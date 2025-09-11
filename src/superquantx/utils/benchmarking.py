@@ -524,5 +524,5 @@ def _get_memory_usage() -> float | None:
     try:
         process = psutil.Process()
         return process.memory_info().rss / 1024 / 1024  # Convert to MB
-    except:
+    except (ImportError, AttributeError, Exception):
         return None

@@ -141,7 +141,7 @@ class OceanBackend(BaseBackend):
         if hasattr(self._sampler, 'properties'):
             try:
                 return len(self._sampler.properties['qubits'])
-            except:
+            except (AttributeError, KeyError, Exception):
                 pass
 
         # Default estimates
@@ -379,7 +379,7 @@ class OceanBackend(BaseBackend):
                     'num_qubits': len(props.get('qubits', [])),
                     'connectivity': 'Chimera/Pegasus/Zephyr',  # D-Wave topologies
                 })
-            except:
+            except (AttributeError, Exception):
                 pass
 
         return info
@@ -390,19 +390,19 @@ class OceanBackend(BaseBackend):
 
         try:
             version_info['dimod'] = dimod.__version__
-        except:
+        except (AttributeError, ImportError):
             pass
 
         try:
             import dwave.system
             version_info['dwave_system'] = dwave.system.__version__
-        except:
+        except (ImportError, AttributeError):
             pass
 
         try:
             import dwave.samplers
             version_info['dwave_samplers'] = dwave.samplers.__version__
-        except:
+        except (ImportError, AttributeError):
             pass
 
         return version_info

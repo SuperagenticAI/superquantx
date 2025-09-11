@@ -153,7 +153,7 @@ class SimulatorBackend(BaseBackend):
     def _define_gates(self) -> dict[str, np.ndarray]:
         """Define quantum gate matrices."""
         # Pauli matrices
-        I = np.array([[1, 0], [0, 1]], dtype=complex)
+        identity = np.array([[1, 0], [0, 1]], dtype=complex)
         X = np.array([[0, 1], [1, 0]], dtype=complex)
         Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
         Z = np.array([[1, 0], [0, -1]], dtype=complex)
@@ -190,7 +190,7 @@ class SimulatorBackend(BaseBackend):
         ], dtype=complex)
 
         return {
-            'I': I, 'X': X, 'Y': Y, 'Z': Z, 'H': H, 'S': S, 'T': T,
+            'I': identity, 'X': X, 'Y': Y, 'Z': Z, 'H': H, 'S': S, 'T': T,
             'CNOT': CNOT, 'CX': CNOT, 'CZ': CZ, 'SWAP': SWAP,
             'PAULI_X': X, 'PAULI_Y': Y, 'PAULI_Z': Z, 'HADAMARD': H
         }

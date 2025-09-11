@@ -32,7 +32,16 @@ import logging
 from typing import Any
 
 # Core imports - make available at top level
-from . import algorithms, backends, cli, datasets, utils
+from . import algorithms, backends, cli, utils
+# Import datasets lazily to avoid circular imports
+try:
+    from . import datasets
+except ImportError as e:
+    # If datasets import fails, create a placeholder
+    import sys
+    import types
+    datasets = types.ModuleType('datasets')
+    sys.modules[f'{__name__}.datasets'] = datasets
 from .config import config, configure
 from .version import __version__
 
@@ -288,6 +297,7 @@ __all__ = [
     "HybridClassifier",
 
     # Common backends
+    "BaseBackend",
     "AutoBackend",
     "QiskitBackend",
     "PennyLaneBackend",

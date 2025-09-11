@@ -23,7 +23,7 @@ try:
     try:
         from braket.aws import AwsDevice
         AWS_AVAILABLE = True
-    except:
+    except ImportError:
         AWS_AVAILABLE = False
     BRAKET_AVAILABLE = True
 except ImportError:
@@ -122,7 +122,7 @@ class BraketBackend(BaseBackend):
         if hasattr(self._device, 'properties'):
             try:
                 return self._device.properties.paradigm.qubit_count
-            except:
+            except (AttributeError, Exception):
                 pass
         # Default estimates
         if 'sv' in self.device_name:
@@ -366,7 +366,7 @@ class BraketBackend(BaseBackend):
                     'provider_name': getattr(props, 'providerName', 'AWS'),
                     'max_qubits': getattr(props.paradigm, 'qubit_count', 'unknown') if hasattr(props, 'paradigm') else 'unknown',
                 })
-            except:
+            except (AttributeError, Exception):
                 pass
 
         return info

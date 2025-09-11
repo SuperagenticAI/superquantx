@@ -366,9 +366,9 @@ def partial_transpose(
         for i in range(dim_A):
             for j in range(dim_A):
                 for k in range(dim_B):
-                    for l in range(dim_B):
+                    for m in range(dim_B):
                         # Transpose indices for subsystem A
-                        rho_TA[i*dim_B + k, j*dim_B + l] = rho[j*dim_B + k, i*dim_B + l]
+                        rho_TA[i*dim_B + k, j*dim_B + m] = rho[j*dim_B + k, i*dim_B + m]
         return rho_TA
 
     elif transpose_subsystem == 1:
@@ -377,9 +377,9 @@ def partial_transpose(
         for i in range(dim_A):
             for j in range(dim_A):
                 for k in range(dim_B):
-                    for l in range(dim_B):
+                    for m in range(dim_B):
                         # Transpose indices for subsystem B
-                        rho_TB[i*dim_B + k, j*dim_B + l] = rho[i*dim_B + l, j*dim_B + k]
+                        rho_TB[i*dim_B + k, j*dim_B + m] = rho[i*dim_B + m, j*dim_B + k]
         return rho_TB
 
     else:

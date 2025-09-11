@@ -13,7 +13,7 @@ class GateMatrix:
     """
 
     # Pauli matrices
-    I = np.array([[1, 0], [0, 1]], dtype=complex)
+    identity = np.array([[1, 0], [0, 1]], dtype=complex)
     X = np.array([[0, 1], [1, 0]], dtype=complex)
     Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
     Z = np.array([[1, 0], [0, -1]], dtype=complex)
@@ -357,7 +357,7 @@ class PauliString:
     def matrix(self) -> np.ndarray:
         """Get the matrix representation of the Pauli string"""
         matrices = {
-            'I': GateMatrix.I,
+            'I': GateMatrix.identity,
             'X': GateMatrix.X,
             'Y': GateMatrix.Y,
             'Z': GateMatrix.Z

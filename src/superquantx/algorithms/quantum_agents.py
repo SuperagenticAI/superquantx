@@ -213,16 +213,16 @@ class QuantumPortfolioAgent(QuantumAgent):
 
             elif constraint_type == 'max_weight':
                 # Maximum weight constraint
-                max_weight = constraint.get('value', 0.3)
-                def max_weight_constraint(weights):
+                max_weight_value = constraint.get('value', 0.3)
+                def max_weight_constraint(weights, max_weight=max_weight_value):
                     return np.sum(np.maximum(0, weights - max_weight) ** 2)
                 quantum_constraints.append(max_weight_constraint)
 
             elif constraint_type == 'sector_limit':
                 # Sector exposure limit
-                sector_assets = constraint.get('assets', [])
-                max_exposure = constraint.get('value', 0.5)
-                def sector_constraint(weights):
+                sector_assets_list = constraint.get('assets', [])
+                max_exposure_value = constraint.get('value', 0.5)
+                def sector_constraint(weights, sector_assets=sector_assets_list, max_exposure=max_exposure_value):
                     sector_exposure = np.sum(weights[sector_assets])
                     return np.maximum(0, sector_exposure - max_exposure) ** 2
                 quantum_constraints.append(sector_constraint)

@@ -150,7 +150,7 @@ class TKETBackend(BaseBackend):
                 device_info = self._backend.device
                 if hasattr(device_info, 'n_nodes'):
                     return device_info.n_nodes
-            except:
+            except (AttributeError, Exception):
                 pass
 
         # Default estimates based on device name
@@ -466,14 +466,14 @@ class TKETBackend(BaseBackend):
         try:
             import pytket
             version_info['pytket'] = pytket.__version__
-        except:
+        except (ImportError, AttributeError):
             pass
 
         if QUANTINUUM_AVAILABLE:
             try:
                 import pytket.extensions.quantinuum
                 version_info['pytket_quantinuum'] = getattr(pytket.extensions.quantinuum, '__version__', 'unknown')
-            except:
+            except (ImportError, AttributeError):
                 pass
 
         return version_info
