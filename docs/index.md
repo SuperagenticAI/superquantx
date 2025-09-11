@@ -1,10 +1,7 @@
 # SuperQuantX Documentation
 
-<div align="center">
-  <img src="assets/logo.png" alt="SuperQuantX Logo" width="400" style="margin-bottom: 2rem;"/>
-</div>
-
 <div class="hero-banner">
+  <h1 class="superquant-gradient">SuperQuantX</h1>
   <h2 class="superquant-gradient">Unified Quantum Computing Platform</h2>
   <p><strong>Building autonomous quantum-enhanced AI systems</strong></p>
   <p>A cutting-edge quantum computing research platform that provides a unified API for quantum agentic AI systems.</p>
@@ -22,6 +19,10 @@ SuperQuantX bridges the gap between quantum computing and artificial intelligenc
 - **📊 Advanced Algorithms**: Pre-built quantum machine learning and optimization algorithms
 - **🛠️ Developer Friendly**: Comprehensive documentation and examples
 - **⚡ High Performance**: Optimized for research and production workloads
+
+<div align="center">
+  <img src="assets/logo.png" alt="SuperQuantX Logo" width="400" style="margin-bottom: 2rem;"/>
+</div>
 
 ### 🎯 Supported Backends
 
