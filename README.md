@@ -8,11 +8,9 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-<p align="center">
-  <a href="https://super-agentic.ai" target="_blank">
-    <img src="resources/logo.png" alt="SuperQuantX Logo" width="500">
-  </a>
-</p>
+# SuperQuantX
+### The foundation for the future of Agentic and Quantum AI
+SuperQuantX unified API for the next wave of Quantum AI. It's a foundation to build powerful Quantum Agentic AI systems with a single interface to Qiskit, Cirq, PennyLane, and more. SuperQuantX is your launchpad into the world of Quantum + Agentic AI.
 
 **Unified Quantum Computing Platform - Building autonomous quantum-enhanced AI systems**
 
@@ -28,6 +26,12 @@ SuperQuantX is a **unified quantum computing platform** that makes quantum algor
 - **🤖 Quantum Agents** - Pre-built autonomous agents for trading, research, and optimization
 - **🧠 Quantum ML** - Advanced quantum machine learning algorithms and neural networks
 - **⚡ Easy Setup** - Get started in minutes with comprehensive documentation
+
+<div align="center">
+  <a href="https://super-agentic.ai" target="_blank">
+    <img src="resources/logo.png" alt="SuperQuantX Logo" width="500">
+  </a>
+</div>
 
 ## ✨ Key Features
 
