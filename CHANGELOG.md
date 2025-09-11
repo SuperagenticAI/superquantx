@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fault-tolerant quantum algorithms
 - Quantum federated learning
 
-## [0.1.0] - 2024-09-06
+## [0.1.1] - 2025-09-11
 
 ### Added
 - Initial release of SuperQuantX

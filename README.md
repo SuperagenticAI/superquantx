@@ -223,7 +223,7 @@ print('✅ SuperQuantX is ready!')
 
 **Ready to explore quantum computing?**
 
-👉 **[Start with the Quick Start Guide →](docs/getting-started/quickstart.md)**
+👉 **[Start with the Quick Start Guide →](https://superagenticai.github.io/superquantx/)**
 
 ---
 
