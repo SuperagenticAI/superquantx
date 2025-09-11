@@ -325,6 +325,7 @@ plots/
 figures/
 *.png
 !resources/*.png
+!docs/assets/logo.png
 *.jpg
 *.jpeg
 *.gif
