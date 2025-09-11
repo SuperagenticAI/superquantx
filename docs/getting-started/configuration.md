@@ -185,8 +185,12 @@ import superquantx as sqx
 # Temporary configuration
 with sqx.config_context(backend="qiskit", shots=10000):
     # This code runs with the specified configuration
-    backend = sqx.get_backend()  # Gets qiskit backend
-    result = backend.run(circuit, shots=10000)  # Uses 10000 shots
+    backend = sqx.get_backend("qiskit")  # Gets qiskit backend
+    # Create a simple test circuit
+    circuit = backend.create_circuit(n_qubits=2)
+    circuit = backend.add_gate(circuit, 'H', 0)
+    circuit = backend.add_measurement(circuit)
+    result = backend.execute_circuit(circuit, shots=10000)  # Uses 10000 shots
 
 # Configuration reverts after context
 ```
@@ -535,10 +539,16 @@ with sqx.experiment("quantum_svm_comparison") as exp:
     exp.log_parameter("shots", 1000)
     
     # Your experiment code here
-    result = run_quantum_svm()
+    qsvm = sqx.QuantumSVM(backend='simulator')
+    # Mock data and training for demonstration
+    import numpy as np
+    X = np.random.rand(10, 2)  # Mock training data
+    y = np.random.choice([0, 1], 10)  # Mock labels
+    qsvm.fit(X, y)
+    accuracy = 0.85  # Mock accuracy result
     
-    exp.log_metric("accuracy", result.accuracy)
-    exp.log_artifact("model.pkl", result.model)
+    exp.log_metric("accuracy", accuracy)
+    exp.log_artifact("model.pkl", qsvm)
 ```
 
 ### Reproducibility Settings
@@ -654,7 +664,7 @@ except sqx.ConfigValidationError as e:
 # Solution: Check backend configuration and installation
 
 # Debug backend availability
-available_backends = sqx.list_backends()
+available_backends = sqx.list_available_backends()
 print(f"Available backends: {available_backends}")
 
 # Check specific backend

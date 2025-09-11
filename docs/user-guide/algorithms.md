@@ -973,7 +973,7 @@ def recommend_algorithm(problem_type, problem_size, available_backends, objectiv
     return filtered_recommendations
 
 # Example usage
-available_backends = sqx.list_backends()
+available_backends = sqx.list_available_backends()
 recommendations = recommend_algorithm(
     problem_type='optimization',
     problem_size=20,

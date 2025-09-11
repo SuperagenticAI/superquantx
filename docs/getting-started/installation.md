@@ -236,16 +236,17 @@ import superquantx as sqx
 print(f"SuperQuantX version: {sqx.__version__}")
 
 # List available backends
-backends = sqx.list_backends()
+backends = sqx.list_available_backends()
 print(f"Available backends: {backends}")
 
 # Test basic functionality
 backend = sqx.get_backend('simulator')
-circuit = backend.create_circuit(2)
-circuit.h(0)
-circuit.cx(0, 1)
-result = backend.run(circuit, shots=100)
-print(f"Test successful! Results: {result.get_counts()}")
+circuit = backend.create_circuit(n_qubits=2)
+circuit = backend.add_gate(circuit, 'H', 0)
+circuit = backend.add_gate(circuit, 'CNOT', [0, 1])
+circuit = backend.add_measurement(circuit)
+result = backend.execute_circuit(circuit, shots=100)
+print(f"Test successful! Results: {result['counts']}")
 ```
 
 ### Backend-Specific Tests
@@ -274,8 +275,8 @@ print(f"Test successful! Results: {result.get_counts()}")
         print("✅ Qiskit backend available")
         
         # Test circuit functionality
-        circuit = backend.create_circuit(2)
-        circuit.h(0)
+        circuit = backend.create_circuit(n_qubits=2)
+        circuit = backend.add_gate(circuit, 'H', 0)
         print("✅ Qiskit circuits working")
     except ImportError as e:
         print(f"❌ Qiskit not available: {e}")

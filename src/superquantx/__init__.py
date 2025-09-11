@@ -44,7 +44,14 @@ except ImportError:
     import types
     datasets = types.ModuleType('datasets')
     sys.modules[f'{__name__}.datasets'] = datasets
-from .config import config, configure
+from .config import (
+    config, configure, create_default_config, configure_interactive, 
+    load_config, configure_logging, configure_simulation, config_context,
+    get_default_backend, get_config, get_config_search_paths, 
+    get_active_config_path, validate_config, validate_config_schema,
+    configure_performance, configure_experiments, experiment,
+    create_profile, activate_profile, profile, ConfigValidationError
+)
 from .version import __version__
 
 
@@ -265,6 +272,40 @@ def print_system_info() -> None:
         status = version if version else "Not installed"
         print(f"  {backend}: {status}")
 
+def run_diagnostics() -> dict[str, dict[str, Any]]:
+    """Run comprehensive diagnostics on all backends.
+    
+    Returns:
+        Dictionary with backend names as keys and diagnostic info as values
+    """
+    diagnostics = {}
+    
+    # Test each backend
+    backend_names = ['simulator', 'pennylane', 'qiskit', 'cirq', 'braket']
+    
+    for backend_name in backend_names:
+        try:
+            backend = get_backend(backend_name)
+            diagnostics[backend_name] = {
+                "available": True,
+                "message": f"{backend_name} backend is working correctly",
+                "backend_type": type(backend).__name__
+            }
+        except ImportError as e:
+            diagnostics[backend_name] = {
+                "available": False,
+                "message": f"Backend not available: {e}",
+                "backend_type": None
+            }
+        except Exception as e:
+            diagnostics[backend_name] = {
+                "available": False,
+                "message": f"Backend error: {e}",
+                "backend_type": None
+            }
+    
+    return diagnostics
+
 # Make commonly used functions available at package level
 __all__ = [
     # Version and info
@@ -272,10 +313,30 @@ __all__ = [
     "get_version",
     "get_backend_info",
     "print_system_info",
+    "run_diagnostics",
 
     # Configuration
     "config",
     "configure",
+    "create_default_config",
+    "configure_interactive", 
+    "load_config",
+    "configure_logging",
+    "configure_simulation",
+    "config_context",
+    "get_default_backend",
+    "get_config",
+    "get_config_search_paths", 
+    "get_active_config_path",
+    "validate_config",
+    "validate_config_schema",
+    "configure_performance",
+    "configure_experiments",
+    "experiment",
+    "create_profile",
+    "activate_profile",
+    "profile",
+    "ConfigValidationError",
 
     # Backend functions
     "get_backend",

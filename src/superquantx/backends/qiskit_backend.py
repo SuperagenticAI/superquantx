@@ -17,38 +17,56 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Try to import Qiskit
+# Try to import Qiskit with modern structure
 try:
     from qiskit import (
-        Aer,
         ClassicalRegister,
         QuantumCircuit,
         QuantumRegister,
-        execute,
         transpile,
     )
-    from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B
-    from qiskit.circuit.library import EfficientSU2, RealAmplitudes, ZZFeatureMap
-    from qiskit.providers.aer import AerSimulator
+    from qiskit_aer import AerSimulator
     from qiskit.quantum_info import Statevector
     QISKIT_AVAILABLE = True
 
-    # Try to import IBM Quantum provider
+    # Try to import algorithms and circuit library
     try:
-        from qiskit import IBMQ
-        from qiskit.providers.ibmq import IBMQBackend
-        IBMQ_AVAILABLE = True
+        from qiskit_algorithms.optimizers import COBYLA, L_BFGS_B
+        QISKIT_ALGORITHMS_AVAILABLE = True
     except ImportError:
-        IBMQ_AVAILABLE = False
+        QISKIT_ALGORITHMS_AVAILABLE = False
+        COBYLA = None
+        L_BFGS_B = None
+
+    try:
+        from qiskit.circuit.library import EfficientSU2, RealAmplitudes, ZZFeatureMap
+        QISKIT_CIRCUIT_LIBRARY_AVAILABLE = True
+    except ImportError:
+        QISKIT_CIRCUIT_LIBRARY_AVAILABLE = False
+        EfficientSU2 = None
+        RealAmplitudes = None
+        ZZFeatureMap = None
+
+    # Try to import IBM Quantum provider (deprecated)
+    try:
+        from qiskit_ibm_provider import IBMProvider
+        IBM_PROVIDER_AVAILABLE = True
+        IBMQ = None  # IBMQ is deprecated
+        IBMQBackend = None
+    except ImportError:
+        IBM_PROVIDER_AVAILABLE = False
+        IBMProvider = None
         IBMQ = None
         IBMQBackend = None
 
 except ImportError:
     QISKIT_AVAILABLE = False
     QuantumCircuit = None
-    Aer = None
     AerSimulator = None
     Statevector = None
+    QISKIT_ALGORITHMS_AVAILABLE = False
+    QISKIT_CIRCUIT_LIBRARY_AVAILABLE = False
+    IBM_PROVIDER_AVAILABLE = False
 
 class QiskitBackend(BaseBackend):
     """Qiskit backend for quantum computing operations.
@@ -77,9 +95,12 @@ class QiskitBackend(BaseBackend):
             'supports_gradient': False,
             'supports_parameter_shift': True,
             'supports_finite_diff': True,
-            'supports_hardware': IBMQ_AVAILABLE,
+            'supports_hardware': IBM_PROVIDER_AVAILABLE,
             'supports_noise_models': True,
         }
+        
+        # Initialize the backend
+        self._initialize_backend()
 
     def _initialize_backend(self) -> None:
         """Initialize Qiskit backend."""
@@ -89,7 +110,7 @@ class QiskitBackend(BaseBackend):
                 logger.info("Initialized Qiskit AerSimulator")
 
             elif self.device.startswith('ibmq_') or self.provider:
-                if not IBMQ_AVAILABLE:
+                if not IBM_PROVIDER_AVAILABLE:
                     raise ImportError("IBM Quantum provider not available")
 
                 # Load IBMQ account
@@ -186,17 +207,20 @@ class QiskitBackend(BaseBackend):
 
         try:
             # Add measurements if not present
-            if circuit.num_clbits == 0 or not any(isinstance(instr.operation,
-                                                           type(circuit.measure(0, 0).operation))
-                                                 for instr in circuit):
+            has_measurements = circuit.num_clbits > 0 and any(
+                hasattr(instr.operation, 'name') and instr.operation.name == 'measure'
+                for instr in circuit.data
+            )
+            
+            if not has_measurements:
                 circuit.add_register(ClassicalRegister(circuit.num_qubits, 'c'))
                 circuit.measure_all()
 
             # Transpile circuit
             transpiled = transpile(circuit, self.backend)
 
-            # Execute
-            job = execute(transpiled, self.backend, shots=shots)
+            # Execute using modern Qiskit API
+            job = self.backend.run(transpiled, shots=shots)
             result = job.result()
 
             # Get counts

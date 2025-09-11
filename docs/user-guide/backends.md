@@ -110,7 +110,7 @@ backend = sqx.get_backend('cirq', simulator='SparseSimulator')
 import superquantx as sqx
 
 # List all available backends
-available = sqx.list_backends()
+available = sqx.list_available_backends()
 print(f"Available backends: {available}")
 
 # Get a specific backend
@@ -230,7 +230,7 @@ for backend, result in benchmark_results.items():
 def compare_backend_features():
     """Compare capabilities across backends."""
     
-    backends = sqx.list_backends()
+    backends = sqx.list_available_backends()
     
     features = {
         'max_qubits': [],
@@ -281,7 +281,7 @@ feature_comparison = compare_backend_features()
 def smart_backend_selection(requirements):
     """Automatically select best backend based on requirements."""
     
-    available_backends = sqx.list_backends()
+    available_backends = sqx.list_available_backends()
     
     # Score backends based on requirements
     scores = {}
@@ -335,7 +335,7 @@ class BackendPool:
     
     def __init__(self, backend_names=None):
         if backend_names is None:
-            backend_names = sqx.list_backends()
+            backend_names = sqx.list_available_backends()
         
         self.backends = {}
         for name in backend_names:
@@ -503,7 +503,7 @@ class BackendMonitor:
     
     def monitor_all_backends(self):
         """Monitor all available backends."""
-        backends = sqx.list_backends()
+        backends = sqx.list_available_backends()
         status = {}
         
         for backend_name in backends:
@@ -711,4 +711,4 @@ If you need help with backends:
     Start with the `simulator` backend for learning, then move to `pennylane` for quantum machine learning research. Use other backends when you need specific hardware access or features.
 
 !!! warning "Backend Availability"
-    Not all backends may be available depending on your installation. Use `sqx.list_backends()` to check which backends are installed and ready to use.
+    Not all backends may be available depending on your installation. Use `sqx.list_available_backends()` to check which backends are installed and ready to use.

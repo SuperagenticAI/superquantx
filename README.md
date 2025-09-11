@@ -81,31 +81,43 @@ agent = sqx.QuantumTradingAgent(
     risk_tolerance=0.3
 )
 results = agent.deploy()
-print(f"Performance: {results.metrics}")
+print(f"Performance: {results.result['performance']}")
 ```
 
 ### Quantum Machine Learning
 ```python
 # Quantum SVM with automatic backend selection
+import numpy as np
 qsvm = sqx.QuantumSVM(backend='auto')
+
+# Mock training data for demonstration
+X_train = np.random.rand(20, 4)
+y_train = np.random.choice([0, 1], 20)
+X_test = np.random.rand(10, 4)
+y_test = np.random.choice([0, 1], 10)
+
 qsvm.fit(X_train, y_train)
 accuracy = qsvm.score(X_test, y_test)
-
-# Compare quantum vs classical performance
-automl = sqx.QuantumAutoML()
-best_model = automl.fit(X_train, y_train)
-report = automl.quantum_advantage_report()
+print(f"Quantum SVM accuracy: {accuracy}")
 ```
 
 ### Advanced Quantum Algorithms
 ```python
 # Molecular simulation with VQE
-vqe = sqx.VQE(molecule="H2", backend="pennylane")
-ground_state = vqe.optimize()
+import numpy as np
+from sklearn.datasets import make_classification
+
+# Create sample Hamiltonian for VQE
+hamiltonian = np.array([[1, 0], [0, -1]])  # Simple Pauli-Z
+vqe = sqx.VQE(hamiltonian=hamiltonian, backend="pennylane")
+ground_state = vqe.find_ground_state()
+print(f"Ground state energy: {ground_state}")
 
 # Optimization with QAOA
-qaoa = sqx.QAOA(problem=optimization_problem)
-solution = qaoa.solve()
+X, y = make_classification(n_samples=10, n_features=4, n_classes=2, random_state=42)
+qaoa = sqx.QAOA(backend="pennylane")
+qaoa.fit(X, y)
+print("✅ QAOA successfully fitted for optimization tasks")
 ```
 
 ## 📖 Documentation

@@ -44,9 +44,8 @@ class PennyLaneBackend(BaseBackend):
         if not PENNYLANE_AVAILABLE:
             raise ImportError("PennyLane is required for PennyLaneBackend. Install with: pip install pennylane")
 
-        super().__init__(device=device, shots=shots, **kwargs)
-
         self.wires = wires
+        super().__init__(device=device, shots=shots, **kwargs)
         self.dev = None
         self.capabilities = {
             'supports_gradient': True,

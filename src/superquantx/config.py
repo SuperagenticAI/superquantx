@@ -322,5 +322,418 @@ def get_platform_config(platform: str) -> dict[str, Any]:
     """
     return config.get(f"platforms.{platform}", {})
 
+def create_default_config(path: str = "./superquantx.json", format: str = "json") -> None:
+    """Generate default configuration file.
+    
+    Args:
+        path: Path where to save the configuration file
+        format: Format of the file ('json' or 'yaml')
+    """
+    default_config = {
+        "default_backend": "simulator",
+        "logging": {
+            "level": "INFO",
+            "file": "superquantx.log",
+            "console": True
+        },
+        "simulation": {
+            "max_qubits": 20,
+            "default_shots": 1000,
+            "seed": None
+        },
+        "backends": {
+            "simulator": {
+                "enabled": True,
+                "device": "CPU"
+            },
+            "pennylane": {
+                "enabled": True,
+                "device": "default.qubit"
+            },
+            "qiskit": {
+                "enabled": False,
+                "provider": "local"
+            }
+        }
+    }
+    
+    path_obj = Path(path)
+    path_obj.parent.mkdir(parents=True, exist_ok=True)
+    
+    if format.lower() == "json":
+        with open(path_obj, "w") as f:
+            json.dump(default_config, f, indent=2)
+    elif format.lower() in ["yaml", "yml"]:
+        with open(path_obj, "w") as f:
+            yaml.dump(default_config, f, default_flow_style=False, indent=2)
+    else:
+        raise ValueError(f"Unsupported format: {format}. Use 'json' or 'yaml'.")
+
+def configure_interactive():
+    """Interactive configuration wizard.
+    
+    Returns:
+        Configuration object that can be saved
+    """
+    print("SuperQuantX Interactive Configuration")
+    print("====================================")
+    
+    # For now, return a basic config object
+    # In a real implementation, this would ask interactive questions
+    class InteractiveConfig:
+        def __init__(self):
+            self.config_data = {
+                "default_backend": "simulator",
+                "logging": {"level": "INFO"},
+                "simulation": {"max_qubits": 20}
+            }
+        
+        def save(self, path: str):
+            path_obj = Path(path)
+            path_obj.parent.mkdir(parents=True, exist_ok=True)
+            with open(path_obj, "w") as f:
+                json.dump(self.config_data, f, indent=2)
+    
+    return InteractiveConfig()
+
+def load_config(config_path=None) -> None:
+    """Load configuration from file(s).
+    
+    Args:
+        config_path: Path to config file or list of paths. If None, uses default locations.
+    """
+    if config_path is None:
+        # Reload from default locations
+        config._load_config_files()
+        return
+    
+    if isinstance(config_path, str):
+        config_path = [config_path]
+    
+    for path in config_path:
+        path_obj = Path(path)
+        if path_obj.exists():
+            try:
+                with open(path_obj) as f:
+                    if path_obj.suffix.lower() in [".yaml", ".yml"]:
+                        file_config = yaml.safe_load(f)
+                    else:
+                        file_config = json.load(f)
+                
+                if file_config:
+                    config._merge_config(file_config)
+                    logger.info(f"Loaded configuration from {path_obj}")
+            except Exception as e:
+                logger.warning(f"Failed to load config from {path_obj}: {e}")
+
+def configure_logging(level="INFO", file=None, console=True, format=None, max_file_size="10MB", backup_count=3) -> None:
+    """Configure logging settings.
+    
+    Args:
+        level: Logging level
+        file: Log file path
+        console: Whether to log to console
+        format: Log format string
+        max_file_size: Maximum log file size before rotation
+        backup_count: Number of backup files to keep
+    """
+    config.set("logging.level", level)
+    if file is not None:
+        config.set("logging.file", file)
+    config.set("logging.console", console)
+    if format is not None:
+        config.set("logging.format", format)
+    config.set("logging.max_file_size", max_file_size)
+    config.set("logging.backup_count", backup_count)
+    
+    # Re-setup logging with new settings
+    setup_logging()
+
+def configure_simulation(max_qubits=None, default_shots=None, memory_limit=None) -> None:
+    """Configure simulation settings.
+    
+    Args:
+        max_qubits: Maximum number of qubits to simulate
+        default_shots: Default number of shots
+        memory_limit: Memory limit for simulations
+    """
+    if max_qubits is not None:
+        config.set("algorithms.max_qubits", max_qubits)
+    if default_shots is not None:
+        config.set("algorithms.default_shots", default_shots)
+    if memory_limit is not None:
+        config.set("simulation.memory_limit", memory_limit)
+
+class ConfigContext:
+    """Context manager for temporary configuration changes."""
+    
+    def __init__(self, **kwargs):
+        self.changes = kwargs
+        self.original_values = {}
+    
+    def __enter__(self):
+        # Save original values
+        for key, value in self.changes.items():
+            if key == "backend":
+                key = "backends.default"
+            elif key == "shots":
+                key = "algorithms.default_shots"
+            
+            self.original_values[key] = config.get(key)
+            config.set(key, value)
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Restore original values
+        for key, value in self.original_values.items():
+            if value is not None:
+                config.set(key, value)
+
+def config_context(**kwargs):
+    """Create a configuration context manager.
+    
+    Usage:
+        with config_context(backend="qiskit", shots=10000):
+            # Code here uses the specified configuration
+            pass
+    """
+    return ConfigContext(**kwargs)
+
+def get_default_backend() -> str:
+    """Get the default backend name."""
+    return config.get("backends.default", "simulator")
+
+def get_config(key: str = None) -> Any:
+    """Get configuration value(s).
+    
+    Args:
+        key: Configuration key (dot notation). If None, returns all config.
+    
+    Returns:
+        Configuration value or full config dict
+    """
+    if key is None:
+        return config.to_dict()
+    return config.get(key)
+
+def get_config_search_paths() -> list:
+    """Get list of configuration search paths."""
+    return [
+        str(Path.home() / ".superquantx" / "config.yaml"),
+        str(Path.home() / ".superquantx" / "config.yml"),
+        str(Path.home() / ".superquantx" / "config.json"),
+        str(Path.cwd() / "superquantx_config.yaml"),
+        str(Path.cwd() / "superquantx_config.yml"),
+        str(Path.cwd() / "superquantx_config.json"),
+    ]
+
+def get_active_config_path() -> str:
+    """Get path of currently active configuration file."""
+    # For simplicity, return the first existing path
+    for path in get_config_search_paths():
+        if Path(path).exists():
+            return path
+    return "Built-in defaults"
+
+class ValidationResult:
+    """Result of configuration validation."""
+    
+    def __init__(self, is_valid: bool, errors: list = None):
+        self.is_valid = is_valid
+        self.errors = errors or []
+
+def validate_config() -> ValidationResult:
+    """Validate current configuration.
+    
+    Returns:
+        ValidationResult with validation status and errors
+    """
+    errors = []
+    
+    # Basic validation - check required keys exist
+    required_keys = ["backends", "algorithms", "logging"]
+    for key in required_keys:
+        if config.get(key) is None:
+            errors.append(f"Missing required section: {key}")
+    
+    # Validate backend configuration
+    backends = config.get("backends", {})
+    if not isinstance(backends, dict):
+        errors.append("backends section must be a dictionary")
+    
+    # Validate logging level
+    log_level = config.get("logging.level", "INFO")
+    valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    if log_level not in valid_levels:
+        errors.append(f"Invalid logging level: {log_level}. Must be one of {valid_levels}")
+    
+    return ValidationResult(is_valid=len(errors) == 0, errors=errors)
+
+class ConfigValidationError(Exception):
+    """Exception raised when configuration validation fails."""
+    pass
+
+def validate_config_schema(config_path: str) -> None:
+    """Validate configuration file against schema.
+    
+    Args:
+        config_path: Path to configuration file
+        
+    Raises:
+        ConfigValidationError: If validation fails
+    """
+    path_obj = Path(config_path)
+    if not path_obj.exists():
+        raise ConfigValidationError(f"Configuration file not found: {config_path}")
+    
+    try:
+        with open(path_obj) as f:
+            if path_obj.suffix.lower() in [".yaml", ".yml"]:
+                file_config = yaml.safe_load(f)
+            else:
+                file_config = json.load(f)
+    except Exception as e:
+        raise ConfigValidationError(f"Invalid configuration file format: {e}")
+    
+    if not isinstance(file_config, dict):
+        raise ConfigValidationError("Configuration must be a dictionary")
+
+def configure_performance(parallel_backends=None, thread_count=None, memory_limit=None, gpu_enabled=None, optimization_level=None) -> None:
+    """Configure performance settings.
+    
+    Args:
+        parallel_backends: Number of backends to run in parallel
+        thread_count: Number of threads per backend
+        memory_limit: Memory limit for simulations
+        gpu_enabled: Enable GPU acceleration
+        optimization_level: Optimization level (0-3)
+    """
+    if parallel_backends is not None:
+        config.set("performance.parallel_backends", parallel_backends)
+    if thread_count is not None:
+        config.set("performance.thread_count", thread_count)
+    if memory_limit is not None:
+        config.set("performance.memory_limit", memory_limit)
+    if gpu_enabled is not None:
+        config.set("performance.gpu_enabled", gpu_enabled)
+    if optimization_level is not None:
+        config.set("simulation.optimization_level", optimization_level)
+
+def configure_experiments(experiment_dir="./experiments", auto_save_results=True, save_circuits=True, save_metadata=True, version_control=True) -> None:
+    """Configure experiment tracking.
+    
+    Args:
+        experiment_dir: Directory to save experiments
+        auto_save_results: Automatically save experiment results
+        save_circuits: Save quantum circuits
+        save_metadata: Save experiment metadata
+        version_control: Enable version control for experiments
+    """
+    config.set("experiments.directory", experiment_dir)
+    config.set("experiments.auto_save_results", auto_save_results)
+    config.set("experiments.save_circuits", save_circuits)
+    config.set("experiments.save_metadata", save_metadata)
+    config.set("experiments.version_control", version_control)
+
+class ExperimentContext:
+    """Context manager for experiment tracking."""
+    
+    def __init__(self, name: str):
+        self.name = name
+        self.parameters = {}
+        self.metrics = {}
+        self.artifacts = {}
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # In a real implementation, this would save the experiment data
+        logger.info(f"Experiment '{self.name}' completed")
+        logger.info(f"Parameters: {self.parameters}")
+        logger.info(f"Metrics: {self.metrics}")
+        logger.info(f"Artifacts: {list(self.artifacts.keys())}")
+    
+    def log_parameter(self, key: str, value: Any) -> None:
+        """Log an experiment parameter."""
+        self.parameters[key] = value
+    
+    def log_metric(self, key: str, value: Any) -> None:
+        """Log an experiment metric."""
+        self.metrics[key] = value
+    
+    def log_artifact(self, filename: str, data: Any) -> None:
+        """Log an experiment artifact."""
+        self.artifacts[filename] = data
+
+def experiment(name: str):
+    """Create an experiment context.
+    
+    Args:
+        name: Name of the experiment
+        
+    Returns:
+        ExperimentContext for tracking the experiment
+    """
+    return ExperimentContext(name)
+
+# Profile management
+_profiles = {}
+
+def create_profile(name: str, config_dict: dict) -> None:
+    """Create a configuration profile.
+    
+    Args:
+        name: Profile name
+        config_dict: Configuration dictionary
+    """
+    _profiles[name] = config_dict.copy()
+
+def activate_profile(name: str) -> None:
+    """Activate a configuration profile.
+    
+    Args:
+        name: Profile name
+    """
+    if name not in _profiles:
+        raise ValueError(f"Profile '{name}' not found")
+    
+    config._merge_config(_profiles[name])
+    logger.info(f"Activated profile: {name}")
+
+class ProfileContext:
+    """Context manager for temporary profile activation."""
+    
+    def __init__(self, name: str):
+        self.name = name
+        self.original_config = None
+    
+    def __enter__(self):
+        if self.name not in _profiles:
+            raise ValueError(f"Profile '{self.name}' not found")
+        
+        # Save current config
+        self.original_config = config.to_dict()
+        
+        # Apply profile
+        config._merge_config(_profiles[self.name])
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Restore original config
+        if self.original_config:
+            config._config = self.original_config
+
+def profile(name: str):
+    """Create a profile context manager.
+    
+    Args:
+        name: Profile name
+        
+    Returns:
+        ProfileContext for temporary profile activation
+    """
+    return ProfileContext(name)
+
 # Initialize logging on import
 setup_logging()

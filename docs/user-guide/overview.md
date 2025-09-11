@@ -222,7 +222,7 @@ SuperQuantX follows a layered architecture:
 
 ```python
 # Backend registration and management
-available_backends = sqx.list_backends()
+available_backends = sqx.list_available_backends()
 print(f"Available: {available_backends}")
 
 # Backend capabilities

@@ -42,16 +42,18 @@ Get started with SuperQuantX in minutes:
 ```python
 import superquantx as sqx
 
-# Create a quantum circuit
-circuit = sqx.Circuit(n_qubits=2)
-circuit.h(0)  # Hadamard gate
-circuit.cnot(0, 1)  # CNOT gate
-
 # Choose your backend
-backend = sqx.get_backend('pennylane')
+backend = sqx.get_backend('simulator')
+
+# Create a quantum circuit
+circuit = backend.create_circuit(n_qubits=2)
+circuit = backend.add_gate(circuit, 'H', 0)  # Hadamard gate
+circuit = backend.add_gate(circuit, 'CNOT', [0, 1])  # CNOT gate
+circuit = backend.add_measurement(circuit)
 
 # Execute the circuit
-result = backend.execute(circuit, shots=1024)
+result = backend.execute_circuit(circuit, shots=1024)
+print(f"Results: {result['counts']}")
 ```
 
 ## Navigation

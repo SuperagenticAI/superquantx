@@ -47,14 +47,14 @@ import superquantx as sqx
 print(f"SuperQuantX version: {sqx.__version__}")
 
 # List available backends
-backends = sqx.list_backends()
+backends = sqx.list_available_backends()
 print(f"Available backends: {backends}")
 ```
 
 You should see something like:
 ```
-SuperQuantX version: 0.1.0
-Available backends: ['simulator', 'pennylane', 'qiskit']
+SuperQuantX version: 0.1.1
+Available backends: {'simulator': {'available': True, 'class': 'SimulatorBackend', 'description': 'Pure Python quantum simulator backend.', 'capabilities': {...}}, 'pennylane': {'available': False, 'class': 'PennyLaneBackend', 'reason': 'Missing dependencies'}, ...}
 ```
 
 ## 🎯 Your First Quantum Program
@@ -66,30 +66,30 @@ import superquantx as sqx
 
 # Step 1: Get a quantum backend
 backend = sqx.get_backend('simulator')
-print(f"Using backend: {backend.name}")
+print(f"Using backend: {backend.device}")
 
 # Step 2: Create a quantum circuit with 2 qubits
-circuit = backend.create_circuit(num_qubits=2)
+circuit = backend.create_circuit(n_qubits=2)
 
 # Step 3: Add quantum gates
-circuit.h(0)      # Put qubit 0 in superposition
-circuit.cx(0, 1)  # Entangle qubits 0 and 1
+circuit = backend.add_gate(circuit, 'H', 0)      # Put qubit 0 in superposition
+circuit = backend.add_gate(circuit, 'CNOT', [0, 1])  # Entangle qubits 0 and 1
 
 # Step 4: Measure the qubits
-circuit.measure_all()
+circuit = backend.add_measurement(circuit)
 
 # Step 5: Run the circuit
-result = backend.run(circuit, shots=1000)
+result = backend.execute_circuit(circuit, shots=1000)
 
 # Step 6: Get the results
-counts = result.get_counts()
+counts = result['counts']
 print(f"Measurement results: {counts}")
 ```
 
 Expected output:
 ```
 Using backend: simulator
-Measurement results: {'00': 523, '11': 477}
+Measurement results: {'00': 496, '11': 504}
 ```
 
 🎉 Congratulations! You've just created your first **quantum entangled state**. Notice how we only get results `00` and `11`, never `01` or `10` - this is quantum entanglement in action!
@@ -135,17 +135,18 @@ import superquantx as sqx
 
 # Create a more complex circuit
 backend = sqx.get_backend('simulator')
-circuit = backend.create_circuit(3)
+circuit = backend.create_circuit(n_qubits=3)
 
 # Build a quantum circuit
-circuit.h(0)           # Hadamard on qubit 0
-circuit.cx(0, 1)       # CNOT from qubit 0 to 1
-circuit.ry(0.5, 2)     # Y-rotation on qubit 2
-circuit.cz(1, 2)       # Controlled-Z gate
+circuit = backend.add_gate(circuit, 'H', 0)           # Hadamard on qubit 0
+circuit = backend.add_gate(circuit, 'CNOT', [0, 1])   # CNOT from qubit 0 to 1
+circuit = backend.add_gate(circuit, 'RY', 2, [0.5])   # Y-rotation on qubit 2
+circuit = backend.add_gate(circuit, 'CZ', [1, 2])     # Controlled-Z gate
 
-# Visualize the circuit
-circuit.draw()         # Text representation
-circuit.draw('mpl')    # Matplotlib visualization (if available)
+# Note: Circuit visualization methods would need to be implemented
+# For now, you can examine the circuit structure programmatically
+print(f"Circuit has {circuit.n_qubits} qubits")
+print(f"Current state vector shape: {circuit.state.shape}")
 ```
 
 ## 🔄 Switching Between Quantum Backends
@@ -230,18 +231,18 @@ SuperQuantX comes with several quantum algorithms ready to use:
     import numpy as np
 
     # Create training data
-    X = np.random.rand(100, 4)
-    y = np.random.randint(0, 2, 100)
+    X = np.random.rand(20, 2)
+    y = np.random.randint(0, 2, 20)
 
     # Build Quantum Neural Network
-    qnn = sqx.QuantumNeuralNetwork(
-        n_qubits=4,
-        n_layers=2,
+    qnn = sqx.QuantumNN(
+        n_qubits=2,
+        n_layers=1,
         backend='simulator'
     )
 
     # Train the network
-    qnn.fit(X, y, epochs=10)
+    qnn.fit(X, y, epochs=5)
     
     # Make predictions
     predictions = qnn.predict(X[:5])

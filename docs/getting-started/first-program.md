@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 
 # Verify your installation
 print(f"SuperQuantX version: {sqx.__version__}")
-print(f"Available backends: {sqx.list_backends()}")
+print(f"Available backends: {sqx.list_available_backends()}")
 ```
 
 ### Step 2: Understanding Qubits
@@ -45,20 +45,20 @@ Unlike classical bits that can only be 0 or 1, **qubits** can exist in a superpo
 backend = sqx.get_backend('simulator')
 
 # Create a circuit with one qubit
-circuit = backend.create_circuit(1)
+circuit = backend.create_circuit(n_qubits=1)
 
 # Initially, the qubit is in state |0⟩
 print("Initial state: |0⟩")
 
 # Apply a Hadamard gate to create superposition
-circuit.h(0)  # Now the qubit is in state (|0⟩ + |1⟩)/√2
+circuit = backend.add_gate(circuit, 'H', 0)  # Now the qubit is in state (|0⟩ + |1⟩)/√2
 
 # Measure the qubit
-circuit.measure_all()
+circuit = backend.add_measurement(circuit)
 
 # Run the circuit multiple times
-result = backend.run(circuit, shots=1000)
-counts = result.get_counts()
+result = backend.execute_circuit(circuit, shots=1000)
+counts = result['counts']
 
 print(f"Measurement results: {counts}")
 print("🎉 You've created quantum superposition!")
@@ -89,26 +89,27 @@ The Bell state is a famous quantum entangled state where two qubits are perfectl
 
 ```python
 # Create a circuit with 2 qubits
-circuit = backend.create_circuit(2)
+circuit = backend.create_circuit(n_qubits=2)
 
 # Step 1: Put first qubit in superposition
-circuit.h(0)
+circuit = backend.add_gate(circuit, 'H', 0)
 
 # Step 2: Entangle the qubits with CNOT gate
-circuit.cx(0, 1)  # Controlled-X gate (CNOT)
+circuit = backend.add_gate(circuit, 'CNOT', [0, 1])  # Controlled-X gate (CNOT)
 
 # Step 3: Measure both qubits
-circuit.measure_all()
+circuit = backend.add_measurement(circuit)
 
 # Run the circuit
-result = backend.run(circuit, shots=1000)
-counts = result.get_counts()
+result = backend.execute_circuit(circuit, shots=1000)
+counts = result['counts']
 
 print(f"Bell state results: {counts}")
 
-# Visualize the circuit
-print("\nCircuit diagram:")
-circuit.draw()
+# Circuit information (visualization to be implemented)
+print(f"\nCircuit created successfully!")
+print(f"Circuit has {circuit.n_qubits} qubits")
+print(f"Current state vector shape: {circuit.state.shape}")
 ```
 
 **Expected output:**
@@ -150,20 +151,20 @@ def quantum_random_number(num_bits=8):
     """Generate a random number using quantum superposition."""
     
     # Create circuit with specified number of qubits
-    circuit = backend.create_circuit(num_bits)
+    circuit = backend.create_circuit(n_qubits=num_bits)
     
     # Put all qubits in superposition
     for i in range(num_bits):
-        circuit.h(i)
+        circuit = backend.add_gate(circuit, 'H', i)
     
     # Measure all qubits
-    circuit.measure_all()
+    circuit = backend.add_measurement(circuit)
     
     # Run the circuit once
-    result = backend.run(circuit, shots=1)
+    result = backend.execute_circuit(circuit, shots=1)
     
     # Convert result to integer
-    binary_result = list(result.get_counts().keys())[0]
+    binary_result = list(result['counts'].keys())[0]
     random_number = int(binary_result, 2)
     
     return random_number, binary_result
@@ -183,22 +184,22 @@ Let's explore quantum interference with a more complex example:
 def quantum_interference_demo():
     """Demonstrate quantum interference patterns."""
     
-    circuit = backend.create_circuit(1)
+    circuit = backend.create_circuit(n_qubits=1)
     
     # Create superposition
-    circuit.h(0)
+    circuit = backend.add_gate(circuit, 'H', 0)
     
     # Add a phase (rotation around Z-axis)
-    circuit.rz(np.pi/4, 0)  # 45-degree phase
+    circuit = backend.add_gate(circuit, 'RZ', 0, [np.pi/4])  # 45-degree phase
     
     # Apply another Hadamard - this creates interference
-    circuit.h(0)
+    circuit = backend.add_gate(circuit, 'H', 0)
     
-    circuit.measure_all()
+    circuit = backend.add_measurement(circuit)
     
     # Run multiple times to see the pattern
-    result = backend.run(circuit, shots=1000)
-    counts = result.get_counts()
+    result = backend.execute_circuit(circuit, shots=1000)
+    counts = result['counts']
     
     return counts
 
@@ -211,14 +212,14 @@ print("Phase\t|0⟩ Count\t|1⟩ Count")
 print("-" * 35)
 
 for phase in phases:
-    circuit = backend.create_circuit(1)
-    circuit.h(0)
-    circuit.rz(phase, 0)
-    circuit.h(0)
-    circuit.measure_all()
+    circuit = backend.create_circuit(n_qubits=1)
+    circuit = backend.add_gate(circuit, 'H', 0)
+    circuit = backend.add_gate(circuit, 'RZ', 0, [phase])
+    circuit = backend.add_gate(circuit, 'H', 0)
+    circuit = backend.add_measurement(circuit)
     
-    result = backend.run(circuit, shots=1000)
-    counts = result.get_counts()
+    result = backend.execute_circuit(circuit, shots=1000)
+    counts = result['counts']
     
     count_0 = counts.get('0', 0)
     count_1 = counts.get('1', 0)
@@ -250,18 +251,18 @@ class QuantumCoin:
             dict: Results with counts for heads and tails
         """
         # Calculate rotation angle for desired bias
-        theta = 2 * np.arccos(np.sqrt(bias))
+        theta = 2 * np.arcsin(np.sqrt(bias))
         
-        circuit = self.backend.create_circuit(1)
+        circuit = self.backend.create_circuit(n_qubits=1)
         
         # Start in |0⟩ (tails)
         # Rotate to achieve desired bias
-        circuit.ry(theta, 0)
+        circuit = self.backend.add_gate(circuit, 'RY', 0, [theta])
         
-        circuit.measure_all()
+        circuit = self.backend.add_measurement(circuit)
         
-        result = self.backend.run(circuit, shots=shots)
-        counts = result.get_counts()
+        result = self.backend.execute_circuit(circuit, shots=shots)
+        counts = result['counts']
         
         # Map 0->tails, 1->heads
         heads = counts.get('1', 0)
@@ -317,16 +318,19 @@ def plot_quantum_results(counts, title="Quantum Measurement Results"):
                 ha='center', va='bottom')
     
     plt.tight_layout()
-    plt.show()
+    # Save instead of showing to avoid timeout in automated tests
+    plt.savefig('/tmp/quantum_results.png', dpi=150, bbox_inches='tight')
+    plt.close()  # Close to free memory
+    print(f"✅ Plot saved successfully with data: {dict(zip(states, values))}")
 
 # Example: Visualize Bell state results
-circuit = backend.create_circuit(2)
-circuit.h(0)
-circuit.cx(0, 1)
-circuit.measure_all()
+circuit = backend.create_circuit(n_qubits=2)
+circuit = backend.add_gate(circuit, 'H', 0)
+circuit = backend.add_gate(circuit, 'CNOT', [0, 1])
+circuit = backend.add_measurement(circuit)
 
-result = backend.run(circuit, shots=1000)
-counts = result.get_counts()
+result = backend.execute_circuit(circuit, shots=1000)
+counts = result['counts']
 
 plot_quantum_results(counts, "Bell State |Φ⁺⟩ = (|00⟩ + |11⟩)/√2")
 ```
@@ -339,42 +343,58 @@ SuperQuantX's power lies in backend flexibility. Let's compare the same algorith
 def compare_backends(algorithm_func, *args, **kwargs):
     """Run the same algorithm on different backends."""
     
-    available_backends = sqx.list_backends()
+    available_backends = sqx.list_available_backends()
     results = {}
     
+    # Only test backends that are actually available and support gate-model circuits
     for backend_name in available_backends:
-        try:
-            print(f"🔄 Testing {backend_name}...")
-            result = algorithm_func(backend_name, *args, **kwargs)
-            results[backend_name] = result
-            print(f"✅ {backend_name} completed successfully")
+        # Skip quantum annealing backends (they use a different programming model)
+        if backend_name in {'ocean', 'dwave'}:
+            print(f"⏭️  Skipping {backend_name}: Quantum annealing backend (not compatible with gate circuits)")
+            continue
             
-        except Exception as e:
-            print(f"❌ {backend_name} failed: {e}")
-            results[backend_name] = None
+        if available_backends[backend_name].get('available', False):
+            try:
+                print(f"🔄 Testing {backend_name}...")
+                result = algorithm_func(backend_name, *args, **kwargs)
+                results[backend_name] = result
+                print(f"✅ {backend_name} completed successfully")
+                
+            except Exception as e:
+                print(f"❌ {backend_name} failed: {e}")
+                results[backend_name] = None
+        else:
+            reason = available_backends[backend_name].get('reason', 'Not available')
+            print(f"⏭️  Skipping {backend_name}: {reason}")
     
     return results
 
 def bell_state_test(backend_name):
     """Create Bell state on specified backend."""
     backend = sqx.get_backend(backend_name)
-    circuit = backend.create_circuit(2)
+    circuit = backend.create_circuit(n_qubits=2)
     
-    circuit.h(0)
-    circuit.cx(0, 1)
-    circuit.measure_all()
+    circuit = backend.add_gate(circuit, 'H', 0)
+    circuit = backend.add_gate(circuit, 'CNOT', [0, 1])
+    circuit = backend.add_measurement(circuit)
     
-    result = backend.run(circuit, shots=1000)
-    return result.get_counts()
+    result = backend.execute_circuit(circuit, shots=1000)
+    return result['counts']
 
 # Compare Bell state across backends
 print("🔍 Cross-Backend Comparison:")
 backend_results = compare_backends(bell_state_test)
 
+print("\n📊 Results Summary:")
 for backend_name, counts in backend_results.items():
     if counts:
         prob_entangled = (counts.get('00', 0) + counts.get('11', 0)) / 1000
         print(f"{backend_name}: Entanglement fidelity = {prob_entangled:.3f}")
+        print(f"  Results: {counts}")
+
+print("\n💡 Note: This example uses gate-model quantum computing.")
+print("   Ocean/D-Wave backends are quantum annealers for optimization problems")
+print("   and use a completely different programming model (QUBO/Ising).")
 ```
 
 ## 🎓 Algorithm: Quantum Phase Kickback
@@ -388,36 +408,36 @@ def phase_kickback_demo():
     print("🔄 Quantum Phase Kickback Demonstration")
     print("This shows how a controlled operation can affect the control qubit")
     
-    circuit = backend.create_circuit(2)
+    circuit = backend.create_circuit(n_qubits=2)
     
     # Put control qubit in superposition
-    circuit.h(0)
+    circuit = backend.add_gate(circuit, 'H', 0)
     
     # Put target qubit in |1⟩ state (important for kickback!)
-    circuit.x(1)
+    circuit = backend.add_gate(circuit, 'X', 1)
     
     # Apply controlled-Z gate
-    circuit.cz(0, 1)
+    circuit = backend.add_gate(circuit, 'CZ', [0, 1])
     
     # Measure in X-basis to see phase difference
-    circuit.h(0)  # H†|±⟩ = |0⟩/|1⟩
-    circuit.measure_all()
+    circuit = backend.add_gate(circuit, 'H', 0)  # H†|±⟩ = |0⟩/|1⟩
+    circuit = backend.add_measurement(circuit)
     
-    result = backend.run(circuit, shots=1000)
-    counts = result.get_counts()
+    result = backend.execute_circuit(circuit, shots=1000)
+    counts = result['counts']
     
     print(f"Results: {counts}")
     
     # Compare with reference (no kickback)
-    circuit_ref = backend.create_circuit(2)
-    circuit_ref.h(0)
-    circuit_ref.x(1)
+    circuit_ref = backend.create_circuit(n_qubits=2)
+    circuit_ref = backend.add_gate(circuit_ref, 'H', 0)
+    circuit_ref = backend.add_gate(circuit_ref, 'X', 1)
     # Skip the CZ gate
-    circuit_ref.h(0)
-    circuit_ref.measure_all()
+    circuit_ref = backend.add_gate(circuit_ref, 'H', 0)
+    circuit_ref = backend.add_measurement(circuit_ref)
     
-    result_ref = backend.run(circuit_ref, shots=1000)
-    counts_ref = result_ref.get_counts()
+    result_ref = backend.execute_circuit(circuit_ref, shots=1000)
+    counts_ref = result_ref['counts']
     
     print(f"Reference (no CZ): {counts_ref}")
     print("The difference shows the phase kickback effect!")
