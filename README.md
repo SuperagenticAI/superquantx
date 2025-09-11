@@ -4,7 +4,7 @@
 [![Python Version](https://img.shields.io/pypi/pyversions/superquantx)](https://pypi.org/project/superquantx/)
 [![License](https://img.shields.io/github/license/SuperagenticAI/superquantx)](https://github.com/SuperagenticAI/superquantx/blob/main/LICENSE)
 [![Tests](https://github.com/SuperagenticAI/superquantx/workflows/Tests/badge.svg)](https://github.com/SuperagenticAI/superquantx/actions)
-[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](#-documentation)
+[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://superagenticai.github.io/superquantx)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
