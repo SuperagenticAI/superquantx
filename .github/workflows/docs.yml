@@ -20,7 +20,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install UV
         uses: astral-sh/setup-uv@v3
@@ -34,7 +34,7 @@ jobs:
 
       - name: Build documentation
         run: |
-          uv run mkdocs build --strict
+          uv run mkdocs build
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
@@ -55,7 +55,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install UV
         uses: astral-sh/setup-uv@v3

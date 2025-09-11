@@ -302,7 +302,6 @@ google_quantum_cache/
 !.github/**/*.yml
 !.github/**/*.yaml
 data/
-datasets/
 raw_data/
 processed_data/
 *.sqlite
