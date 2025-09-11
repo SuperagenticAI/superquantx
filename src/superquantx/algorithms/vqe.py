@@ -5,7 +5,8 @@ and eigenvalues of quantum systems using parameterized quantum circuits.
 """
 
 import logging
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 from scipy.optimize import minimize
@@ -17,27 +18,27 @@ logger = logging.getLogger(__name__)
 
 class VQE(OptimizationQuantumAlgorithm):
     """Variational Quantum Eigensolver for finding ground states.
-    
+
     VQE is a hybrid quantum-classical algorithm that uses a parameterized
     quantum circuit (ansatz) to find the ground state energy of a given
     Hamiltonian by minimizing the expectation value.
-    
+
     The algorithm works by:
     1. Preparing a parameterized quantum state |ψ(θ)⟩
     2. Measuring the expectation value ⟨ψ(θ)|H|ψ(θ)⟩
     3. Classically optimizing parameters θ to minimize energy
     4. Iterating until convergence
-    
+
     Args:
         backend: Quantum backend for circuit execution
         hamiltonian: Target Hamiltonian (matrix or operator)
         ansatz: Parameterized circuit ansatz ('UCCSD', 'RealAmplitudes', etc.)
         optimizer: Classical optimizer ('COBYLA', 'L-BFGS-B', etc.)
         shots: Number of measurement shots
-        maxiter: Maximum optimization iterations  
+        maxiter: Maximum optimization iterations
         initial_params: Initial parameter values
         **kwargs: Additional parameters
-        
+
     Example:
         >>> # Define H2 molecule Hamiltonian
         >>> H2_hamiltonian = create_h2_hamiltonian(bond_distance=0.74)
@@ -49,13 +50,13 @@ class VQE(OptimizationQuantumAlgorithm):
 
     def __init__(
         self,
-        hamiltonian: Union[np.ndarray, Any],
-        ansatz: Union[str, Callable] = 'RealAmplitudes',
-        backend: Union[str, Any] = 'simulator',
+        hamiltonian: np.ndarray | Any,
+        ansatz: str | Callable = 'RealAmplitudes',
+        backend: str | Any = 'simulator',
         optimizer: str = 'COBYLA',
         shots: int = 1024,
         maxiter: int = 1000,
-        initial_params: Optional[np.ndarray] = None,
+        initial_params: np.ndarray | None = None,
         include_custom_gates: bool = False,
         client = None,
         **kwargs
@@ -101,14 +102,14 @@ class VQE(OptimizationQuantumAlgorithm):
             self.hamiltonian_terms = self.hamiltonian
             self.n_qubits = self._infer_qubits_from_hamiltonian()
 
-    def _decompose_hamiltonian(self) -> List[Tuple[float, str]]:
+    def _decompose_hamiltonian(self) -> list[tuple[float, str]]:
         """Decompose Hamiltonian into Pauli string representation."""
         if hasattr(self.backend, 'decompose_hamiltonian'):
             return self.backend.decompose_hamiltonian(self.hamiltonian)
         else:
             return self._fallback_decomposition()
 
-    def _fallback_decomposition(self) -> List[Tuple[float, str]]:
+    def _fallback_decomposition(self) -> list[tuple[float, str]]:
         """Fallback Hamiltonian decomposition."""
         logger.warning("Using fallback Hamiltonian decomposition")
         # Simple placeholder - would need proper Pauli decomposition
@@ -122,10 +123,10 @@ class VQE(OptimizationQuantumAlgorithm):
 
     def _create_ansatz_circuit(self, params: np.ndarray) -> Any:
         """Create ansatz circuit with given parameters.
-        
+
         Args:
             params: Circuit parameters
-            
+
         Returns:
             Parameterized quantum circuit
 
@@ -151,10 +152,10 @@ class VQE(OptimizationQuantumAlgorithm):
 
     def _compute_expectation_value(self, params: np.ndarray) -> float:
         """Compute expectation value ⟨ψ(θ)|H|ψ(θ)⟩.
-        
+
         Args:
             params: Circuit parameters
-            
+
         Returns:
             Hamiltonian expectation value
 
@@ -190,10 +191,10 @@ class VQE(OptimizationQuantumAlgorithm):
 
     def _compute_gradient(self, params: np.ndarray) -> np.ndarray:
         """Compute parameter gradients using parameter-shift rule.
-        
+
         Args:
             params: Current parameters
-            
+
         Returns:
             Gradient vector
 
@@ -218,14 +219,14 @@ class VQE(OptimizationQuantumAlgorithm):
         self.gradient_history.append(np.linalg.norm(gradients))
         return gradients
 
-    def fit(self, X: Optional[np.ndarray] = None, y: Optional[np.ndarray] = None, **kwargs) -> 'VQE':
+    def fit(self, X: np.ndarray | None = None, y: np.ndarray | None = None, **kwargs) -> 'VQE':
         """Fit VQE (setup for optimization).
-        
+
         Args:
             X: Not used in VQE
             y: Not used in VQE
             **kwargs: Additional parameters
-            
+
         Returns:
             Self for method chaining
 
@@ -265,13 +266,13 @@ class VQE(OptimizationQuantumAlgorithm):
         """Generate random initial parameters."""
         return np.random.uniform(-np.pi, np.pi, self.n_params)
 
-    def predict(self, X: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
+    def predict(self, X: np.ndarray | None = None, **kwargs) -> np.ndarray:
         """Get ground state wavefunction coefficients.
-        
+
         Args:
             X: Not used
             **kwargs: Additional parameters
-            
+
         Returns:
             Ground state wavefunction
 
@@ -292,14 +293,14 @@ class VQE(OptimizationQuantumAlgorithm):
 
         return np.array(statevector)
 
-    def _run_optimization(self, objective_function=None, initial_params: Optional[np.ndarray] = None, **kwargs):
+    def _run_optimization(self, objective_function=None, initial_params: np.ndarray | None = None, **kwargs):
         """Run VQE optimization.
-        
+
         Args:
             objective_function: Not used (VQE has its own objective)
             initial_params: Initial parameter guess
             **kwargs: Additional optimization parameters
-            
+
         Returns:
             Optimization result
 
@@ -356,15 +357,15 @@ class VQE(OptimizationQuantumAlgorithm):
             logger.error(f"VQE optimization failed: {e}")
             raise
 
-    def get_energy_landscape(self, param_indices: List[int], param_ranges: List[Tuple[float, float]],
-                           resolution: int = 20) -> Dict[str, Any]:
+    def get_energy_landscape(self, param_indices: list[int], param_ranges: list[tuple[float, float]],
+                           resolution: int = 20) -> dict[str, Any]:
         """Compute energy landscape for visualization.
-        
+
         Args:
             param_indices: Indices of parameters to vary
             param_ranges: Ranges for each parameter
             resolution: Number of points per dimension
-            
+
         Returns:
             Dictionary with landscape data
 
@@ -396,9 +397,9 @@ class VQE(OptimizationQuantumAlgorithm):
             'param_indices': param_indices
         }
 
-    def analyze_convergence(self) -> Dict[str, Any]:
+    def analyze_convergence(self) -> dict[str, Any]:
         """Analyze VQE convergence properties.
-        
+
         Returns:
             Convergence analysis results
 
@@ -447,12 +448,12 @@ class VQE(OptimizationQuantumAlgorithm):
 
         return analysis
 
-    def compare_with_exact(self, exact_ground_energy: float) -> Dict[str, Any]:
+    def compare_with_exact(self, exact_ground_energy: float) -> dict[str, Any]:
         """Compare VQE result with exact ground state energy.
-        
+
         Args:
             exact_ground_energy: Known exact ground state energy
-            
+
         Returns:
             Comparison analysis
 
@@ -472,7 +473,7 @@ class VQE(OptimizationQuantumAlgorithm):
             'energy_above_ground': max(0, self.optimal_value_ - exact_ground_energy)
         }
 
-    def get_params(self, deep: bool = True) -> Dict[str, Any]:
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get VQE parameters."""
         params = super().get_params(deep)
         params.update({
@@ -502,7 +503,7 @@ def create_vqe_for_molecule(
     client = None
 ) -> VQE:
     """Create a VQE instance pre-configured for molecular simulation.
-    
+
     Args:
         molecule_name: Name of the molecule (e.g., 'H2', 'LiH')
         bond_distance: Bond distance for the molecule (uses default if None)
@@ -510,7 +511,7 @@ def create_vqe_for_molecule(
         ansatz: Ansatz circuit type
         optimizer: Classical optimizer
         client: Optional client for quantum execution
-        
+
     Returns:
         Configured VQE instance
 

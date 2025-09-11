@@ -5,7 +5,8 @@ and variational quantum algorithms.
 """
 
 import logging
-from typing import Any, Callable, Dict, List, Optional, Union
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 
@@ -26,11 +27,11 @@ except ImportError:
 
 class PennyLaneBackend(BaseBackend):
     """PennyLane backend for quantum computing operations.
-    
+
     This backend provides access to PennyLane's quantum devices and
     automatic differentiation capabilities for variational quantum
     algorithms.
-    
+
     Args:
         device: PennyLane device name ('default.qubit', 'qiskit.aer', etc.)
         wires: Number of qubits/wires
@@ -86,19 +87,19 @@ class PennyLaneBackend(BaseBackend):
 
         return circuit_template
 
-    def add_gate(self, circuit: Callable, gate: str, qubits: Union[int, List[int]],
-                 params: Optional[List[float]] = None) -> Callable:
+    def add_gate(self, circuit: Callable, gate: str, qubits: int | list[int],
+                 params: list[float] | None = None) -> Callable:
         """Add a quantum gate to the circuit (conceptual - PennyLane uses functions)."""
         # In PennyLane, gates are added within quantum functions
         # This method is more for compatibility with the base interface
         logger.debug(f"Gate {gate} would be added to qubits {qubits} with params {params}")
         return circuit
 
-    def add_measurement(self, circuit: Callable, qubits: Optional[List[int]] = None) -> Callable:
+    def add_measurement(self, circuit: Callable, qubits: list[int] | None = None) -> Callable:
         """Add measurement operations (conceptual in PennyLane)."""
         return circuit
 
-    def execute_circuit(self, circuit: Callable, shots: Optional[int] = None) -> Dict[str, Any]:
+    def execute_circuit(self, circuit: Callable, shots: int | None = None) -> dict[str, Any]:
         """Execute quantum circuit and return results."""
         try:
             # Create QNode
@@ -221,7 +222,7 @@ class PennyLaneBackend(BaseBackend):
         return angle_encoding_map
 
     def compute_kernel_matrix(self, X1: np.ndarray, X2: np.ndarray,
-                            feature_map: Callable, shots: Optional[int] = None) -> np.ndarray:
+                            feature_map: Callable, shots: int | None = None) -> np.ndarray:
         """Compute quantum kernel matrix using PennyLane."""
         n1, n2 = len(X1), len(X2)
         kernel_matrix = np.zeros((n1, n2))
@@ -376,7 +377,7 @@ class PennyLaneBackend(BaseBackend):
         return uccsd_circuit
 
     def compute_expectation(self, circuit: Callable, hamiltonian: Any,
-                          shots: Optional[int] = None) -> float:
+                          shots: int | None = None) -> float:
         """Compute expectation value of Hamiltonian."""
         try:
             # If hamiltonian is a PennyLane Hamiltonian
@@ -400,7 +401,7 @@ class PennyLaneBackend(BaseBackend):
             logger.error(f"Expectation computation failed: {e}")
             return 0.0
 
-    def _compute_matrix_expectation(self, circuit: Callable, H: np.ndarray, shots: Optional[int]) -> float:
+    def _compute_matrix_expectation(self, circuit: Callable, H: np.ndarray, shots: int | None) -> float:
         """Compute expectation value for matrix Hamiltonian."""
         # Get statevector
         statevector = self.get_statevector(circuit)
@@ -409,7 +410,7 @@ class PennyLaneBackend(BaseBackend):
         expectation = np.real(np.conj(statevector) @ H @ statevector)
         return float(expectation)
 
-    def get_version_info(self) -> Dict[str, Any]:
+    def get_version_info(self) -> dict[str, Any]:
         """Get PennyLane version information."""
         info = super().get_version_info()
         info.update({

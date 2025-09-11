@@ -588,12 +588,12 @@ def main():
     datasets = generate_quantum_datasets()
 
     # Demonstrate feature maps
-    feature_maps = demonstrate_feature_maps()
+    demonstrate_feature_maps()
 
     # Run examples
     classification_results = quantum_classification_example(datasets, client)
     regression_results = quantum_regression_example(datasets, client)
-    network_results = quantum_neural_network_example(datasets, client)
+    quantum_neural_network_example(datasets, client)
 
     # Visualize results
     visualize_results(classification_results, regression_results)

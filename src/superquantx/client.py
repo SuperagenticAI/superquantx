@@ -2,7 +2,7 @@
 """
 
 import asyncio
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
@@ -24,23 +24,23 @@ class QuantumJob(BaseModel):
     job_id: str
     status: str
     created_at: str
-    circuit_id: Optional[str] = None
-    backend: Optional[str] = None
-    shots: Optional[int] = None
-    results: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
+    circuit_id: str | None = None
+    backend: str | None = None
+    shots: int | None = None
+    results: dict[str, Any] | None = None
+    error: str | None = None
 
 
 class SuperQuantXClient:
     """Main client for interacting with the SuperQuantX platform
-    
+
     This client provides access to quantum computing resources, quantum algorithms,
     and quantum machine learning capabilities through the SuperQuantX API.
     """
 
-    def __init__(self, config: Union[SuperQuantXConfig, str, Dict[str, Any]]):
+    def __init__(self, config: SuperQuantXConfig | str | dict[str, Any]):
         """Initialize SuperQuantX client
-        
+
         Args:
             config: Configuration object, API key string, or config dictionary
 
@@ -83,20 +83,20 @@ class SuperQuantXClient:
         self,
         method: str,
         endpoint: str,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Make an authenticated request to the SuperQuantX API
-        
+
         Args:
             method: HTTP method (GET, POST, etc.)
             endpoint: API endpoint
             data: Request body data
             params: Query parameters
-            
+
         Returns:
             Response data as dictionary
-            
+
         Raises:
             httpx.HTTPError: If request fails
 
@@ -117,27 +117,27 @@ class SuperQuantXClient:
                     raise
                 await asyncio.sleep(2 ** attempt)  # Exponential backoff
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check API health and connectivity
-        
+
         Returns:
             Health status information
 
         """
         return await self._request("GET", "/health")
 
-    async def get_account_info(self) -> Dict[str, Any]:
+    async def get_account_info(self) -> dict[str, Any]:
         """Get account information and usage statistics
-        
+
         Returns:
             Account information including quotas and usage
 
         """
         return await self._request("GET", "/account")
 
-    async def list_backends(self) -> List[Dict[str, Any]]:
+    async def list_backends(self) -> list[dict[str, Any]]:
         """List available quantum backends
-        
+
         Returns:
             List of available backends with their specifications
 
@@ -145,12 +145,12 @@ class SuperQuantXClient:
         response = await self._request("GET", "/backends")
         return response.get("backends", [])
 
-    async def get_backend_info(self, backend_name: str) -> Dict[str, Any]:
+    async def get_backend_info(self, backend_name: str) -> dict[str, Any]:
         """Get detailed information about a specific backend
-        
+
         Args:
             backend_name: Name of the backend
-            
+
         Returns:
             Backend information including capabilities and status
 
@@ -159,21 +159,21 @@ class SuperQuantXClient:
 
     async def submit_job(
         self,
-        circuit_data: Dict[str, Any],
+        circuit_data: dict[str, Any],
         backend: str = "simulator",
         shots: int = 1024,
         optimization_level: int = 1,
         **kwargs
     ) -> QuantumJob:
         """Submit a quantum circuit for execution
-        
+
         Args:
             circuit_data: Quantum circuit representation
             backend: Target backend for execution
             shots: Number of measurement shots
             optimization_level: Circuit optimization level (0-3)
             **kwargs: Additional execution parameters
-            
+
         Returns:
             QuantumJob object representing the submitted job
 
@@ -191,10 +191,10 @@ class SuperQuantXClient:
 
     async def get_job(self, job_id: str) -> QuantumJob:
         """Get job information and results
-        
+
         Args:
             job_id: Job identifier
-            
+
         Returns:
             QuantumJob object with current status and results
 
@@ -202,12 +202,12 @@ class SuperQuantXClient:
         response = await self._request("GET", f"/jobs/{job_id}")
         return QuantumJob(**response)
 
-    async def cancel_job(self, job_id: str) -> Dict[str, Any]:
+    async def cancel_job(self, job_id: str) -> dict[str, Any]:
         """Cancel a running job
-        
+
         Args:
             job_id: Job identifier
-            
+
         Returns:
             Cancellation confirmation
 
@@ -217,16 +217,16 @@ class SuperQuantXClient:
     async def list_jobs(
         self,
         limit: int = 100,
-        status: Optional[str] = None,
-        backend: Optional[str] = None
-    ) -> List[QuantumJob]:
+        status: str | None = None,
+        backend: str | None = None
+    ) -> list[QuantumJob]:
         """List user's jobs with optional filtering
-        
+
         Args:
             limit: Maximum number of jobs to return
             status: Filter by job status
             backend: Filter by backend
-            
+
         Returns:
             List of QuantumJob objects
 
@@ -247,15 +247,15 @@ class SuperQuantXClient:
         poll_interval: int = 5
     ) -> QuantumJob:
         """Wait for job completion with polling
-        
+
         Args:
             job_id: Job identifier
             timeout: Maximum wait time in seconds
             poll_interval: Polling interval in seconds
-            
+
         Returns:
             Completed QuantumJob object
-            
+
         Raises:
             TimeoutError: If job doesn't complete within timeout
 
@@ -275,13 +275,13 @@ class SuperQuantXClient:
             await asyncio.sleep(poll_interval)
 
     # Synchronous wrappers for common operations
-    def health_check_sync(self) -> Dict[str, Any]:
+    def health_check_sync(self) -> dict[str, Any]:
         """Synchronous version of health_check"""
         return asyncio.run(self.health_check())
 
     def submit_job_sync(
         self,
-        circuit_data: Dict[str, Any],
+        circuit_data: dict[str, Any],
         backend: str = "simulator",
         shots: int = 1024,
         **kwargs

@@ -5,7 +5,8 @@ problems using quantum circuits with parameterized gates.
 """
 
 import logging
-from typing import Any, Callable, Dict, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 from scipy.optimize import minimize
@@ -17,28 +18,28 @@ logger = logging.getLogger(__name__)
 
 class QAOA(OptimizationQuantumAlgorithm):
     """Quantum Approximate Optimization Algorithm for combinatorial optimization.
-    
+
     QAOA is a hybrid quantum-classical algorithm that alternates between
     quantum evolution and classical parameter optimization to find approximate
     solutions to combinatorial optimization problems.
-    
+
     The algorithm works by:
     1. Preparing an initial superposition state
     2. Applying alternating problem and mixer Hamiltonians
     3. Measuring the quantum state
     4. Classically optimizing the parameters
-    
+
     Args:
         backend: Quantum backend for circuit execution
         p: Number of QAOA layers (depth)
         problem_hamiltonian: Problem Hamiltonian function
-        mixer_hamiltonian: Mixer Hamiltonian function  
+        mixer_hamiltonian: Mixer Hamiltonian function
         initial_state: Initial quantum state preparation
         optimizer: Classical optimizer ('COBYLA', 'L-BFGS-B', etc.)
         shots: Number of measurement shots
         maxiter: Maximum optimization iterations
         **kwargs: Additional parameters
-        
+
     Example:
         >>> # Define Max-Cut problem
         >>> def problem_ham(gamma, graph):
@@ -50,10 +51,10 @@ class QAOA(OptimizationQuantumAlgorithm):
 
     def __init__(
         self,
-        backend: Union[str, Any],
+        backend: str | Any,
         p: int = 1,
-        problem_hamiltonian: Optional[Callable] = None,
-        mixer_hamiltonian: Optional[Callable] = None,
+        problem_hamiltonian: Callable | None = None,
+        mixer_hamiltonian: Callable | None = None,
         initial_state: str = 'uniform_superposition',
         optimizer: str = 'COBYLA',
         shots: int = 1024,
@@ -109,10 +110,10 @@ class QAOA(OptimizationQuantumAlgorithm):
 
     def _create_qaoa_circuit(self, params: np.ndarray) -> Any:
         """Create QAOA circuit with given parameters.
-        
+
         Args:
             params: Array of [gamma_1, beta_1, ..., gamma_p, beta_p]
-            
+
         Returns:
             Quantum circuit
 
@@ -147,10 +148,10 @@ class QAOA(OptimizationQuantumAlgorithm):
 
     def _objective_function(self, params: np.ndarray) -> float:
         """QAOA objective function to minimize.
-        
+
         Args:
             params: Circuit parameters
-            
+
         Returns:
             Negative expectation value (for minimization)
 
@@ -188,14 +189,14 @@ class QAOA(OptimizationQuantumAlgorithm):
         logger.warning("Using fallback circuit execution")
         return np.random.random()  # Placeholder
 
-    def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> 'QAOA':
+    def fit(self, X: np.ndarray, y: np.ndarray | None = None, **kwargs) -> 'QAOA':
         """Fit QAOA to problem instance.
-        
+
         Args:
             X: Problem instance data (e.g., adjacency matrix for Max-Cut)
             y: Not used in QAOA
             **kwargs: Additional parameters
-            
+
         Returns:
             Self for method chaining
 
@@ -222,11 +223,11 @@ class QAOA(OptimizationQuantumAlgorithm):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """Get optimal solution from QAOA results.
-        
+
         Args:
             X: Problem instance (not used if same as training)
             **kwargs: Additional parameters
-            
+
         Returns:
             Optimal bit string solution
 
@@ -249,14 +250,14 @@ class QAOA(OptimizationQuantumAlgorithm):
 
         return best_solution
 
-    def _run_optimization(self, objective_function, initial_params: Optional[np.ndarray] = None, **kwargs):
+    def _run_optimization(self, objective_function, initial_params: np.ndarray | None = None, **kwargs):
         """Run QAOA optimization.
-        
+
         Args:
             objective_function: Function to optimize (ignored, uses internal)
             initial_params: Initial parameter guess
             **kwargs: Additional optimization parameters
-            
+
         Returns:
             Optimization result
 
@@ -313,13 +314,13 @@ class QAOA(OptimizationQuantumAlgorithm):
         betas = np.random.uniform(*self.beta_bounds, self.p)
         return np.concatenate([gammas, betas])
 
-    def get_optimization_landscape(self, param_range: Tuple[float, float], resolution: int = 50) -> Dict[str, Any]:
+    def get_optimization_landscape(self, param_range: tuple[float, float], resolution: int = 50) -> dict[str, Any]:
         """Compute optimization landscape for visualization.
-        
+
         Args:
             param_range: Range of parameters to explore
             resolution: Number of points per dimension
-            
+
         Returns:
             Dictionary with landscape data
 
@@ -345,12 +346,12 @@ class QAOA(OptimizationQuantumAlgorithm):
             'optimal_params': self.optimal_params_ if hasattr(self, 'optimal_params_') else None
         }
 
-    def analyze_solution_quality(self, true_optimum: Optional[float] = None) -> Dict[str, Any]:
+    def analyze_solution_quality(self, true_optimum: float | None = None) -> dict[str, Any]:
         """Analyze quality of QAOA solution.
-        
+
         Args:
             true_optimum: Known optimal value for comparison
-            
+
         Returns:
             Analysis results
 
@@ -384,7 +385,7 @@ class QAOA(OptimizationQuantumAlgorithm):
 
         return analysis
 
-    def get_params(self, deep: bool = True) -> Dict[str, Any]:
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get QAOA parameters."""
         params = super().get_params(deep)
         params.update({

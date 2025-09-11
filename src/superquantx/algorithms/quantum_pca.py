@@ -5,7 +5,7 @@ including quantum matrix diagonalization and dimensionality reduction.
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 from sklearn.decomposition import PCA
@@ -18,16 +18,16 @@ logger = logging.getLogger(__name__)
 
 class QuantumPCA(UnsupervisedQuantumAlgorithm):
     """Quantum Principal Component Analysis for dimensionality reduction.
-    
+
     This implementation uses quantum algorithms to perform PCA, potentially
     offering exponential speedup for certain types of data matrices.
-    
+
     The algorithm can use different quantum approaches:
     - Quantum Matrix Inversion: For density matrix diagonalization
     - Variational Quantum Eigensolver: For finding principal eigenvectors
     - Quantum Phase Estimation: For eigenvalue extraction
     - Quantum Singular Value Decomposition: Direct SVD approach
-    
+
     Args:
         backend: Quantum backend for circuit execution
         n_components: Number of principal components to extract
@@ -38,7 +38,7 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
         shots: Number of measurement shots
         classical_fallback: Use classical PCA if quantum fails
         **kwargs: Additional parameters
-        
+
     Example:
         >>> qpca = QuantumPCA(backend='pennylane', n_components=3, method='vqe')
         >>> qpca.fit(X_train)
@@ -49,7 +49,7 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
 
     def __init__(
         self,
-        backend: Union[str, Any],
+        backend: str | Any,
         n_components: int = 2,
         method: str = 'vqe',
         encoding: str = 'amplitude',
@@ -148,7 +148,7 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
         logger.warning("Using fallback density matrix encoding")
         return None
 
-    def _quantum_eigensolver_vqe(self, density_matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _quantum_eigensolver_vqe(self, density_matrix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Use VQE to find principal eigenvectors and eigenvalues."""
         logger.info("Running VQE for quantum PCA")
 
@@ -174,7 +174,7 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
             logger.error(f"VQE eigensolver failed: {e}")
             return self._fallback_vqe_eigensolver(density_matrix)
 
-    def _fallback_vqe_eigensolver(self, density_matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _fallback_vqe_eigensolver(self, density_matrix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Fallback VQE implementation using classical eigensolver."""
         logger.warning("Using classical fallback for VQE eigensolver")
         eigenvals, eigenvecs = np.linalg.eigh(density_matrix)
@@ -182,7 +182,7 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
         idx = np.argsort(eigenvals)[::-1]
         return eigenvals[idx][:self.n_components], eigenvecs[:, idx][:, :self.n_components]
 
-    def _quantum_phase_estimation(self, density_matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _quantum_phase_estimation(self, density_matrix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Use quantum phase estimation for eigenvalue extraction."""
         logger.info("Running quantum phase estimation for PCA")
 
@@ -206,12 +206,12 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
             logger.error(f"Quantum phase estimation failed: {e}")
             return self._fallback_phase_estimation(density_matrix)
 
-    def _fallback_phase_estimation(self, density_matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _fallback_phase_estimation(self, density_matrix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Fallback phase estimation using classical methods."""
         logger.warning("Using classical fallback for phase estimation")
         return self._fallback_vqe_eigensolver(density_matrix)
 
-    def _quantum_svd(self, X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _quantum_svd(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Quantum singular value decomposition approach."""
         logger.info("Running quantum SVD for PCA")
 
@@ -237,14 +237,14 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
             logger.error(f"Quantum SVD failed: {e}")
             return self._fallback_svd(X)
 
-    def _fallback_svd(self, X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _fallback_svd(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Fallback SVD using classical methods."""
         logger.warning("Using classical fallback for SVD")
         U, s, Vt = np.linalg.svd(X, full_matrices=False)
         eigenvalues = (s ** 2) / (X.shape[0] - 1)
         return eigenvalues[:self.n_components], Vt[:self.n_components].T
 
-    def _quantum_matrix_inversion(self, density_matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _quantum_matrix_inversion(self, density_matrix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Quantum matrix inversion approach."""
         logger.info("Running quantum matrix inversion for PCA")
 
@@ -268,19 +268,19 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
             logger.error(f"Quantum matrix inversion failed: {e}")
             return self._fallback_matrix_inversion(density_matrix)
 
-    def _fallback_matrix_inversion(self, density_matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _fallback_matrix_inversion(self, density_matrix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Fallback matrix inversion using classical methods."""
         logger.warning("Using classical fallback for matrix inversion")
         return self._fallback_vqe_eigensolver(density_matrix)
 
-    def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> 'QuantumPCA':
+    def fit(self, X: np.ndarray, y: np.ndarray | None = None, **kwargs) -> 'QuantumPCA':
         """Fit quantum PCA to the data.
-        
+
         Args:
             X: Training data
             y: Ignored (unsupervised learning)
             **kwargs: Additional fitting parameters
-            
+
         Returns:
             Self for method chaining
 
@@ -335,10 +335,10 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
 
     def transform(self, X: np.ndarray) -> np.ndarray:
         """Transform data to lower dimensional space.
-        
+
         Args:
             X: Data to transform
-            
+
         Returns:
             Transformed data
 
@@ -360,10 +360,10 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
 
     def inverse_transform(self, X_transformed: np.ndarray) -> np.ndarray:
         """Reconstruct data from lower dimensional representation.
-        
+
         Args:
             X_transformed: Transformed data
-            
+
         Returns:
             Reconstructed data
 
@@ -383,7 +383,7 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
 
         return X_reconstructed
 
-    def fit_transform(self, X: np.ndarray, y: Optional[np.ndarray] = None) -> np.ndarray:
+    def fit_transform(self, X: np.ndarray, y: np.ndarray | None = None) -> np.ndarray:
         """Fit PCA and transform data in one step."""
         return self.fit(X, y).transform(X)
 
@@ -391,7 +391,7 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
         """Transform data (alias for transform method)."""
         return self.transform(X)
 
-    def get_quantum_advantage_metrics(self) -> Dict[str, Any]:
+    def get_quantum_advantage_metrics(self) -> dict[str, Any]:
         """Analyze potential quantum advantage."""
         if not self.is_fitted:
             raise ValueError("Must fit model first")
@@ -418,7 +418,7 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
 
         return metrics
 
-    def compare_with_classical(self, X: np.ndarray) -> Dict[str, Any]:
+    def compare_with_classical(self, X: np.ndarray) -> dict[str, Any]:
         """Compare quantum PCA results with classical PCA."""
         if not self.is_fitted or not hasattr(self.classical_pca, 'components_'):
             raise ValueError("Both quantum and classical PCA must be fitted")
@@ -459,7 +459,7 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
             'mean_component_similarity': np.mean(component_similarities) if component_similarities else 0,
         }
 
-    def analyze_convergence(self) -> Dict[str, Any]:
+    def analyze_convergence(self) -> dict[str, Any]:
         """Analyze convergence properties of the quantum algorithm."""
         if not self.convergence_history:
             return {'message': 'No convergence history available'}
@@ -475,7 +475,7 @@ class QuantumPCA(UnsupervisedQuantumAlgorithm):
             'convergence_rate': np.mean(np.diff(convergence_data)) if len(convergence_data) > 1 else 0,
         }
 
-    def get_params(self, deep: bool = True) -> Dict[str, Any]:
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get quantum PCA parameters."""
         params = super().get_params(deep)
         params.update({

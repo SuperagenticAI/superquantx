@@ -5,7 +5,7 @@ operations and access to Google Quantum AI hardware.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -27,10 +27,10 @@ except ImportError:
 
 class CirqBackend(BaseBackend):
     """Cirq backend for quantum computing operations.
-    
+
     This backend provides access to Cirq simulators and Google Quantum AI
     hardware for quantum algorithm execution.
-    
+
     Args:
         device: Cirq device name ('simulator', 'sycamore', etc.)
         processor_id: Google Quantum AI processor ID
@@ -39,7 +39,7 @@ class CirqBackend(BaseBackend):
 
     """
 
-    def __init__(self, device: str = 'simulator', processor_id: Optional[str] = None,
+    def __init__(self, device: str = 'simulator', processor_id: str | None = None,
                  shots: int = 1024, **kwargs):
         if not CIRQ_AVAILABLE:
             raise ImportError("Cirq is required for CirqBackend. Install with: pip install cirq")
@@ -90,8 +90,8 @@ class CirqBackend(BaseBackend):
         circuit = cirq.Circuit()
         return circuit, qubits  # Return both circuit and qubits for convenience
 
-    def add_gate(self, circuit_info: Tuple[Any, List], gate: str,
-                 qubits: Union[int, List[int]], params: Optional[List[float]] = None) -> Tuple[Any, List]:
+    def add_gate(self, circuit_info: tuple[Any, list], gate: str,
+                 qubits: int | list[int], params: list[float] | None = None) -> tuple[Any, list]:
         """Add a quantum gate to the circuit."""
         circuit, qubit_list = circuit_info
 
@@ -131,8 +131,8 @@ class CirqBackend(BaseBackend):
 
         return circuit, qubit_list
 
-    def add_measurement(self, circuit_info: Tuple[Any, List],
-                       qubits: Optional[List[int]] = None) -> Tuple[Any, List]:
+    def add_measurement(self, circuit_info: tuple[Any, list],
+                       qubits: list[int] | None = None) -> tuple[Any, list]:
         """Add measurement operations to the circuit."""
         circuit, qubit_list = circuit_info
 
@@ -144,7 +144,7 @@ class CirqBackend(BaseBackend):
 
         return circuit, qubit_list
 
-    def execute_circuit(self, circuit_info: Union[Any, Tuple], shots: Optional[int] = None) -> Dict[str, Any]:
+    def execute_circuit(self, circuit_info: Any | tuple, shots: int | None = None) -> dict[str, Any]:
         """Execute quantum circuit and return results."""
         if isinstance(circuit_info, tuple):
             circuit, qubit_list = circuit_info
@@ -202,7 +202,7 @@ class CirqBackend(BaseBackend):
             logger.error(f"Circuit execution failed: {e}")
             raise
 
-    def get_statevector(self, circuit_info: Union[Any, Tuple]) -> np.ndarray:
+    def get_statevector(self, circuit_info: Any | tuple) -> np.ndarray:
         """Get the statevector from a quantum circuit."""
         if isinstance(circuit_info, tuple):
             circuit, qubit_list = circuit_info
@@ -227,7 +227,7 @@ class CirqBackend(BaseBackend):
             n_qubits = len(qubit_list)
             return np.array([1.0] + [0.0] * (2**n_qubits - 1))
 
-    def _get_n_qubits(self, circuit_info: Union[Any, Tuple]) -> int:
+    def _get_n_qubits(self, circuit_info: Any | tuple) -> int:
         """Get number of qubits in circuit."""
         if isinstance(circuit_info, tuple):
             circuit, qubit_list = circuit_info
@@ -239,10 +239,10 @@ class CirqBackend(BaseBackend):
     # Enhanced Cirq-specific implementations
     # ========================================================================
 
-    def create_feature_map(self, n_features: int, feature_map: str, reps: int = 1) -> Tuple[Any, List]:
+    def create_feature_map(self, n_features: int, feature_map: str, reps: int = 1) -> tuple[Any, list]:
         """Create quantum feature map for data encoding."""
-        qubits = [cirq.LineQubit(i) for i in range(n_features)]
-        circuit = cirq.Circuit()
+        [cirq.LineQubit(i) for i in range(n_features)]
+        cirq.Circuit()
 
         if feature_map == 'ZZFeatureMap':
             circuit_info = self._create_zz_feature_map(n_features, reps)
@@ -256,7 +256,7 @@ class CirqBackend(BaseBackend):
 
         return circuit_info
 
-    def _create_zz_feature_map(self, n_features: int, reps: int) -> Tuple[Any, List]:
+    def _create_zz_feature_map(self, n_features: int, reps: int) -> tuple[Any, list]:
         """Create ZZ feature map circuit."""
         qubits = [cirq.LineQubit(i) for i in range(n_features)]
         circuit = cirq.Circuit()
@@ -277,7 +277,7 @@ class CirqBackend(BaseBackend):
 
         return circuit, qubits
 
-    def _create_pauli_feature_map(self, n_features: int, reps: int) -> Tuple[Any, List]:
+    def _create_pauli_feature_map(self, n_features: int, reps: int) -> tuple[Any, list]:
         """Create Pauli feature map circuit."""
         qubits = [cirq.LineQubit(i) for i in range(n_features)]
         circuit = cirq.Circuit()
@@ -295,7 +295,7 @@ class CirqBackend(BaseBackend):
 
         return circuit, qubits
 
-    def _create_amplitude_map(self, n_features: int) -> Tuple[Any, List]:
+    def _create_amplitude_map(self, n_features: int) -> tuple[Any, list]:
         """Create amplitude encoding map."""
         n_qubits = int(np.ceil(np.log2(n_features)))
         qubits = [cirq.LineQubit(i) for i in range(n_qubits)]
@@ -307,7 +307,7 @@ class CirqBackend(BaseBackend):
 
         return circuit, qubits
 
-    def _create_angle_encoding_map(self, n_features: int) -> Tuple[Any, List]:
+    def _create_angle_encoding_map(self, n_features: int) -> tuple[Any, list]:
         """Create angle encoding map."""
         qubits = [cirq.LineQubit(i) for i in range(n_features)]
         circuit = cirq.Circuit()
@@ -318,7 +318,7 @@ class CirqBackend(BaseBackend):
         return circuit, qubits
 
     def create_ansatz(self, ansatz_type: str, n_qubits: int, params: np.ndarray,
-                     include_custom_gates: bool = False) -> Tuple[Any, List]:
+                     include_custom_gates: bool = False) -> tuple[Any, list]:
         """Create parameterized ansatz circuit."""
         if ansatz_type == 'RealAmplitudes':
             return self._create_real_amplitudes_ansatz(n_qubits, params)
@@ -332,7 +332,7 @@ class CirqBackend(BaseBackend):
             logger.warning(f"Unknown ansatz '{ansatz_type}', using RealAmplitudes")
             return self._create_real_amplitudes_ansatz(n_qubits, params)
 
-    def _create_real_amplitudes_ansatz(self, n_qubits: int, params: np.ndarray) -> Tuple[Any, List]:
+    def _create_real_amplitudes_ansatz(self, n_qubits: int, params: np.ndarray) -> tuple[Any, list]:
         """Create RealAmplitudes ansatz."""
         qubits = [cirq.LineQubit(i) for i in range(n_qubits)]
         circuit = cirq.Circuit()
@@ -359,7 +359,7 @@ class CirqBackend(BaseBackend):
 
         return circuit, qubits
 
-    def _create_efficient_su2_ansatz(self, n_qubits: int, params: np.ndarray) -> Tuple[Any, List]:
+    def _create_efficient_su2_ansatz(self, n_qubits: int, params: np.ndarray) -> tuple[Any, list]:
         """Create EfficientSU2 ansatz."""
         qubits = [cirq.LineQubit(i) for i in range(n_qubits)]
         circuit = cirq.Circuit()
@@ -382,7 +382,7 @@ class CirqBackend(BaseBackend):
 
         return circuit, qubits
 
-    def _create_two_local_ansatz(self, n_qubits: int, params: np.ndarray) -> Tuple[Any, List]:
+    def _create_two_local_ansatz(self, n_qubits: int, params: np.ndarray) -> tuple[Any, list]:
         """Create TwoLocal ansatz."""
         qubits = [cirq.LineQubit(i) for i in range(n_qubits)]
         circuit = cirq.Circuit()
@@ -406,7 +406,7 @@ class CirqBackend(BaseBackend):
 
         return circuit, qubits
 
-    def _create_uccsd_ansatz(self, n_qubits: int, params: np.ndarray) -> Tuple[Any, List]:
+    def _create_uccsd_ansatz(self, n_qubits: int, params: np.ndarray) -> tuple[Any, list]:
         """Create UCCSD ansatz (simplified)."""
         qubits = [cirq.LineQubit(i) for i in range(n_qubits)]
         circuit = cirq.Circuit()
@@ -434,8 +434,8 @@ class CirqBackend(BaseBackend):
 
         return circuit, qubits
 
-    def compute_expectation(self, circuit_info: Union[Any, Tuple], hamiltonian: Any,
-                          shots: Optional[int] = None) -> float:
+    def compute_expectation(self, circuit_info: Any | tuple, hamiltonian: Any,
+                          shots: int | None = None) -> float:
         """Compute expectation value of Hamiltonian."""
         try:
             if isinstance(hamiltonian, np.ndarray):
@@ -451,7 +451,7 @@ class CirqBackend(BaseBackend):
             logger.error(f"Expectation computation failed: {e}")
             return 0.0
 
-    def get_version_info(self) -> Dict[str, Any]:
+    def get_version_info(self) -> dict[str, Any]:
         """Get Cirq version information."""
         info = super().get_version_info()
 

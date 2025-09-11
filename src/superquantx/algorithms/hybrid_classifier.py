@@ -5,7 +5,7 @@ machine learning components for enhanced performance and flexibility.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 
 class HybridClassifier(SupervisedQuantumAlgorithm):
     """Hybrid Classical-Quantum Classifier.
-    
+
     This classifier combines classical and quantum machine learning algorithms
     to leverage the strengths of both approaches. It can operate in different modes:
     - Ensemble: Combines predictions from multiple quantum and classical models
     - Sequential: Uses quantum features as input to classical models
-    - Voting: Majority voting among quantum and classical predictions  
+    - Voting: Majority voting among quantum and classical predictions
     - Stacking: Uses meta-learner to combine quantum and classical predictions
-    
+
     Args:
         backend: Quantum backend for quantum components
         hybrid_mode: Mode of operation ('ensemble', 'sequential', 'voting', 'stacking')
@@ -42,7 +42,7 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
         meta_learner: Meta-learning algorithm for stacking mode
         shots: Number of measurement shots
         **kwargs: Additional parameters
-        
+
     Example:
         >>> hybrid = HybridClassifier(
         ...     backend='pennylane',
@@ -57,10 +57,10 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
 
     def __init__(
         self,
-        backend: Union[str, Any],
+        backend: str | Any,
         hybrid_mode: str = 'ensemble',
-        quantum_algorithms: Optional[List[str]] = None,
-        classical_algorithms: Optional[List[str]] = None,
+        quantum_algorithms: list[str] | None = None,
+        classical_algorithms: list[str] | None = None,
         quantum_weight: float = 0.5,
         feature_selection: bool = False,
         meta_learner: str = 'logistic_regression',
@@ -153,7 +153,7 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
             from sklearn.feature_selection import SelectKBest, f_classif
             self.feature_selector = SelectKBest(score_func=f_classif, k='all')
 
-    def _apply_feature_selection(self, X: np.ndarray, y: Optional[np.ndarray] = None) -> np.ndarray:
+    def _apply_feature_selection(self, X: np.ndarray, y: np.ndarray | None = None) -> np.ndarray:
         """Apply quantum-inspired feature selection."""
         if not self.feature_selection or self.feature_selector is None:
             return X
@@ -172,7 +172,7 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
         logger.info(f"Feature selection: {X.shape[1]} -> {X_selected.shape[1]} features")
         return X_selected
 
-    def _train_quantum_models(self, X: np.ndarray, y: np.ndarray) -> Dict[str, float]:
+    def _train_quantum_models(self, X: np.ndarray, y: np.ndarray) -> dict[str, float]:
         """Train quantum models and return their scores."""
         scores = {}
 
@@ -194,7 +194,7 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
 
         return scores
 
-    def _train_classical_models(self, X: np.ndarray, y: np.ndarray) -> Dict[str, float]:
+    def _train_classical_models(self, X: np.ndarray, y: np.ndarray) -> dict[str, float]:
         """Train classical models and return their scores."""
         scores = {}
 
@@ -216,7 +216,7 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
 
         return scores
 
-    def _get_base_predictions(self, X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _get_base_predictions(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Get predictions from all base models."""
         quantum_preds = []
         classical_preds = []
@@ -367,12 +367,12 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
 
     def fit(self, X: np.ndarray, y: np.ndarray, **kwargs) -> 'HybridClassifier':
         """Train the hybrid classifier.
-        
+
         Args:
             X: Training data features
             y: Training data labels
             **kwargs: Additional training parameters
-            
+
         Returns:
             Self for method chaining
 
@@ -460,11 +460,11 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """Make predictions using the hybrid classifier.
-        
+
         Args:
             X: Input data for prediction
             **kwargs: Additional prediction parameters
-            
+
         Returns:
             Predicted labels
 
@@ -496,11 +496,11 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
 
     def predict_proba(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """Predict class probabilities.
-        
+
         Args:
             X: Input data for prediction
             **kwargs: Additional parameters
-            
+
         Returns:
             Predicted class probabilities
 
@@ -556,7 +556,7 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
 
         return prob_matrix
 
-    def get_model_performance(self) -> Dict[str, Any]:
+    def get_model_performance(self) -> dict[str, Any]:
         """Get detailed performance metrics for all models."""
         performance = {
             'quantum_scores': self.quantum_scores.copy(),
@@ -580,11 +580,11 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
 
         return performance
 
-    def get_feature_importance(self) -> Optional[np.ndarray]:
+    def get_feature_importance(self) -> np.ndarray | None:
         """Get feature importance from feature selection."""
         return self.feature_importance_
 
-    def cross_validate(self, X: np.ndarray, y: np.ndarray, cv: int = 5) -> Dict[str, Any]:
+    def cross_validate(self, X: np.ndarray, y: np.ndarray, cv: int = 5) -> dict[str, Any]:
         """Perform cross-validation on the hybrid classifier."""
         if not self.is_fitted:
             raise ValueError("Model must be fitted before cross-validation")
@@ -604,7 +604,7 @@ class HybridClassifier(SupervisedQuantumAlgorithm):
             logger.error(f"Cross-validation failed: {e}")
             return {'error': str(e)}
 
-    def get_params(self, deep: bool = True) -> Dict[str, Any]:
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get hybrid classifier parameters."""
         params = super().get_params(deep)
         params.update({

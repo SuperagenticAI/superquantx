@@ -19,7 +19,7 @@ from superquantx.algorithms import create_vqe_for_molecule
 def hydrogen_molecule_hamiltonian():
     """
     Create Hamiltonian for H2 molecule in STO-3G basis
-    
+
     This is a simplified 2-qubit Hamiltonian for H2 at equilibrium
     bond distance (0.74 Å) using Jordan-Wigner mapping.
     """
@@ -49,11 +49,11 @@ def hydrogen_molecule_hamiltonian():
 def create_hardware_efficient_ansatz(num_qubits, num_layers):
     """
     Create hardware-efficient ansatz for VQE
-    
+
     Args:
         num_qubits: Number of qubits
         num_layers: Number of ansatz layers
-    
+
     Returns:
         Function that creates ansatz circuit from parameters
     """
@@ -89,7 +89,7 @@ def create_hardware_efficient_ansatz(num_qubits, num_layers):
 def create_uccsd_ansatz(num_qubits):
     """
     Create simplified UCCSD (Unitary Coupled Cluster) ansatz
-    
+
     This is a simplified version focusing on single and double excitations
     for educational purposes.
     """
@@ -127,13 +127,13 @@ def create_uccsd_ansatz(num_qubits):
 def run_vqe_simulation(hamiltonian, ansatz, num_params, client=None):
     """
     Run VQE optimization using simulation
-    
+
     Args:
         hamiltonian: Target Hamiltonian
         ansatz: Parameterized ansatz function
         num_params: Number of parameters
         client: SuperQuantX client (None for local simulation)
-    
+
     Returns:
         VQE results dictionary
     """
@@ -376,7 +376,7 @@ def main():
     # Example 4: Advanced features
     print("\n\n4. Advanced VQE Features")
     print("-" * 25)
-    feature_results = demonstrate_vqe_features()
+    demonstrate_vqe_features()
 
     # Example 5: Visualization (if matplotlib available)
     try:

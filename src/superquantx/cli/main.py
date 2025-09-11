@@ -6,7 +6,6 @@ with subcommands for various quantum machine learning operations.
 
 import sys
 from pathlib import Path
-from typing import Optional
 
 import click
 
@@ -38,12 +37,12 @@ from .commands import (
     help='Enable verbose output'
 )
 @click.pass_context
-def cli(ctx: click.Context, config: Optional[str], verbose: bool):
+def cli(ctx: click.Context, config: str | None, verbose: bool):
     """SuperQuantX: Building the Foundation for Quantum Agentic AI
-    
+
     Deploy quantum-enhanced autonomous agents and AI systems in minutes.
     From quantum circuits to intelligent agents across all quantum platforms.
-    
+
     Examples:
         sqx create-agent trading               # Deploy quantum trading agent
         sqx run automl --data portfolio        # Quantum AutoML optimization
@@ -109,12 +108,12 @@ def shell():
         banner = """
         SuperQuantX Interactive Shell
         =============================
-        
+
         Available imports:
         - superquantx as sqx
         - numpy as np
         - matplotlib.pyplot as plt
-        
+
         Try: sqx.algorithms.QuantumSVM()
         """
 

@@ -85,20 +85,20 @@ BACKEND_ALIASES = {
     'local': 'simulator',
 }
 
-def get_backend(backend: Union[str, BaseBackend], **kwargs) -> BaseBackend:
+def get_backend(backend: str | BaseBackend, **kwargs) -> BaseBackend:
     """Get a quantum backend instance.
-    
+
     Args:
         backend: Backend name or instance
         **kwargs: Backend configuration parameters
-        
+
     Returns:
         Backend instance
-        
+
     Raises:
         ValueError: If backend is not supported
         ImportError: If backend dependencies are missing
-        
+
     Example:
         >>> backend = get_backend('pennylane', device='default.qubit')
         >>> backend = get_backend('qiskit', provider='IBMQ')
@@ -136,7 +136,7 @@ def get_backend(backend: Union[str, BaseBackend], **kwargs) -> BaseBackend:
 
 def _auto_select_backend() -> str:
     """Automatically select the best available backend.
-    
+
     Returns:
         Backend name
 
@@ -148,7 +148,7 @@ def _auto_select_backend() -> str:
         try:
             backend_class = BACKEND_REGISTRY[backend_name]
             # Try to instantiate with minimal config
-            test_backend = backend_class()
+            backend_class()
             logger.info(f"Auto-selected backend: {backend_name}")
             return backend_name
         except (ImportError, Exception) as e:
@@ -159,9 +159,9 @@ def _auto_select_backend() -> str:
     logger.warning("No preferred backends available, falling back to simulator")
     return 'simulator'
 
-def list_available_backends() -> Dict[str, Dict[str, Any]]:
+def list_available_backends() -> dict[str, dict[str, Any]]:
     """List all available backends and their status.
-    
+
     Returns:
         Dictionary with backend information
 
@@ -196,12 +196,12 @@ def list_available_backends() -> Dict[str, Dict[str, Any]]:
 
     return backend_info
 
-def check_backend_compatibility(backend_name: str) -> Dict[str, Any]:
+def check_backend_compatibility(backend_name: str) -> dict[str, Any]:
     """Check compatibility and requirements for a specific backend.
-    
+
     Args:
         backend_name: Name of the backend to check
-        
+
     Returns:
         Compatibility information
 

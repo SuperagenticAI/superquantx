@@ -5,15 +5,15 @@ to provide clear error messages and proper error handling for quantum-agentic
 AI research workflows.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 
 class SuperQuantXError(Exception):
     """Base exception for all SuperQuantX errors."""
 
-    def __init__(self, message: str, error_code: Optional[str] = None) -> None:
+    def __init__(self, message: str, error_code: str | None = None) -> None:
         """Initialize SuperQuantX base exception.
-        
+
         Args:
             message: Human-readable error message
             error_code: Optional error code for programmatic handling
@@ -36,11 +36,11 @@ class BackendError(SuperQuantXError):
     def __init__(
         self,
         message: str,
-        backend_name: Optional[str] = None,
-        original_error: Optional[Exception] = None,
+        backend_name: str | None = None,
+        original_error: Exception | None = None,
     ) -> None:
         """Initialize backend error.
-        
+
         Args:
             message: Error description
             backend_name: Name of the backend that failed
@@ -60,9 +60,9 @@ class BackendError(SuperQuantXError):
 class BackendNotAvailableError(BackendError):
     """Raised when a required quantum backend is not available."""
 
-    def __init__(self, backend_name: str, missing_dependencies: Optional[list[str]] = None) -> None:
+    def __init__(self, backend_name: str, missing_dependencies: list[str] | None = None) -> None:
         """Initialize backend not available error.
-        
+
         Args:
             backend_name: Name of the unavailable backend
             missing_dependencies: List of missing dependency packages
@@ -84,11 +84,11 @@ class AlgorithmError(SuperQuantXError):
     def __init__(
         self,
         message: str,
-        algorithm_name: Optional[str] = None,
-        step: Optional[str] = None,
+        algorithm_name: str | None = None,
+        step: str | None = None,
     ) -> None:
         """Initialize algorithm error.
-        
+
         Args:
             message: Error description
             algorithm_name: Name of the algorithm that failed
@@ -112,7 +112,7 @@ class NotFittedError(AlgorithmError):
 
     def __init__(self, algorithm_name: str) -> None:
         """Initialize not fitted error.
-        
+
         Args:
             algorithm_name: Name of the algorithm that needs fitting
 
@@ -128,11 +128,11 @@ class InvalidParameterError(SuperQuantXError):
         self,
         parameter_name: str,
         parameter_value: Any,
-        expected_type: Optional[str] = None,
-        valid_values: Optional[list[Any]] = None,
+        expected_type: str | None = None,
+        valid_values: list[Any] | None = None,
     ) -> None:
         """Initialize invalid parameter error.
-        
+
         Args:
             parameter_name: Name of the invalid parameter
             parameter_value: The invalid value provided
@@ -161,10 +161,10 @@ class QuantumCircuitError(SuperQuantXError):
     def __init__(
         self,
         message: str,
-        circuit_info: Optional[dict[str, Any]] = None,
+        circuit_info: dict[str, Any] | None = None,
     ) -> None:
         """Initialize quantum circuit error.
-        
+
         Args:
             message: Error description
             circuit_info: Dictionary with circuit information (qubits, gates, etc.)
@@ -177,9 +177,9 @@ class QuantumCircuitError(SuperQuantXError):
 class ConfigurationError(SuperQuantXError):
     """Raised when configuration issues are detected."""
 
-    def __init__(self, message: str, config_key: Optional[str] = None) -> None:
+    def __init__(self, message: str, config_key: str | None = None) -> None:
         """Initialize configuration error.
-        
+
         Args:
             message: Error description
             config_key: The configuration key that caused the error
@@ -197,9 +197,9 @@ class ConfigurationError(SuperQuantXError):
 class ResearchModeError(SuperQuantXError):
     """Raised when research-only features are used incorrectly."""
 
-    def __init__(self, message: str, feature_name: Optional[str] = None) -> None:
+    def __init__(self, message: str, feature_name: str | None = None) -> None:
         """Initialize research mode error.
-        
+
         Args:
             message: Error description
             feature_name: Name of the research feature
@@ -218,11 +218,11 @@ class ResearchModeError(SuperQuantXError):
 # Utility functions for error handling
 def validate_backend_available(backend_name: str, backend_instance: Any) -> None:
     """Validate that a backend is available and properly initialized.
-    
+
     Args:
         backend_name: Name of the backend to validate
         backend_instance: The backend instance to check
-        
+
     Raises:
         BackendNotAvailableError: If backend is not available
         BackendError: If backend is improperly initialized
@@ -237,11 +237,11 @@ def validate_backend_available(backend_name: str, backend_instance: Any) -> None
 
 def validate_fitted(algorithm_instance: Any, algorithm_name: str) -> None:
     """Validate that an algorithm has been fitted.
-    
+
     Args:
         algorithm_instance: The algorithm instance to check
         algorithm_name: Name of the algorithm
-        
+
     Raises:
         NotFittedError: If algorithm is not fitted
 
@@ -253,19 +253,19 @@ def validate_fitted(algorithm_instance: Any, algorithm_name: str) -> None:
 def validate_parameter(
     parameter_name: str,
     parameter_value: Any,
-    expected_type: Optional[type] = None,
-    valid_values: Optional[list[Any]] = None,
+    expected_type: type | None = None,
+    valid_values: list[Any] | None = None,
     allow_none: bool = False,
 ) -> None:
     """Validate a parameter value.
-    
+
     Args:
         parameter_name: Name of the parameter
         parameter_value: Value to validate
         expected_type: Expected Python type
         valid_values: List of valid values
         allow_none: Whether None is an acceptable value
-        
+
     Raises:
         InvalidParameterError: If parameter is invalid
 

@@ -6,7 +6,7 @@ must implement to work with SuperQuantX algorithms.
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 
@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 class BaseBackend(ABC):
     """Abstract base class for quantum computing backends.
-    
+
     This class defines the interface that all quantum backends must implement
     to provide quantum circuit execution, measurement, and algorithm-specific
     operations for SuperQuantX.
-    
+
     Args:
         device: Device or simulator to use
         shots: Default number of measurement shots
@@ -27,7 +27,7 @@ class BaseBackend(ABC):
 
     """
 
-    def __init__(self, device: Optional[str] = None, shots: int = 1024, **kwargs):
+    def __init__(self, device: str | None = None, shots: int = 1024, **kwargs):
         self.device = device
         self.shots = shots
         self.config = kwargs
@@ -50,18 +50,18 @@ class BaseBackend(ABC):
         pass
 
     @abstractmethod
-    def add_gate(self, circuit: Any, gate: str, qubits: Union[int, List[int]],
-                 params: Optional[List[float]] = None) -> Any:
+    def add_gate(self, circuit: Any, gate: str, qubits: int | list[int],
+                 params: list[float] | None = None) -> Any:
         """Add a quantum gate to the circuit."""
         pass
 
     @abstractmethod
-    def add_measurement(self, circuit: Any, qubits: Optional[List[int]] = None) -> Any:
+    def add_measurement(self, circuit: Any, qubits: list[int] | None = None) -> Any:
         """Add measurement operations to the circuit."""
         pass
 
     @abstractmethod
-    def execute_circuit(self, circuit: Any, shots: Optional[int] = None) -> Dict[str, Any]:
+    def execute_circuit(self, circuit: Any, shots: int | None = None) -> dict[str, Any]:
         """Execute quantum circuit and return results."""
         pass
 
@@ -80,7 +80,7 @@ class BaseBackend(ABC):
         return self.create_circuit(n_features)
 
     def compute_kernel_matrix(self, X1: np.ndarray, X2: np.ndarray,
-                            feature_map: Any, shots: Optional[int] = None) -> np.ndarray:
+                            feature_map: Any, shots: int | None = None) -> np.ndarray:
         """Compute quantum kernel matrix between data points."""
         logger.warning(f"Kernel matrix computation not implemented in {self.__class__.__name__}")
         # Fallback to RBF kernel
@@ -94,7 +94,7 @@ class BaseBackend(ABC):
         return self.create_circuit(n_qubits)
 
     def compute_expectation(self, circuit: Any, hamiltonian: Any,
-                          shots: Optional[int] = None) -> float:
+                          shots: int | None = None) -> float:
         """Compute expectation value of Hamiltonian."""
         logger.warning(f"Expectation computation not implemented in {self.__class__.__name__}")
         return 0.0
@@ -107,12 +107,12 @@ class BaseBackend(ABC):
         return self.create_circuit(n_qubits)
 
     def execute_qaoa(self, circuit: Any, problem_hamiltonian: Any, problem_instance: Any,
-                    shots: Optional[int] = None) -> float:
+                    shots: int | None = None) -> float:
         """Execute QAOA circuit and return expectation value."""
         logger.warning(f"QAOA execution not implemented in {self.__class__.__name__}")
         return 0.0
 
-    def sample_circuit(self, circuit: Any, shots: Optional[int] = None) -> np.ndarray:
+    def sample_circuit(self, circuit: Any, shots: int | None = None) -> np.ndarray:
         """Sample bit strings from quantum circuit."""
         result = self.execute_circuit(circuit, shots)
         # Convert result to bit string array
@@ -141,9 +141,9 @@ class BaseBackend(ABC):
         # Normalize data
         norm = np.linalg.norm(data)
         if norm > 0:
-            normalized_data = data / norm
+            data / norm
         else:
-            normalized_data = data
+            pass
 
         # Simple implementation - would need proper state preparation
         logger.warning("Amplitude encoding not fully implemented")
@@ -173,8 +173,8 @@ class BaseBackend(ABC):
                                 encoding: str, n_qubits: int, shots: int) -> float:
         """Compute quantum distance between two data points."""
         # Encode both data points
-        circuit1 = self.encode_data_point(x1, encoding, n_qubits)
-        circuit2 = self.encode_data_point(x2, encoding, n_qubits)
+        self.encode_data_point(x1, encoding, n_qubits)
+        self.encode_data_point(x2, encoding, n_qubits)
 
         # Simple distance approximation using overlap
         # This is a placeholder - actual implementation would use swap test or similar
@@ -186,10 +186,10 @@ class BaseBackend(ABC):
             return np.linalg.norm(x1 - x2)
 
     def execute_qnn(self, input_data: np.ndarray, weights: np.ndarray,
-                   quantum_layers: List[Dict], classical_layers: List[Dict],
+                   quantum_layers: list[dict], classical_layers: list[dict],
                    encoding: str, measurement: str, shots: int) -> np.ndarray:
         """Execute quantum neural network."""
-        batch_size = input_data.shape[0]
+        input_data.shape[0]
         n_qubits = len(weights) // len(quantum_layers) if quantum_layers else 1
 
         # Get expected output size from classical layers
@@ -226,7 +226,7 @@ class BaseBackend(ABC):
                 result = self._result_to_probabilities(result)
 
             # Apply classical layers if present
-            original_length = len(result)
+            len(result)
             if classical_layers and expected_output_size:
                 # Simple linear transformation to get desired output size
                 if len(result) != expected_output_size:
@@ -271,7 +271,7 @@ class BaseBackend(ABC):
         """Get number of qubits in circuit."""
         pass
 
-    def _result_to_bitstrings(self, result: Dict[str, Any]) -> np.ndarray:
+    def _result_to_bitstrings(self, result: dict[str, Any]) -> np.ndarray:
         """Convert execution result to bit string array."""
         # This is backend-specific and should be overridden
         if 'counts' in result:
@@ -284,7 +284,7 @@ class BaseBackend(ABC):
         else:
             return np.array([[0, 1]])  # Placeholder
 
-    def _result_to_probabilities(self, result: Dict[str, Any]) -> np.ndarray:
+    def _result_to_probabilities(self, result: dict[str, Any]) -> np.ndarray:
         """Convert execution result to probability array."""
         if 'counts' in result:
             counts = result['counts']
@@ -296,12 +296,12 @@ class BaseBackend(ABC):
         else:
             return np.array([0.5, 0.5])  # Placeholder
 
-    def _compute_pauli_expectation(self, circuit: Any, pauli_strings: List[str]) -> np.ndarray:
+    def _compute_pauli_expectation(self, circuit: Any, pauli_strings: list[str]) -> np.ndarray:
         """Compute expectation values of Pauli strings."""
         # Placeholder implementation
         return np.random.random(len(pauli_strings)) * 2 - 1
 
-    def get_version_info(self) -> Dict[str, Any]:
+    def get_version_info(self) -> dict[str, Any]:
         """Get backend version information."""
         return {
             'backend_name': self.__class__.__name__,
@@ -309,7 +309,7 @@ class BaseBackend(ABC):
             'capabilities': self.capabilities,
         }
 
-    def get_device_info(self) -> Dict[str, Any]:
+    def get_device_info(self) -> dict[str, Any]:
         """Get information about the quantum device."""
         return {
             'device': self.device,

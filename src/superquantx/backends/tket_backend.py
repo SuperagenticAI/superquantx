@@ -5,7 +5,7 @@ hardware for advanced quantum circuit compilation and optimization.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 
@@ -47,21 +47,21 @@ except ImportError:
 
 class TKETBackend(BaseBackend):
     """TKET (Quantum Toolkit) backend for quantum computing operations.
-    
+
     This backend provides access to TKET's quantum circuit compilation,
     optimization, and execution capabilities, including Quantinuum hardware.
-    
+
     Args:
         device: Device name (e.g., 'aer_simulator', 'H1-1E', 'H1-2E', 'simulator')
         shots: Number of measurement shots
         machine: Specific Quantinuum machine for hardware execution
         api_key: Quantinuum API key (required for hardware)
         **kwargs: Additional backend configuration
-        
+
     Example:
         >>> # Local simulator
         >>> backend = TKETBackend(device='aer_simulator')
-        >>> 
+        >>>
         >>> # Quantinuum hardware (requires API key)
         >>> backend = TKETBackend(
         ...     device='H1-1E',
@@ -74,8 +74,8 @@ class TKETBackend(BaseBackend):
         self,
         device: str = 'aer_simulator',
         shots: int = 1024,
-        machine: Optional[str] = None,
-        api_key: Optional[str] = None,
+        machine: str | None = None,
+        api_key: str | None = None,
         **kwargs
     ) -> None:
         if not TKET_AVAILABLE:
@@ -163,7 +163,7 @@ class TKETBackend(BaseBackend):
         else:
             return 32  # Conservative estimate
 
-    def _get_native_gates(self) -> List[str]:
+    def _get_native_gates(self) -> list[str]:
         """Get native gates supported by TKET."""
         # TKET supports a rich set of gates
         return [
@@ -187,8 +187,8 @@ class TKETBackend(BaseBackend):
         circuit = Circuit(n_qubits)
         return circuit
 
-    def add_gate(self, circuit: Circuit, gate: str, qubits: Union[int, List[int]],
-                 params: Optional[List[float]] = None) -> Circuit:
+    def add_gate(self, circuit: Circuit, gate: str, qubits: int | list[int],
+                 params: list[float] | None = None) -> Circuit:
         """Add a quantum gate to the circuit."""
         if isinstance(qubits, int):
             qubits = [qubits]
@@ -239,7 +239,7 @@ class TKETBackend(BaseBackend):
 
         return circuit
 
-    def add_measurement(self, circuit: Circuit, qubits: Union[int, List[int]]) -> Circuit:
+    def add_measurement(self, circuit: Circuit, qubits: int | list[int]) -> Circuit:
         """Add measurement instructions to specified qubits."""
         if isinstance(qubits, int):
             qubits = [qubits]
@@ -254,7 +254,7 @@ class TKETBackend(BaseBackend):
 
         return circuit
 
-    def execute_circuit(self, circuit: Circuit, shots: Optional[int] = None) -> Dict[str, Any]:
+    def execute_circuit(self, circuit: Circuit, shots: int | None = None) -> dict[str, Any]:
         """Execute quantum circuit and return results."""
         shots = shots or self.shots
 
@@ -360,7 +360,7 @@ class TKETBackend(BaseBackend):
             logger.error(f"Circuit optimization failed: {e}")
             return circuit
 
-    def create_parameterized_circuit(self, n_qubits: int, n_params: int) -> Tuple[Circuit, List[str]]:
+    def create_parameterized_circuit(self, n_qubits: int, n_params: int) -> tuple[Circuit, list[str]]:
         """Create a parameterized quantum circuit for variational algorithms."""
         from pytket.circuit import fresh_symbol
 
@@ -376,7 +376,7 @@ class TKETBackend(BaseBackend):
 
         return circuit, param_names
 
-    def bind_parameters(self, circuit: Circuit, param_values: Dict[str, float]) -> Circuit:
+    def bind_parameters(self, circuit: Circuit, param_values: dict[str, float]) -> Circuit:
         """Bind parameter values to parameterized circuit."""
         try:
             bound_circuit = circuit.copy()
@@ -384,7 +384,7 @@ class TKETBackend(BaseBackend):
             # Create symbol substitution map
             if hasattr(circuit, '_symbols'):
                 symbol_map = {}
-                for symbol, name in zip(circuit._symbols, circuit._param_names):
+                for symbol, name in zip(circuit._symbols, circuit._param_names, strict=False):
                     if name in param_values:
                         symbol_map[symbol] = param_values[name]
 
@@ -397,8 +397,8 @@ class TKETBackend(BaseBackend):
             logger.error(f"Parameter binding failed: {e}")
             return circuit
 
-    def expectation_value(self, circuit: Circuit, observable: Union[str, np.ndarray],
-                         shots: Optional[int] = None) -> float:
+    def expectation_value(self, circuit: Circuit, observable: str | np.ndarray,
+                         shots: int | None = None) -> float:
         """Calculate expectation value of observable using TKET."""
         shots = shots or self.shots
 
@@ -436,7 +436,7 @@ class TKETBackend(BaseBackend):
     # Backend Information
     # ========================================================================
 
-    def get_backend_info(self) -> Dict[str, Any]:
+    def get_backend_info(self) -> dict[str, Any]:
         """Get information about the TKET backend."""
         info = {
             'backend_name': 'tket',
@@ -459,7 +459,7 @@ class TKETBackend(BaseBackend):
 
         return info
 
-    def get_version_info(self) -> Dict[str, str]:
+    def get_version_info(self) -> dict[str, str]:
         """Get version information for TKET dependencies."""
         version_info = {'backend_version': '1.0.0'}
 
@@ -482,7 +482,7 @@ class TKETBackend(BaseBackend):
         """Check if the backend is available and properly configured."""
         return TKET_AVAILABLE
 
-    def get_circuit_info(self) -> Dict[str, Any]:
+    def get_circuit_info(self) -> dict[str, Any]:
         """Get information about circuit execution capabilities."""
         return {
             'max_qubits': self._get_max_qubits(),

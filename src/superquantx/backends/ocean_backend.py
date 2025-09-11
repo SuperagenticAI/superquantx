@@ -3,12 +3,12 @@
 This module provides integration with D-Wave Ocean SDK for quantum annealing
 and optimization problems using D-Wave quantum annealing processors.
 
-Note: This backend focuses on QUBO/Ising model problems rather than 
+Note: This backend focuses on QUBO/Ising model problems rather than
 gate-model quantum circuits.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 
@@ -35,13 +35,13 @@ except ImportError:
 
 class OceanBackend(BaseBackend):
     """D-Wave Ocean backend for quantum annealing operations.
-    
+
     This backend provides access to D-Wave's quantum annealing systems
     for solving optimization problems formulated as QUBO or Ising models.
-    
+
     Note: Unlike gate-model quantum computers, D-Wave systems solve optimization
     problems rather than running quantum circuits.
-    
+
     Args:
         device: Sampler type ('DWave', 'hybrid', 'simulator', 'advantage')
         solver: Specific solver name (optional)
@@ -49,11 +49,11 @@ class OceanBackend(BaseBackend):
         endpoint: D-Wave API endpoint
         shots: Number of samples (reads)
         **kwargs: Additional sampler configuration
-        
+
     Example:
         >>> # Simulated annealing (no hardware required)
         >>> backend = OceanBackend(device='simulator')
-        >>> 
+        >>>
         >>> # D-Wave hardware (requires API token)
         >>> backend = OceanBackend(
         ...     device='advantage',
@@ -65,9 +65,9 @@ class OceanBackend(BaseBackend):
     def __init__(
         self,
         device: str = 'simulator',
-        solver: Optional[str] = None,
-        token: Optional[str] = None,
-        endpoint: Optional[str] = None,
+        solver: str | None = None,
+        token: str | None = None,
+        endpoint: str | None = None,
         shots: int = 1000,  # Called "num_reads" in D-Wave
         **kwargs
     ) -> None:
@@ -156,13 +156,13 @@ class OceanBackend(BaseBackend):
     # Optimization Problem Interface (replaces circuit operations)
     # ========================================================================
 
-    def solve_qubo(self, Q: Dict[Tuple[int, int], float], **kwargs) -> Dict[str, Any]:
+    def solve_qubo(self, Q: dict[tuple[int, int], float], **kwargs) -> dict[str, Any]:
         """Solve a Quadratic Unconstrained Binary Optimization (QUBO) problem.
-        
+
         Args:
             Q: QUBO dictionary where keys are (i, j) variable pairs and values are coefficients
             **kwargs: Additional solving parameters
-            
+
         Returns:
             Solution results with energies and samples
 
@@ -204,14 +204,14 @@ class OceanBackend(BaseBackend):
                 'problem_type': 'QUBO'
             }
 
-    def solve_ising(self, h: Dict[int, float], J: Dict[Tuple[int, int], float], **kwargs) -> Dict[str, Any]:
+    def solve_ising(self, h: dict[int, float], J: dict[tuple[int, int], float], **kwargs) -> dict[str, Any]:
         """Solve an Ising model problem.
-        
+
         Args:
             h: Linear coefficients (bias terms) for each variable
             J: Quadratic coefficients (coupling terms) between variables
             **kwargs: Additional solving parameters
-            
+
         Returns:
             Solution results with energies and samples
 
@@ -253,13 +253,13 @@ class OceanBackend(BaseBackend):
                 'problem_type': 'Ising'
             }
 
-    def solve_optimization_problem(self, problem: Union[Dict, Any], problem_type: str = 'auto') -> Dict[str, Any]:
+    def solve_optimization_problem(self, problem: dict | Any, problem_type: str = 'auto') -> dict[str, Any]:
         """Generic optimization problem solver.
-        
+
         Args:
             problem: Problem specification (QUBO dict, Ising model, or BQM)
             problem_type: Type of problem ('qubo', 'ising', 'bqm', 'auto')
-            
+
         Returns:
             Solution results
 
@@ -296,7 +296,7 @@ class OceanBackend(BaseBackend):
                 'problem_type': problem_type
             }
 
-    def _convert_sampleset(self, sampleset, problem_type: str) -> Dict[str, Any]:
+    def _convert_sampleset(self, sampleset, problem_type: str) -> dict[str, Any]:
         """Convert D-Wave sampleset to standard format."""
         results = {
             'samples': [],
@@ -319,9 +319,9 @@ class OceanBackend(BaseBackend):
     # Gate Model Compatibility (Limited Support)
     # ========================================================================
 
-    def create_circuit(self, n_qubits: int) -> Dict[str, Any]:
+    def create_circuit(self, n_qubits: int) -> dict[str, Any]:
         """Limited circuit support for compatibility.
-        
+
         Note: D-Wave is not a gate-model quantum computer.
         This returns a placeholder for optimization problems.
         """
@@ -333,18 +333,18 @@ class OceanBackend(BaseBackend):
             'problem': None
         }
 
-    def add_gate(self, circuit: Dict, gate: str, qubits: Union[int, List[int]],
-                 params: Optional[List[float]] = None) -> Dict:
+    def add_gate(self, circuit: dict, gate: str, qubits: int | list[int],
+                 params: list[float] | None = None) -> dict:
         """Limited gate support - not applicable for annealing."""
         logger.warning("Gate operations not supported on D-Wave annealing backend")
         return circuit
 
-    def add_measurement(self, circuit: Dict, qubits: Union[int, List[int]]) -> Dict:
+    def add_measurement(self, circuit: dict, qubits: int | list[int]) -> dict:
         """Limited measurement support - not applicable for annealing."""
         logger.warning("Measurements not applicable for D-Wave annealing backend")
         return circuit
 
-    def execute_circuit(self, circuit: Dict, shots: Optional[int] = None) -> Dict[str, Any]:
+    def execute_circuit(self, circuit: dict, shots: int | None = None) -> dict[str, Any]:
         """Limited circuit execution - redirects to optimization solving."""
         logger.warning("Circuit execution not supported - use solve_qubo() or solve_ising() instead")
         return {
@@ -359,7 +359,7 @@ class OceanBackend(BaseBackend):
     # Backend Information
     # ========================================================================
 
-    def get_backend_info(self) -> Dict[str, Any]:
+    def get_backend_info(self) -> dict[str, Any]:
         """Get information about the D-Wave Ocean backend."""
         info = {
             'backend_name': 'ocean',
@@ -384,7 +384,7 @@ class OceanBackend(BaseBackend):
 
         return info
 
-    def get_version_info(self) -> Dict[str, str]:
+    def get_version_info(self) -> dict[str, str]:
         """Get version information for Ocean dependencies."""
         version_info = {'backend_version': '1.0.0'}
 
@@ -411,7 +411,7 @@ class OceanBackend(BaseBackend):
         """Check if the backend is available and properly configured."""
         return OCEAN_AVAILABLE and self._sampler is not None
 
-    def get_circuit_info(self) -> Dict[str, Any]:
+    def get_circuit_info(self) -> dict[str, Any]:
         """Get circuit capabilities (limited for annealing backend)."""
         return {
             'max_qubits': 0,  # Not applicable
@@ -424,13 +424,13 @@ class OceanBackend(BaseBackend):
             'quantum_annealing': True,
         }
 
-    def _get_n_qubits(self, circuit: Dict) -> int:
+    def _get_n_qubits(self, circuit: dict) -> int:
         """Get number of qubits/variables (not applicable for annealing)."""
         if isinstance(circuit, dict):
             return circuit.get('n_variables', 0)
         return 0
 
-    def get_statevector(self, circuit: Dict) -> np.ndarray:
+    def get_statevector(self, circuit: dict) -> np.ndarray:
         """Get statevector (not applicable for annealing backend)."""
         logger.warning("Statevector not applicable for quantum annealing backend")
         return np.array([1.0 + 0j])  # Dummy statevector
@@ -439,7 +439,7 @@ class OceanBackend(BaseBackend):
     # Convenience Methods for Common Optimization Problems
     # ========================================================================
 
-    def solve_max_cut(self, graph: Union[Any, List[Tuple]], **kwargs) -> Dict[str, Any]:
+    def solve_max_cut(self, graph: Any | list[tuple], **kwargs) -> dict[str, Any]:
         """Solve Maximum Cut problem on a graph."""
         try:
             if not nx:
@@ -465,7 +465,7 @@ class OceanBackend(BaseBackend):
             logger.error(f"Max Cut solving failed: {e}")
             return {'success': False, 'error': str(e)}
 
-    def solve_tsp(self, distance_matrix: np.ndarray, **kwargs) -> Dict[str, Any]:
+    def solve_tsp(self, distance_matrix: np.ndarray, **kwargs) -> dict[str, Any]:
         """Solve Traveling Salesman Problem (simplified formulation)."""
         try:
             n_cities = len(distance_matrix)

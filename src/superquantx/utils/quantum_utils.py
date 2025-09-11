@@ -5,7 +5,6 @@ including fidelity calculations, quantum distances, and entanglement measures.
 """
 
 import warnings
-from typing import Tuple
 
 import numpy as np
 from scipy.linalg import sqrtm
@@ -17,18 +16,18 @@ def fidelity(
     validate: bool = True
 ) -> float:
     """Calculate quantum fidelity between two quantum states.
-    
+
     For pure states |ψ₁⟩ and |ψ₂⟩:
     F(ψ₁, ψ₂) = |⟨ψ₁|ψ₂⟩|²
-    
+
     For mixed states ρ₁ and ρ₂:
     F(ρ₁, ρ₂) = Tr(√(√ρ₁ ρ₂ √ρ₁))²
-    
+
     Args:
         state1: First quantum state (vector or density matrix)
         state2: Second quantum state (vector or density matrix)
         validate: Whether to validate inputs
-        
+
     Returns:
         Fidelity value between 0 and 1
 
@@ -79,15 +78,15 @@ def trace_distance(
     validate: bool = True
 ) -> float:
     """Calculate trace distance between two quantum states.
-    
+
     For quantum states ρ₁ and ρ₂:
     D(ρ₁, ρ₂) = (1/2) * Tr(|ρ₁ - ρ₂|)
-    
+
     Args:
         state1: First quantum state
-        state2: Second quantum state  
+        state2: Second quantum state
         validate: Whether to validate inputs
-        
+
     Returns:
         Trace distance between 0 and 1
 
@@ -113,20 +112,20 @@ def trace_distance(
 
 def quantum_mutual_information(
     joint_state: np.ndarray,
-    subsystem_dims: Tuple[int, int],
+    subsystem_dims: tuple[int, int],
     validate: bool = True
 ) -> float:
     """Calculate quantum mutual information between two subsystems.
-    
+
     I(A:B) = S(ρₐ) + S(ρᵦ) - S(ρₐᵦ)
-    
+
     where S(ρ) is the von Neumann entropy.
-    
+
     Args:
         joint_state: Joint quantum state of both subsystems
         subsystem_dims: Dimensions of subsystems (dim_A, dim_B)
         validate: Whether to validate inputs
-        
+
     Returns:
         Quantum mutual information
 
@@ -154,18 +153,18 @@ def quantum_mutual_information(
 
 def entanglement_measure(
     state: np.ndarray,
-    subsystem_dims: Tuple[int, int],
+    subsystem_dims: tuple[int, int],
     measure: str = 'negativity',
     validate: bool = True
 ) -> float:
     """Calculate entanglement measure for a bipartite quantum state.
-    
+
     Args:
         state: Quantum state (pure or mixed)
         subsystem_dims: Dimensions of subsystems (dim_A, dim_B)
         measure: Type of measure ('negativity', 'concurrence', 'entropy')
         validate: Whether to validate inputs
-        
+
     Returns:
         Entanglement measure value
 
@@ -185,19 +184,19 @@ def entanglement_measure(
 
 def negativity(
     state: np.ndarray,
-    subsystem_dims: Tuple[int, int]
+    subsystem_dims: tuple[int, int]
 ) -> float:
     """Calculate negativity entanglement measure.
-    
+
     Negativity is defined as:
     N(ρ) = (||ρᵀᴬ||₁ - 1) / 2
-    
+
     where ρᵀᴬ is the partial transpose with respect to subsystem A.
-    
+
     Args:
         state: Quantum state
         subsystem_dims: Dimensions of subsystems
-        
+
     Returns:
         Negativity value
 
@@ -216,16 +215,16 @@ def negativity(
 
 def concurrence(
     state: np.ndarray,
-    subsystem_dims: Tuple[int, int]
+    subsystem_dims: tuple[int, int]
 ) -> float:
     """Calculate concurrence for two-qubit systems.
-    
+
     Note: This implementation is only valid for 2×2 systems.
-    
+
     Args:
         state: Two-qubit quantum state
         subsystem_dims: Should be (2, 2) for two qubits
-        
+
     Returns:
         Concurrence value
 
@@ -259,14 +258,14 @@ def concurrence(
 
 def entanglement_entropy(
     state: np.ndarray,
-    subsystem_dims: Tuple[int, int]
+    subsystem_dims: tuple[int, int]
 ) -> float:
     """Calculate entanglement entropy (von Neumann entropy of reduced state).
-    
+
     Args:
         state: Quantum state
         subsystem_dims: Dimensions of subsystems
-        
+
     Returns:
         Entanglement entropy
 
@@ -281,12 +280,12 @@ def entanglement_entropy(
 
 def von_neumann_entropy(rho: np.ndarray) -> float:
     """Calculate von Neumann entropy of a quantum state.
-    
+
     S(ρ) = -Tr(ρ log ρ)
-    
+
     Args:
         rho: Density matrix
-        
+
     Returns:
         von Neumann entropy
 
@@ -304,16 +303,16 @@ def von_neumann_entropy(rho: np.ndarray) -> float:
 
 def partial_trace(
     rho: np.ndarray,
-    subsystem_dims: Tuple[int, int],
+    subsystem_dims: tuple[int, int],
     trace_out: int
 ) -> np.ndarray:
     """Compute partial trace of a density matrix.
-    
+
     Args:
         rho: Density matrix
         subsystem_dims: Dimensions of subsystems (dim_A, dim_B)
         trace_out: Which subsystem to trace out (0 for A, 1 for B)
-        
+
     Returns:
         Reduced density matrix
 
@@ -345,16 +344,16 @@ def partial_trace(
 
 def partial_transpose(
     rho: np.ndarray,
-    subsystem_dims: Tuple[int, int],
+    subsystem_dims: tuple[int, int],
     transpose_subsystem: int
 ) -> np.ndarray:
     """Compute partial transpose of a density matrix.
-    
+
     Args:
         rho: Density matrix
         subsystem_dims: Dimensions of subsystems
         transpose_subsystem: Which subsystem to transpose (0 for A, 1 for B)
-        
+
     Returns:
         Partially transposed density matrix
 
@@ -392,7 +391,7 @@ def _validate_quantum_state(state: np.ndarray) -> None:
     if len(state.shape) == 1:
         # Pure state vector
         if not np.isclose(np.linalg.norm(state), 1.0, atol=1e-10):
-            warnings.warn("State vector is not normalized")
+            warnings.warn("State vector is not normalized", stacklevel=2)
 
     elif len(state.shape) == 2:
         # Density matrix
@@ -401,16 +400,16 @@ def _validate_quantum_state(state: np.ndarray) -> None:
 
         # Check if Hermitian
         if not np.allclose(state, np.conj(state.T), atol=1e-10):
-            warnings.warn("Density matrix is not Hermitian")
+            warnings.warn("Density matrix is not Hermitian", stacklevel=2)
 
         # Check if positive semidefinite
         eigenvals = np.linalg.eigvals(state)
         if np.any(eigenvals < -1e-10):
-            warnings.warn("Density matrix is not positive semidefinite")
+            warnings.warn("Density matrix is not positive semidefinite", stacklevel=2)
 
         # Check trace
         if not np.isclose(np.trace(state), 1.0, atol=1e-10):
-            warnings.warn("Density matrix trace is not 1")
+            warnings.warn("Density matrix trace is not 1", stacklevel=2)
 
     else:
         raise ValueError("Invalid quantum state format")
@@ -433,12 +432,12 @@ def quantum_state_distance(
     metric: str = 'fidelity'
 ) -> float:
     """Calculate distance between quantum states using various metrics.
-    
+
     Args:
         state1: First quantum state
         state2: Second quantum state
         metric: Distance metric ('fidelity', 'trace_distance', 'hilbert_schmidt')
-        
+
     Returns:
         Distance value
 

@@ -8,7 +8,7 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import numpy as np
 
@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class QuantumResult:
     """Container for quantum algorithm results.
-    
+
     This class provides a standardized way to return results from quantum
     algorithms, including the main result, metadata, and performance metrics.
-    
+
     Attributes:
         result: The main algorithm result
         metadata: Additional information about the computation
@@ -33,11 +33,11 @@ class QuantumResult:
     """
 
     result: Any
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
     execution_time: float
-    backend_info: Dict[str, Any]
-    error: Optional[str] = None
-    intermediate_results: Optional[Dict[str, Any]] = None
+    backend_info: dict[str, Any]
+    error: str | None = None
+    intermediate_results: dict[str, Any] | None = None
 
     def __post_init__(self):
         """Validate and process result after initialization."""
@@ -48,10 +48,10 @@ class QuantumResult:
 
 class BaseQuantumAlgorithm(ABC):
     """Abstract base class for all quantum machine learning algorithms.
-    
+
     This class defines the common interface that all quantum algorithms must
     implement, providing consistency across different algorithm types and backends.
-    
+
     Args:
         backend: Quantum backend to use for computation
         shots: Number of measurement shots (default: 1024)
@@ -63,9 +63,9 @@ class BaseQuantumAlgorithm(ABC):
 
     def __init__(
         self,
-        backend: Union[str, Any],
+        backend: str | Any,
         shots: int = 1024,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         optimization_level: int = 1,
         **kwargs
     ) -> None:
@@ -90,7 +90,7 @@ class BaseQuantumAlgorithm(ABC):
 
         logger.info(f"Initialized {self.__class__.__name__} with backend {type(self.backend).__name__}")
 
-    def _initialize_backend(self, backend: Union[str, Any]) -> Any:
+    def _initialize_backend(self, backend: str | Any) -> Any:
         """Initialize the quantum backend."""
         if isinstance(backend, str):
             # Import here to avoid circular imports
@@ -99,14 +99,14 @@ class BaseQuantumAlgorithm(ABC):
         return backend
 
     @abstractmethod
-    def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> 'BaseQuantumAlgorithm':
+    def fit(self, X: np.ndarray, y: np.ndarray | None = None, **kwargs) -> 'BaseQuantumAlgorithm':
         """Train the quantum algorithm.
-        
+
         Args:
             X: Training data features
             y: Training data labels (for supervised learning)
             **kwargs: Additional training parameters
-            
+
         Returns:
             Self for method chaining
 
@@ -116,11 +116,11 @@ class BaseQuantumAlgorithm(ABC):
     @abstractmethod
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """Make predictions using the trained algorithm.
-        
+
         Args:
             X: Input data for prediction
             **kwargs: Additional prediction parameters
-            
+
         Returns:
             Predictions array
 
@@ -129,12 +129,12 @@ class BaseQuantumAlgorithm(ABC):
 
     def score(self, X: np.ndarray, y: np.ndarray, **kwargs) -> float:
         """Compute the algorithm's score on the given test data.
-        
+
         Args:
             X: Test data features
             y: True test data labels
             **kwargs: Additional scoring parameters
-            
+
         Returns:
             Algorithm score (higher is better)
 
@@ -147,12 +147,12 @@ class BaseQuantumAlgorithm(ABC):
         from sklearn.metrics import accuracy_score
         return accuracy_score(y_true, predictions)
 
-    def get_params(self, deep: bool = True) -> Dict[str, Any]:
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get algorithm parameters.
-        
+
         Args:
             deep: Whether to return deep copy of parameters
-            
+
         Returns:
             Parameter dictionary
 
@@ -168,10 +168,10 @@ class BaseQuantumAlgorithm(ABC):
 
     def set_params(self, **params) -> 'BaseQuantumAlgorithm':
         """Set algorithm parameters.
-        
+
         Args:
             **params: Parameters to set
-            
+
         Returns:
             Self for method chaining
 
@@ -185,7 +185,7 @@ class BaseQuantumAlgorithm(ABC):
 
     def save_model(self, filepath: str) -> None:
         """Save the trained model to disk.
-        
+
         Args:
             filepath: Path where to save the model
 
@@ -212,10 +212,10 @@ class BaseQuantumAlgorithm(ABC):
     @classmethod
     def load_model(cls, filepath: str) -> 'BaseQuantumAlgorithm':
         """Load a trained model from disk.
-        
+
         Args:
             filepath: Path to the saved model
-            
+
         Returns:
             Loaded algorithm instance
 
@@ -235,14 +235,14 @@ class BaseQuantumAlgorithm(ABC):
         logger.info(f"Model loaded from {filepath}")
         return instance
 
-    def benchmark(self, X: np.ndarray, y: Optional[np.ndarray] = None, runs: int = 5) -> Dict[str, Any]:
+    def benchmark(self, X: np.ndarray, y: np.ndarray | None = None, runs: int = 5) -> dict[str, Any]:
         """Benchmark algorithm performance.
-        
+
         Args:
             X: Test data
             y: Test labels (optional)
             runs: Number of benchmark runs
-            
+
         Returns:
             Benchmark results dictionary
 
@@ -281,9 +281,9 @@ class BaseQuantumAlgorithm(ABC):
 
         return results
 
-    def get_circuit_info(self) -> Dict[str, Any]:
+    def get_circuit_info(self) -> dict[str, Any]:
         """Get information about the quantum circuit.
-        
+
         Returns:
             Circuit information dictionary
 
@@ -348,7 +348,7 @@ class UnsupervisedQuantumAlgorithm(BaseQuantumAlgorithm):
         self.n_features_ = None
         self.n_samples_ = None
 
-    def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> 'UnsupervisedQuantumAlgorithm':
+    def fit(self, X: np.ndarray, y: np.ndarray | None = None, **kwargs) -> 'UnsupervisedQuantumAlgorithm':
         """Fit unsupervised algorithm."""
         self._validate_data(X)
         self.n_features_ = X.shape[1]
@@ -369,14 +369,14 @@ class OptimizationQuantumAlgorithm(BaseQuantumAlgorithm):
         self.optimal_value_ = None
         self.optimization_history_ = []
 
-    def optimize(self, objective_function, initial_params: Optional[np.ndarray] = None, **kwargs) -> QuantumResult:
+    def optimize(self, objective_function, initial_params: np.ndarray | None = None, **kwargs) -> QuantumResult:
         """Optimize objective function.
-        
+
         Args:
             objective_function: Function to optimize
             initial_params: Initial parameter values
             **kwargs: Additional optimization parameters
-            
+
         Returns:
             Optimization result
 

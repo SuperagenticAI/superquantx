@@ -47,17 +47,17 @@ class TestBackendRegistry:
 
         # Should always have simulator
         assert 'simulator' in backends
-        assert backends['simulator']['available'] == True
+        assert backends['simulator']['available']
 
     def test_check_backend_compatibility(self):
         """Test individual backend compatibility checking."""
         # Test known available backend
         compat = check_backend_compatibility('simulator')
-        assert compat['compatible'] == True
+        assert compat['compatible']
 
         # Test unknown backend
         compat = check_backend_compatibility('nonexistent_backend')
-        assert compat['compatible'] == False
+        assert not compat['compatible']
 
 
 class TestBackendCreation:
@@ -229,7 +229,7 @@ class TestOceanBackend:
             from superquantx.backends.ocean_backend import OceanBackend
             backend = OceanBackend(device='simulator')
             assert backend.device_name == 'simulator'
-            assert backend._is_quantum_annealing == True
+            assert backend._is_quantum_annealing
         except ImportError:
             pytest.skip("Ocean not available")
 
@@ -242,7 +242,7 @@ class TestOceanBackend:
             Q = {(0, 0): -1, (1, 1): -1, (0, 1): 2}
             result = backend.solve_qubo(Q, num_reads=100)
 
-            assert result['success'] == True
+            assert result['success']
             assert 'samples' in result
             assert 'energies' in result
             assert result['problem_type'] == 'QUBO'
@@ -259,7 +259,7 @@ class TestOceanBackend:
             J = {(0, 1): -1}
             result = backend.solve_ising(h, J, num_reads=50)
 
-            assert result['success'] == True
+            assert result['success']
             assert result['problem_type'] == 'Ising'
         except ImportError:
             pytest.skip("Ocean not available")
@@ -291,7 +291,7 @@ class TestOceanBackend:
             # Should warn about gate operations
             backend.add_gate(circuit, 'h', 0)  # Should warn
             result = backend.execute_circuit(circuit)  # Should warn
-            assert result['success'] == False
+            assert not result['success']
         except ImportError:
             pytest.skip("Ocean not available")
 
@@ -363,14 +363,14 @@ class TestBackendSpecificFeatures:
             from superquantx.backends.ocean_backend import OceanBackend
             ocean = OceanBackend()
             info = ocean.get_backend_info()
-            assert info['quantum_annealing'] == True
-            assert info['gate_model'] == False
+            assert info['quantum_annealing']
+            assert not info['gate_model']
         except ImportError:
             pytest.skip("Ocean not available")
 
         # Compare with gate-model backend
         simulator = get_backend('simulator')
-        sim_info = simulator.get_backend_info()
+        simulator.get_backend_info()
         # Simulator should support gate model
         circuit = simulator.create_circuit(2)
         assert circuit is not None
@@ -388,8 +388,8 @@ class TestBackendSpecificFeatures:
         try:
             from superquantx.backends.ocean_backend import OceanBackend
             ocean = OceanBackend()
-            assert ocean.capabilities['annealing_backend'] == True
-            assert ocean.capabilities['supports_optimization'] == True
+            assert ocean.capabilities['annealing_backend']
+            assert ocean.capabilities['supports_optimization']
         except ImportError:
             pass
 

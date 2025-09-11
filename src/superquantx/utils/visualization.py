@@ -4,7 +4,7 @@ This module provides functions to visualize quantum circuits, optimization resul
 quantum states, and other quantum machine learning concepts.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
@@ -28,14 +28,14 @@ except ImportError:
 
 
 def visualize_results(
-    results: Dict[str, Any],
+    results: dict[str, Any],
     plot_type: str = 'optimization',
     backend: str = 'matplotlib',
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Visualize quantum machine learning results.
-    
+
     Args:
         results: Results dictionary from algorithm execution
         plot_type: Type of plot ('optimization', 'classification', 'regression')
@@ -60,13 +60,13 @@ def visualize_results(
 
 
 def plot_optimization_history(
-    results: Dict[str, Any],
+    results: dict[str, Any],
     backend: str = 'matplotlib',
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot optimization history from algorithm results.
-    
+
     Args:
         results: Results containing 'cost_history' or similar
         backend: Plotting backend
@@ -95,13 +95,13 @@ def plot_optimization_history(
 
 
 def plot_circuit(
-    circuit_data: Dict[str, Any],
+    circuit_data: dict[str, Any],
     backend: str = 'matplotlib',
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot quantum circuit diagram.
-    
+
     Args:
         circuit_data: Circuit information dictionary
         backend: Plotting backend
@@ -121,11 +121,11 @@ def plot_quantum_state(
     state_vector: np.ndarray,
     backend: str = 'matplotlib',
     representation: str = 'bar',
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot quantum state vector.
-    
+
     Args:
         state_vector: Complex quantum state vector
         backend: Plotting backend
@@ -145,11 +145,11 @@ def plot_quantum_state(
 def plot_bloch_sphere(
     state_vector: np.ndarray,
     backend: str = 'matplotlib',
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot quantum state on Bloch sphere (for single qubit states).
-    
+
     Args:
         state_vector: Single qubit state vector [α, β]
         backend: Plotting backend
@@ -172,9 +172,9 @@ def plot_bloch_sphere(
 
 
 def plot_classification_results(
-    results: Dict[str, Any],
+    results: dict[str, Any],
     backend: str = 'matplotlib',
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot classification results including confusion matrix and metrics."""
@@ -187,9 +187,9 @@ def plot_classification_results(
 
 
 def plot_regression_results(
-    results: Dict[str, Any],
+    results: dict[str, Any],
     backend: str = 'matplotlib',
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot regression results including predictions vs actual."""
@@ -203,8 +203,8 @@ def plot_regression_results(
 
 # Matplotlib implementations
 def _plot_optimization_matplotlib(
-    cost_history: List[float],
-    save_path: Optional[str] = None,
+    cost_history: list[float],
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot optimization history using matplotlib."""
@@ -222,8 +222,8 @@ def _plot_optimization_matplotlib(
 
 
 def _plot_circuit_matplotlib(
-    circuit_data: Dict[str, Any],
-    save_path: Optional[str] = None,
+    circuit_data: dict[str, Any],
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot circuit diagram using matplotlib."""
@@ -240,7 +240,7 @@ def _plot_circuit_matplotlib(
     # Draw gates (simplified representation)
     gate_positions = np.linspace(1, 9, len(gates)) if gates else []
 
-    for pos, gate in zip(gate_positions, gates):
+    for pos, gate in zip(gate_positions, gates, strict=False):
         gate_type = gate.get('type', 'X')
         qubit = gate.get('qubit', 0)
 
@@ -269,7 +269,7 @@ def _plot_circuit_matplotlib(
 def _plot_state_matplotlib(
     state_vector: np.ndarray,
     representation: str,
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot quantum state using matplotlib."""
@@ -298,13 +298,13 @@ def _plot_state_matplotlib(
         phases = np.angle(state_vector)
 
         plt.figure(figsize=(10, 8))
-        scatter = plt.scatter(phases, amplitudes, s=100, alpha=0.7)
+        plt.scatter(phases, amplitudes, s=100, alpha=0.7)
         plt.xlabel('Phase (radians)')
         plt.ylabel('Amplitude')
         plt.title('Quantum State (Phase-Amplitude)')
 
         # Add state labels
-        for i, (phase, amp) in enumerate(zip(phases, amplitudes)):
+        for i, (phase, amp) in enumerate(zip(phases, amplitudes, strict=False)):
             if amp > 0.01:  # Only label significant amplitudes
                 plt.annotate(f'|{i}⟩', (phase, amp), xytext=(5, 5),
                            textcoords='offset points')
@@ -317,7 +317,7 @@ def _plot_state_matplotlib(
 
 def _plot_bloch_matplotlib(
     bloch_vector: np.ndarray,
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot Bloch sphere using matplotlib."""
@@ -360,8 +360,8 @@ def _plot_bloch_matplotlib(
 
 
 def _plot_classification_matplotlib(
-    results: Dict[str, Any],
-    save_path: Optional[str] = None,
+    results: dict[str, Any],
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot classification results using matplotlib."""
@@ -410,8 +410,8 @@ def _plot_classification_matplotlib(
 
 
 def _plot_regression_matplotlib(
-    results: Dict[str, Any],
-    save_path: Optional[str] = None,
+    results: dict[str, Any],
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot regression results using matplotlib."""
@@ -465,8 +465,8 @@ def _plot_regression_matplotlib(
 
 # Plotly implementations (simplified)
 def _plot_optimization_plotly(
-    cost_history: List[float],
-    save_path: Optional[str] = None,
+    cost_history: list[float],
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot optimization history using plotly."""
@@ -475,7 +475,7 @@ def _plot_optimization_plotly(
         y=cost_history,
         mode='lines',
         name='Cost',
-        line=dict(width=3)
+        line={'width': 3}
     ))
     fig.update_layout(
         title='Optimization History',
@@ -490,8 +490,8 @@ def _plot_optimization_plotly(
 
 
 def _plot_circuit_plotly(
-    circuit_data: Dict[str, Any],
-    save_path: Optional[str] = None,
+    circuit_data: dict[str, Any],
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot circuit using plotly (simplified)."""
@@ -514,7 +514,7 @@ def _plot_circuit_plotly(
 def _plot_state_plotly(
     state_vector: np.ndarray,
     representation: str,
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot state using plotly."""
@@ -537,7 +537,7 @@ def _plot_state_plotly(
 
 def _plot_bloch_plotly(
     bloch_vector: np.ndarray,
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot Bloch sphere using plotly."""
@@ -562,17 +562,17 @@ def _plot_bloch_plotly(
     fig.add_trace(go.Scatter3d(
         x=[0, x], y=[0, y], z=[0, z],
         mode='lines+markers',
-        line=dict(width=5, color='red'),
-        marker=dict(size=8, color='red')
+        line={'width': 5, 'color': 'red'},
+        marker={'size': 8, 'color': 'red'}
     ))
 
     fig.update_layout(
         title='Bloch Sphere',
-        scene=dict(
-            xaxis_title='X',
-            yaxis_title='Y',
-            zaxis_title='Z'
-        )
+        scene={
+            'xaxis_title': 'X',
+            'yaxis_title': 'Y',
+            'zaxis_title': 'Z'
+        }
     )
 
     if save_path:
@@ -582,8 +582,8 @@ def _plot_bloch_plotly(
 
 
 def _plot_classification_plotly(
-    results: Dict[str, Any],
-    save_path: Optional[str] = None,
+    results: dict[str, Any],
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot classification results using plotly."""
@@ -605,8 +605,8 @@ def _plot_classification_plotly(
 
 
 def _plot_regression_plotly(
-    results: Dict[str, Any],
-    save_path: Optional[str] = None,
+    results: dict[str, Any],
+    save_path: str | None = None,
     **kwargs
 ) -> None:
     """Plot regression results using plotly."""

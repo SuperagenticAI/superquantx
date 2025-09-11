@@ -7,7 +7,6 @@ including algorithm execution, benchmarking, configuration, and system informati
 import json
 import sys
 import time
-from typing import Optional
 
 import click
 import numpy as np
@@ -100,7 +99,7 @@ def list_algorithms(category: str, verbose: bool):
 
                     # Try to get algorithm class and show parameters
                     try:
-                        alg_class = getattr(sqx.algorithms, alg_name)
+                        getattr(sqx.algorithms, alg_name)
                         # This is a simplified approach - real implementation would
                         # need to inspect the class properly
                         click.echo(f"    Module: superquantx.algorithms.{alg_name}")
@@ -189,8 +188,8 @@ def run_algorithm(
     algorithm: str,
     data: str,
     backend: str,
-    output: Optional[str],
-    config_file: Optional[str],
+    output: str | None,
+    config_file: str | None,
     verbose: bool
 ):
     """Run a quantum algorithm on specified dataset."""
@@ -403,7 +402,7 @@ def benchmark(
     is_flag=True,
     help='Show current configuration'
 )
-def configure(backend: Optional[str], shots: Optional[int], seed: Optional[int], show: bool):
+def configure(backend: str | None, shots: int | None, seed: int | None, show: bool):
     """Configure SuperQuantX settings."""
     if show:
         click.echo("Current SuperQuantX Configuration:")
@@ -451,7 +450,7 @@ def configure(backend: Optional[str], shots: Optional[int], seed: Optional[int],
     type=click.Path(),
     help='Output file (NPZ format)'
 )
-def create_dataset(dataset_type: str, samples: int, features: int, output: Optional[str]):
+def create_dataset(dataset_type: str, samples: int, features: int, output: str | None):
     """Create synthetic datasets for testing."""
     if dataset_type == 'classification':
         X_train, X_test, y_train, y_test, metadata = sqx.datasets.generate_classification_data(
@@ -502,7 +501,7 @@ def create_dataset(dataset_type: str, samples: int, features: int, output: Optio
     type=click.Path(),
     help='Output file for plot'
 )
-def visualize(results_file: str, plot_type: str, output: Optional[str]):
+def visualize(results_file: str, plot_type: str, output: str | None):
     """Visualize algorithm results."""
     # Load results
     with open(results_file) as f:

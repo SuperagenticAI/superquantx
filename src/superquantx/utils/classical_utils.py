@@ -7,7 +7,7 @@ including cross-validation, hyperparameter search, and model selection.
 import itertools
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 from sklearn.metrics import accuracy_score, mean_squared_error
@@ -18,12 +18,12 @@ from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
 class CrossValidationResult:
     """Results from cross-validation."""
 
-    scores: List[float]
+    scores: list[float]
     mean_score: float
     std_score: float
-    fold_times: List[float]
+    fold_times: list[float]
     mean_time: float
-    best_params: Optional[Dict[str, Any]] = None
+    best_params: dict[str, Any] | None = None
 
 
 def cross_validation(
@@ -33,11 +33,11 @@ def cross_validation(
     cv_folds: int = 5,
     scoring: str = 'accuracy',
     stratify: bool = True,
-    random_state: Optional[int] = 42,
+    random_state: int | None = 42,
     verbose: bool = False
 ) -> CrossValidationResult:
     """Perform k-fold cross-validation on quantum algorithm.
-    
+
     Args:
         algorithm: Quantum algorithm instance
         X: Feature matrix
@@ -47,12 +47,12 @@ def cross_validation(
         stratify: Whether to use stratified CV for classification
         random_state: Random seed
         verbose: Whether to print progress
-        
+
     Returns:
         CrossValidationResult with scores and timing info
 
     """
-    n_samples = len(X)
+    len(X)
 
     # Choose cross-validation strategy
     if stratify and _is_classification_task(y):
@@ -107,17 +107,17 @@ def cross_validation(
 
 def hyperparameter_search(
     algorithm_class: type,
-    param_grid: Dict[str, List[Any]],
+    param_grid: dict[str, list[Any]],
     X: np.ndarray,
     y: np.ndarray,
     cv_folds: int = 3,
     scoring: str = 'accuracy',
     n_jobs: int = 1,
-    random_state: Optional[int] = 42,
+    random_state: int | None = 42,
     verbose: bool = False
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Perform grid search for hyperparameter optimization.
-    
+
     Args:
         algorithm_class: Quantum algorithm class
         param_grid: Dictionary of parameter names and values to try
@@ -128,7 +128,7 @@ def hyperparameter_search(
         n_jobs: Number of parallel jobs (not implemented)
         random_state: Random seed
         verbose: Whether to print progress
-        
+
     Returns:
         Dictionary with best parameters and results
 
@@ -147,7 +147,7 @@ def hyperparameter_search(
 
     for i, param_values in enumerate(param_combinations):
         # Create parameter dictionary
-        params = dict(zip(param_names, param_values))
+        params = dict(zip(param_names, param_values, strict=False))
 
         if verbose:
             print(f"Combination {i+1}/{len(param_combinations)}: {params}")
@@ -204,17 +204,17 @@ def hyperparameter_search(
 
 
 def model_selection(
-    algorithms: List[Tuple[str, type, Dict[str, Any]]],
+    algorithms: list[tuple[str, type, dict[str, Any]]],
     X: np.ndarray,
     y: np.ndarray,
     cv_folds: int = 5,
     scoring: str = 'accuracy',
     test_size: float = 0.2,
-    random_state: Optional[int] = 42,
+    random_state: int | None = 42,
     verbose: bool = False
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Compare multiple algorithms and select the best one.
-    
+
     Args:
         algorithms: List of (name, class, params) tuples
         X: Feature matrix
@@ -224,7 +224,7 @@ def model_selection(
         test_size: Proportion for test set
         random_state: Random seed
         verbose: Whether to print progress
-        
+
     Returns:
         Dictionary with model selection results
 
@@ -311,10 +311,10 @@ def data_splitting(
     val_size: float = 0.15,
     test_size: float = 0.15,
     stratify: bool = True,
-    random_state: Optional[int] = 42
-) -> Tuple[np.ndarray, ...]:
+    random_state: int | None = 42
+) -> tuple[np.ndarray, ...]:
     """Split data into train, validation, and test sets.
-    
+
     Args:
         X: Feature matrix
         y: Target vector
@@ -323,7 +323,7 @@ def data_splitting(
         test_size: Proportion for testing
         stratify: Whether to stratify splits for classification
         random_state: Random seed
-        
+
     Returns:
         Tuple of (X_train, X_val, X_test, y_train, y_val, y_test)
 
@@ -355,14 +355,14 @@ def learning_curve_analysis(
     algorithm: Any,
     X: np.ndarray,
     y: np.ndarray,
-    train_sizes: Optional[List[float]] = None,
+    train_sizes: list[float] | None = None,
     cv_folds: int = 5,
     scoring: str = 'accuracy',
-    random_state: Optional[int] = 42,
+    random_state: int | None = 42,
     verbose: bool = False
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Analyze learning curve by varying training set size.
-    
+
     Args:
         algorithm: Quantum algorithm instance
         X: Feature matrix
@@ -372,7 +372,7 @@ def learning_curve_analysis(
         scoring: Scoring metric
         random_state: Random seed
         verbose: Whether to print progress
-        
+
     Returns:
         Learning curve analysis results
 
@@ -438,10 +438,10 @@ def feature_importance_analysis(
     method: str = 'permutation',
     n_repeats: int = 10,
     scoring: str = 'accuracy',
-    random_state: Optional[int] = 42
+    random_state: int | None = 42
 ) -> np.ndarray:
     """Analyze feature importance using permutation or other methods.
-    
+
     Args:
         algorithm: Fitted quantum algorithm
         X: Feature matrix
@@ -450,7 +450,7 @@ def feature_importance_analysis(
         n_repeats: Number of permutation repeats
         scoring: Scoring metric
         random_state: Random seed
-        
+
     Returns:
         Feature importance scores
 
@@ -471,7 +471,7 @@ def _permutation_importance(
     y: np.ndarray,
     n_repeats: int,
     scoring: str,
-    random_state: Optional[int]
+    random_state: int | None
 ) -> np.ndarray:
     """Calculate permutation feature importance."""
     # Baseline score

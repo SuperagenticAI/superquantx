@@ -3,7 +3,7 @@
 
 import json
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -13,14 +13,14 @@ class QuantumGate(BaseModel):
     """
 
     name: str = Field(..., description="Gate name (e.g., 'H', 'CNOT', 'RZ')")
-    qubits: List[int] = Field(..., description="Target qubit indices")
-    parameters: List[float] = Field(default_factory=list, description="Gate parameters")
-    classical_condition: Optional[Tuple[str, int]] = Field(
+    qubits: list[int] = Field(..., description="Target qubit indices")
+    parameters: list[float] = Field(default_factory=list, description="Gate parameters")
+    classical_condition: tuple[str, int] | None = Field(
         default=None,
         description="Classical register condition (register_name, value)"
     )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert gate to dictionary representation"""
         return {
             "name": self.name,
@@ -30,7 +30,7 @@ class QuantumGate(BaseModel):
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "QuantumGate":
+    def from_dict(cls, data: dict[str, Any]) -> "QuantumGate":
         """Create gate from dictionary representation"""
         return cls(**data)
 
@@ -62,7 +62,7 @@ class QuantumRegister(BaseModel):
 
 class QuantumCircuit:
     """Quantum circuit representation with gate operations and measurements
-    
+
     This class provides a high-level interface for building and manipulating
     quantum circuits compatible with multiple quantum computing frameworks.
     """
@@ -70,11 +70,11 @@ class QuantumCircuit:
     def __init__(
         self,
         num_qubits: int,
-        num_classical_bits: Optional[int] = None,
-        name: Optional[str] = None
+        num_classical_bits: int | None = None,
+        name: str | None = None
     ):
         """Initialize a quantum circuit
-        
+
         Args:
             num_qubits: Number of qubits in the circuit
             num_classical_bits: Number of classical bits (defaults to num_qubits)
@@ -85,16 +85,16 @@ class QuantumCircuit:
         self.num_classical_bits = num_classical_bits or num_qubits
         self.name = name or f"circuit_{id(self)}"
 
-        self.quantum_registers: List[QuantumRegister] = [
+        self.quantum_registers: list[QuantumRegister] = [
             QuantumRegister(name="q", size=num_qubits)
         ]
-        self.classical_registers: List[ClassicalRegister] = [
+        self.classical_registers: list[ClassicalRegister] = [
             ClassicalRegister(name="c", size=self.num_classical_bits)
         ]
 
-        self.gates: List[QuantumGate] = []
-        self.measurements: List[Tuple[int, int]] = []  # (qubit_index, classical_bit_index)
-        self.barriers: List[List[int]] = []  # Barrier positions
+        self.gates: list[QuantumGate] = []
+        self.measurements: list[tuple[int, int]] = []  # (qubit_index, classical_bit_index)
+        self.barriers: list[list[int]] = []  # Barrier positions
 
     def __len__(self) -> int:
         """Return the number of gates in the circuit"""
@@ -107,7 +107,7 @@ class QuantumCircuit:
         """Create a deep copy of the circuit"""
         return deepcopy(self)
 
-    def add_register(self, register: Union[QuantumRegister, ClassicalRegister]) -> None:
+    def add_register(self, register: QuantumRegister | ClassicalRegister) -> None:
         """Add a quantum or classical register to the circuit"""
         if isinstance(register, QuantumRegister):
             self.quantum_registers.append(register)
@@ -260,7 +260,7 @@ class QuantumCircuit:
             self.measure(i, i)
         return self
 
-    def barrier(self, qubits: Optional[List[int]] = None) -> "QuantumCircuit":
+    def barrier(self, qubits: list[int] | None = None) -> "QuantumCircuit":
         """Add a barrier (prevents gate reordering across barrier)"""
         if qubits is None:
             qubits = list(range(self.num_qubits))
@@ -268,13 +268,13 @@ class QuantumCircuit:
         return self
 
     # Circuit composition
-    def compose(self, other: "QuantumCircuit", qubits: Optional[List[int]] = None) -> "QuantumCircuit":
+    def compose(self, other: "QuantumCircuit", qubits: list[int] | None = None) -> "QuantumCircuit":
         """Compose this circuit with another circuit
-        
+
         Args:
             other: Circuit to compose with
             qubits: Qubit mapping for the other circuit
-            
+
         Returns:
             New composed circuit
 
@@ -354,7 +354,7 @@ class QuantumCircuit:
             return gate
 
     # Export functions
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert circuit to dictionary representation"""
         return {
             "name": self.name,
@@ -372,7 +372,7 @@ class QuantumCircuit:
         return json.dumps(self.to_dict(), indent=indent)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "QuantumCircuit":
+    def from_dict(cls, data: dict[str, Any]) -> "QuantumCircuit":
         """Create circuit from dictionary representation"""
         circuit = cls(
             num_qubits=data["num_qubits"],
@@ -400,10 +400,10 @@ class QuantumCircuit:
 
     def draw(self, output: str = "text") -> str:
         """Draw the circuit in text format
-        
+
         Args:
             output: Output format ("text" only for now)
-            
+
         Returns:
             String representation of the circuit
 
@@ -417,7 +417,7 @@ class QuantumCircuit:
             lines.append(line)
 
         for gate in self.gates:
-            max_qubit = max(gate.qubits)
+            max(gate.qubits)
             gate_repr = gate.name
 
             if len(gate.qubits) == 1:

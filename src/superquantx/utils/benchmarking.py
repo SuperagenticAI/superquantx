@@ -6,9 +6,10 @@ compare performance, and generate comprehensive performance reports.
 
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -28,33 +29,33 @@ class BenchmarkResult:
     backend_name: str
     dataset_name: str
     execution_time: float
-    memory_usage: Optional[float]
-    accuracy: Optional[float]
-    loss: Optional[float]
-    n_parameters: Optional[int]
-    n_qubits: Optional[int]
-    n_iterations: Optional[int]
+    memory_usage: float | None
+    accuracy: float | None
+    loss: float | None
+    n_parameters: int | None
+    n_qubits: int | None
+    n_iterations: int | None
     success: bool
-    error_message: Optional[str]
-    metadata: Dict[str, Any]
+    error_message: str | None
+    metadata: dict[str, Any]
 
 
 def benchmark_algorithm(
     algorithm: Any,
-    datasets: List[Tuple[str, Any]],
-    metrics: Optional[List[str]] = None,
+    datasets: list[tuple[str, Any]],
+    metrics: list[str] | None = None,
     n_runs: int = 1,
     verbose: bool = True
-) -> List[BenchmarkResult]:
+) -> list[BenchmarkResult]:
     """Benchmark quantum algorithm performance across multiple datasets.
-    
+
     Args:
         algorithm: Quantum algorithm instance
         datasets: List of (name, dataset) tuples
         metrics: List of metrics to compute
         n_runs: Number of runs for averaging
         verbose: Whether to print progress
-        
+
     Returns:
         List of benchmark results
 
@@ -90,25 +91,27 @@ def benchmark_algorithm(
 
 
 def benchmark_backend(
-    backends: List[Any],
+    backends: list[Any],
     test_circuit: Callable,
-    n_qubits_range: List[int] = [2, 4, 6, 8],
+    n_qubits_range: list[int] = None,
     n_shots: int = 1024,
     verbose: bool = True
-) -> Dict[str, List[BenchmarkResult]]:
+) -> dict[str, list[BenchmarkResult]]:
     """Benchmark different quantum backends.
-    
+
     Args:
         backends: List of backend instances
         test_circuit: Function that creates test circuit
         n_qubits_range: Range of qubit numbers to test
         n_shots: Number of shots for each measurement
         verbose: Whether to print progress
-        
+
     Returns:
         Dictionary mapping backend names to benchmark results
 
     """
+    if n_qubits_range is None:
+        n_qubits_range = [2, 4, 6, 8]
     results = {}
 
     for backend in backends:
@@ -180,14 +183,14 @@ def performance_metrics(
     y_true: np.ndarray,
     y_pred: np.ndarray,
     task_type: str = 'classification'
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Compute performance metrics for predictions.
-    
+
     Args:
         y_true: True labels/values
         y_pred: Predicted labels/values
         task_type: Type of task ('classification' or 'regression')
-        
+
     Returns:
         Dictionary of computed metrics
 
@@ -244,25 +247,27 @@ def performance_metrics(
 
 
 def compare_algorithms(
-    algorithms: List[Any],
+    algorithms: list[Any],
     dataset: Any,
-    metrics: List[str] = ['accuracy', 'execution_time'],
+    metrics: list[str] = None,
     n_runs: int = 3,
     verbose: bool = True
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Compare multiple algorithms on the same dataset.
-    
+
     Args:
         algorithms: List of algorithm instances
         dataset: Dataset to use for comparison
         metrics: Metrics to compare
         n_runs: Number of runs for averaging
         verbose: Whether to print progress
-        
+
     Returns:
         Comparison results dictionary
 
     """
+    if metrics is None:
+        metrics = ['accuracy', 'execution_time']
     comparison_results = {
         'algorithms': [],
         'metrics': metrics,
@@ -322,15 +327,15 @@ def compare_algorithms(
 
 
 def generate_benchmark_report(
-    results: List[BenchmarkResult],
-    output_path: Optional[str] = None
-) -> Dict[str, Any]:
+    results: list[BenchmarkResult],
+    output_path: str | None = None
+) -> dict[str, Any]:
     """Generate comprehensive benchmark report.
-    
+
     Args:
         results: List of benchmark results
         output_path: Optional path to save report
-        
+
     Returns:
         Report dictionary
 
@@ -409,7 +414,7 @@ def _run_single_benchmark(
     algorithm: Any,
     dataset_name: str,
     dataset: Any,
-    metrics: List[str]
+    metrics: list[str]
 ) -> BenchmarkResult:
     """Run single benchmark iteration."""
     try:
@@ -483,7 +488,7 @@ def _run_single_benchmark(
     return result
 
 
-def _average_benchmark_results(results: List[BenchmarkResult]) -> BenchmarkResult:
+def _average_benchmark_results(results: list[BenchmarkResult]) -> BenchmarkResult:
     """Average multiple benchmark results."""
     # Take the first result as template
     template = results[0]
@@ -511,7 +516,7 @@ def _average_benchmark_results(results: List[BenchmarkResult]) -> BenchmarkResul
     )
 
 
-def _get_memory_usage() -> Optional[float]:
+def _get_memory_usage() -> float | None:
     """Get current memory usage in MB."""
     if not HAS_PSUTIL:
         return None

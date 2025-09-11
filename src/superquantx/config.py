@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import yaml
 
@@ -20,7 +20,7 @@ class Config:
 
     def __init__(self) -> None:
         """Initialize configuration with defaults."""
-        self._config: Dict[str, Any] = {
+        self._config: dict[str, Any] = {
             # Backend configuration
             "backends": {
                 "default": "auto",
@@ -160,9 +160,9 @@ class Config:
             if value is not None:
                 self._set_nested_value(config_path, value)
 
-    def _merge_config(self, new_config: Dict[str, Any]) -> None:
+    def _merge_config(self, new_config: dict[str, Any]) -> None:
         """Merge new configuration with existing configuration."""
-        def merge_dicts(base: Dict, update: Dict) -> Dict:
+        def merge_dicts(base: dict, update: dict) -> dict:
             for key, value in update.items():
                 if key in base and isinstance(base[key], dict) and isinstance(value, dict):
                     base[key] = merge_dicts(base[key], value)
@@ -215,11 +215,11 @@ class Config:
 
         current[keys[-1]] = value
 
-    def update(self, updates: Dict[str, Any]) -> None:
+    def update(self, updates: dict[str, Any]) -> None:
         """Update configuration with a dictionary of values."""
         self._merge_config(updates)
 
-    def save(self, path: Optional[Union[str, Path]] = None) -> None:
+    def save(self, path: str | Path | None = None) -> None:
         """Save current configuration to file."""
         if path is None:
             path = Path.home() / ".superquantx" / "config.yaml"
@@ -240,7 +240,7 @@ class Config:
         """Reset configuration to defaults."""
         self.__init__()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Get configuration as dictionary."""
         return self._config.copy()
 
@@ -258,13 +258,13 @@ class Config:
 config = Config()
 
 def configure(
-    backend: Optional[str] = None,
-    shots: Optional[int] = None,
-    debug: Optional[bool] = None,
+    backend: str | None = None,
+    shots: int | None = None,
+    debug: bool | None = None,
     **kwargs
 ) -> None:
     """Configure SuperQuantX settings.
-    
+
     Args:
         backend: Default backend to use
         shots: Default number of shots for quantum circuits
@@ -310,12 +310,12 @@ def setup_logging() -> None:
         force=True,
     )
 
-def get_platform_config(platform: str) -> Dict[str, Any]:
+def get_platform_config(platform: str) -> dict[str, Any]:
     """Get configuration for a specific platform.
-    
+
     Args:
         platform: Platform name (e.g., 'ibm', 'braket', 'azure')
-        
+
     Returns:
         Platform configuration dictionary
 

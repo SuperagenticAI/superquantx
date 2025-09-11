@@ -6,7 +6,8 @@ including classical optimizers commonly used in quantum machine learning.
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 
@@ -94,15 +95,15 @@ class AdamOptimizer(Optimizer):
 def optimize_circuit(
     cost_function: Callable[[np.ndarray], float],
     initial_params: np.ndarray,
-    gradient_function: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+    gradient_function: Callable[[np.ndarray], np.ndarray] | None = None,
     optimizer: str = 'adam',
     max_iterations: int = 100,
     tolerance: float = 1e-6,
     learning_rate: float = 0.01,
     verbose: bool = False
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Optimize quantum circuit parameters.
-    
+
     Args:
         cost_function: Function to minimize f(params) -> cost
         initial_params: Initial parameter values
@@ -112,7 +113,7 @@ def optimize_circuit(
         tolerance: Convergence tolerance
         learning_rate: Learning rate for gradient-based optimizers
         verbose: Whether to print progress
-        
+
     Returns:
         Dictionary with optimization results
 
@@ -132,7 +133,8 @@ def optimize_circuit(
 
     # If no gradient function provided, use finite differences
     if gradient_function is None:
-        gradient_function = lambda p: finite_difference_gradient(cost_function, p)
+        def gradient_function(p):
+            return finite_difference_gradient(cost_function, p)
 
     for iteration in range(max_iterations):
         # Compute cost and gradient
@@ -168,20 +170,20 @@ def optimize_circuit(
 
 def optimize_parameters(
     objective_function: Callable,
-    bounds: List[Tuple[float, float]],
+    bounds: list[tuple[float, float]],
     method: str = 'scipy',
     max_evaluations: int = 1000,
-    random_state: Optional[int] = None
-) -> Dict[str, Any]:
+    random_state: int | None = None
+) -> dict[str, Any]:
     """Optimize parameters using various methods.
-    
+
     Args:
         objective_function: Function to minimize
         bounds: Parameter bounds as list of (min, max) tuples
         method: Optimization method ('scipy', 'random_search', 'grid_search')
         max_evaluations: Maximum function evaluations
         random_state: Random seed
-        
+
     Returns:
         Optimization results dictionary
 
@@ -203,9 +205,9 @@ def gradient_descent(
     learning_rate: float = 0.01,
     max_iterations: int = 1000,
     tolerance: float = 1e-6
-) -> Tuple[np.ndarray, List[float]]:
+) -> tuple[np.ndarray, list[float]]:
     """Perform gradient descent optimization.
-    
+
     Args:
         cost_function: Cost function to minimize
         gradient_function: Function returning gradients
@@ -213,7 +215,7 @@ def gradient_descent(
         learning_rate: Learning rate
         max_iterations: Maximum iterations
         tolerance: Convergence tolerance
-        
+
     Returns:
         Tuple of (optimal_params, cost_history)
 
@@ -244,9 +246,9 @@ def adam_optimizer(
     epsilon: float = 1e-8,
     max_iterations: int = 1000,
     tolerance: float = 1e-6
-) -> Tuple[np.ndarray, List[float]]:
+) -> tuple[np.ndarray, list[float]]:
     """Perform Adam optimization.
-    
+
     Args:
         cost_function: Cost function to minimize
         gradient_function: Function returning gradients
@@ -257,7 +259,7 @@ def adam_optimizer(
         epsilon: Small constant for numerical stability
         max_iterations: Maximum iterations
         tolerance: Convergence tolerance
-        
+
     Returns:
         Tuple of (optimal_params, cost_history)
 
@@ -285,12 +287,12 @@ def finite_difference_gradient(
     epsilon: float = 1e-6
 ) -> np.ndarray:
     """Compute gradient using finite differences.
-    
+
     Args:
         function: Function to differentiate
         params: Parameters at which to compute gradient
         epsilon: Finite difference step size
-        
+
     Returns:
         Gradient vector
 
@@ -312,9 +314,9 @@ def finite_difference_gradient(
 
 def _scipy_optimize(
     objective_function: Callable,
-    bounds: List[Tuple[float, float]],
+    bounds: list[tuple[float, float]],
     max_evaluations: int
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Optimize using scipy methods."""
     try:
         from scipy.optimize import minimize
@@ -342,10 +344,10 @@ def _scipy_optimize(
 
 def _random_search_optimize(
     objective_function: Callable,
-    bounds: List[Tuple[float, float]],
+    bounds: list[tuple[float, float]],
     max_evaluations: int,
-    random_state: Optional[int]
-) -> Dict[str, Any]:
+    random_state: int | None
+) -> dict[str, Any]:
     """Random search optimization."""
     np.random.seed(random_state)
 
@@ -372,9 +374,9 @@ def _random_search_optimize(
 
 def _grid_search_optimize(
     objective_function: Callable,
-    bounds: List[Tuple[float, float]],
+    bounds: list[tuple[float, float]],
     max_evaluations: int
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Grid search optimization."""
     n_params = len(bounds)
     n_points_per_dim = int(max_evaluations ** (1 / n_params))

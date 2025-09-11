@@ -2,7 +2,7 @@
 """
 
 import math
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Union
 
 import numpy as np
 from scipy.linalg import expm
@@ -199,11 +199,11 @@ class ParametricGate:
         name: str,
         num_qubits: int,
         matrix_func: callable,
-        parameters: List[str],
-        description: Optional[str] = None
+        parameters: list[str],
+        description: str | None = None
     ):
         """Initialize parametric gate
-        
+
         Args:
             name: Gate name
             num_qubits: Number of qubits the gate acts on
@@ -238,12 +238,12 @@ class GateDecomposer:
     """
 
     @staticmethod
-    def decompose_arbitrary_single_qubit(matrix: np.ndarray) -> List[Tuple[str, List[float]]]:
+    def decompose_arbitrary_single_qubit(matrix: np.ndarray) -> list[tuple[str, list[float]]]:
         """Decompose arbitrary single-qubit unitary into U3 gates
-        
+
         Args:
             matrix: 2x2 unitary matrix
-            
+
         Returns:
             List of (gate_name, parameters) tuples
 
@@ -279,9 +279,9 @@ class GateDecomposer:
         return decomposition
 
     @staticmethod
-    def decompose_cnot_to_cz(control: int, target: int) -> List[Tuple[str, List[int], List[float]]]:
+    def decompose_cnot_to_cz(control: int, target: int) -> list[tuple[str, list[int], list[float]]]:
         """Decompose CNOT to CZ using Hadamard gates
-        
+
         Returns:
             List of (gate_name, qubits, parameters) tuples
 
@@ -293,9 +293,9 @@ class GateDecomposer:
         ]
 
     @staticmethod
-    def decompose_toffoli() -> List[Tuple[str, List[int], List[float]]]:
+    def decompose_toffoli() -> list[tuple[str, list[int], list[float]]]:
         """Decompose Toffoli gate into CNOT and single-qubit gates
-        
+
         Returns:
             List of (gate_name, qubits, parameters) for qubits [0, 1, 2]
 
@@ -319,9 +319,9 @@ class GateDecomposer:
         ]
 
     @staticmethod
-    def decompose_fredkin() -> List[Tuple[str, List[int], List[float]]]:
+    def decompose_fredkin() -> list[tuple[str, list[int], list[float]]]:
         """Decompose Fredkin gate into CNOT and Toffoli gates
-        
+
         Returns:
             List of (gate_name, qubits, parameters) for qubits [0, 1, 2]
 
@@ -339,7 +339,7 @@ class PauliString:
 
     def __init__(self, pauli_ops: str, coefficient: complex = 1.0):
         """Initialize Pauli string
-        
+
         Args:
             pauli_ops: String of Pauli operators (e.g., "IXZY")
             coefficient: Complex coefficient
@@ -377,7 +377,7 @@ class PauliString:
         anti_commuting_pairs = {('X', 'Y'), ('Y', 'X'), ('X', 'Z'), ('Z', 'X'), ('Y', 'Z'), ('Z', 'Y')}
         anti_commutations = 0
 
-        for op1, op2 in zip(self.pauli_ops, other.pauli_ops):
+        for op1, op2 in zip(self.pauli_ops, other.pauli_ops, strict=False):
             if (op1, op2) in anti_commuting_pairs:
                 anti_commutations += 1
 
@@ -385,7 +385,7 @@ class PauliString:
 
     def __mul__(self, other: Union[complex, "PauliString"]) -> "PauliString":
         """Multiply with scalar or another Pauli string"""
-        if isinstance(other, (int, float, complex)):
+        if isinstance(other, int | float | complex):
             return PauliString(self.pauli_ops, self.coefficient * other)
         elif isinstance(other, PauliString):
             if len(self.pauli_ops) != len(other.pauli_ops):
@@ -395,7 +395,7 @@ class PauliString:
             result_ops = []
             phase = 1
 
-            for op1, op2 in zip(self.pauli_ops, other.pauli_ops):
+            for op1, op2 in zip(self.pauli_ops, other.pauli_ops, strict=False):
                 if op1 == 'I':
                     result_ops.append(op2)
                 elif op2 == 'I':
@@ -441,9 +441,9 @@ class Hamiltonian:
     """Quantum Hamiltonian represented as sum of Pauli strings
     """
 
-    def __init__(self, pauli_strings: List[PauliString]):
+    def __init__(self, pauli_strings: list[PauliString]):
         """Initialize Hamiltonian
-        
+
         Args:
             pauli_strings: List of Pauli strings that sum to form the Hamiltonian
 
@@ -498,12 +498,12 @@ class Hamiltonian:
         return self * scalar
 
     @classmethod
-    def from_dict(cls, hamiltonian_dict: Dict[str, complex]) -> "Hamiltonian":
+    def from_dict(cls, hamiltonian_dict: dict[str, complex]) -> "Hamiltonian":
         """Create Hamiltonian from dictionary
-        
+
         Args:
             hamiltonian_dict: Dictionary mapping Pauli strings to coefficients
-            
+
         Example:
             {"IXZI": 0.5, "YZII": -0.3, "ZXYX": 1.2j}
 
@@ -522,7 +522,7 @@ class Hamiltonian:
         periodic: bool = False
     ) -> "Hamiltonian":
         """Create Heisenberg model Hamiltonian
-        
+
         H = Σᵢ (Jₓ XᵢXᵢ₊₁ + Jᵧ YᵢYᵢ₊₁ + Jᵤ ZᵢZᵢ₊₁)
         """
         pauli_strings = []
@@ -560,7 +560,7 @@ class Hamiltonian:
         periodic: bool = False
     ) -> "Hamiltonian":
         """Create transverse field Ising model Hamiltonian
-        
+
         H = -J Σᵢ ZᵢZᵢ₊₁ - h Σᵢ Xᵢ
         """
         pauli_strings = []

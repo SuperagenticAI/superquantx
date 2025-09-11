@@ -2,7 +2,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, Field
@@ -17,7 +17,7 @@ class NoiseChannel(ABC):
 
     def __init__(self, probability: float):
         """Initialize noise channel
-        
+
         Args:
             probability: Noise probability (0 <= p <= 1)
 
@@ -27,7 +27,7 @@ class NoiseChannel(ABC):
         self.probability = probability
 
     @abstractmethod
-    def kraus_operators(self) -> List[np.ndarray]:
+    def kraus_operators(self) -> list[np.ndarray]:
         """Return Kraus operators for the noise channel"""
         pass
 
@@ -47,7 +47,7 @@ class BitFlipChannel(NoiseChannel):
     """Bit flip (X) noise channel
     """
 
-    def kraus_operators(self) -> List[np.ndarray]:
+    def kraus_operators(self) -> list[np.ndarray]:
         """Kraus operators for bit flip channel"""
         sqrt_p = np.sqrt(self.probability)
         sqrt_1_p = np.sqrt(1 - self.probability)
@@ -72,7 +72,7 @@ class PhaseFlipChannel(NoiseChannel):
     """Phase flip (Z) noise channel
     """
 
-    def kraus_operators(self) -> List[np.ndarray]:
+    def kraus_operators(self) -> list[np.ndarray]:
         """Kraus operators for phase flip channel"""
         sqrt_p = np.sqrt(self.probability)
         sqrt_1_p = np.sqrt(1 - self.probability)
@@ -97,7 +97,7 @@ class BitPhaseFlipChannel(NoiseChannel):
     """Bit-phase flip (Y) noise channel
     """
 
-    def kraus_operators(self) -> List[np.ndarray]:
+    def kraus_operators(self) -> list[np.ndarray]:
         """Kraus operators for bit-phase flip channel"""
         sqrt_p = np.sqrt(self.probability)
         sqrt_1_p = np.sqrt(1 - self.probability)
@@ -122,7 +122,7 @@ class DepolarizingChannel(NoiseChannel):
     """Depolarizing noise channel
     """
 
-    def kraus_operators(self) -> List[np.ndarray]:
+    def kraus_operators(self) -> list[np.ndarray]:
         """Kraus operators for depolarizing channel"""
         p = self.probability
 
@@ -146,7 +146,7 @@ class AmplitudeDampingChannel(NoiseChannel):
     """Amplitude damping noise channel (T1 decay)
     """
 
-    def kraus_operators(self) -> List[np.ndarray]:
+    def kraus_operators(self) -> list[np.ndarray]:
         """Kraus operators for amplitude damping channel"""
         gamma = self.probability
 
@@ -177,7 +177,7 @@ class PhaseDampingChannel(NoiseChannel):
     """Phase damping noise channel (T2 dephasing)
     """
 
-    def kraus_operators(self) -> List[np.ndarray]:
+    def kraus_operators(self) -> list[np.ndarray]:
         """Kraus operators for phase damping channel"""
         gamma = self.probability
 
@@ -208,7 +208,7 @@ class TwoQubitDepolarizingChannel(NoiseChannel):
     """Two-qubit depolarizing noise channel
     """
 
-    def kraus_operators(self) -> List[np.ndarray]:
+    def kraus_operators(self) -> list[np.ndarray]:
         """Kraus operators for two-qubit depolarizing channel"""
         p = self.probability
 
@@ -249,27 +249,27 @@ class NoiseModel(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
-    single_qubit_error_rates: Dict[str, float] = Field(
+    single_qubit_error_rates: dict[str, float] = Field(
         default_factory=dict,
         description="Error rates for single-qubit gates"
     )
 
-    two_qubit_error_rates: Dict[str, float] = Field(
+    two_qubit_error_rates: dict[str, float] = Field(
         default_factory=dict,
         description="Error rates for two-qubit gates"
     )
 
-    readout_error_rates: Dict[int, float] = Field(
+    readout_error_rates: dict[int, float] = Field(
         default_factory=dict,
         description="Readout error rates per qubit"
     )
 
-    coherence_times: Dict[str, Dict[int, float]] = Field(
+    coherence_times: dict[str, dict[int, float]] = Field(
         default_factory=dict,
         description="T1 and T2 times per qubit"
     )
 
-    crosstalk_matrix: Optional[np.ndarray] = Field(
+    crosstalk_matrix: np.ndarray | None = Field(
         default=None,
         description="Crosstalk coupling matrix"
     )
@@ -298,10 +298,10 @@ class NoiseModel(BaseModel):
 
     def apply_to_circuit(self, circuit: QuantumCircuit) -> QuantumCircuit:
         """Apply noise model to quantum circuit
-        
+
         Args:
             circuit: Original circuit
-            
+
         Returns:
             Noisy circuit with error channels
 
@@ -357,13 +357,13 @@ class NoiseModel(BaseModel):
     @classmethod
     def from_device_properties(
         cls,
-        device_props: Dict[str, Any]
+        device_props: dict[str, Any]
     ) -> "NoiseModel":
         """Create noise model from device properties
-        
+
         Args:
             device_props: Device property dictionary
-            
+
         Returns:
             Noise model based on device properties
 
@@ -392,7 +392,7 @@ class NoiseModel(BaseModel):
             t1_times = device_props["coherence_times"].get("T1", [])
             t2_times = device_props["coherence_times"].get("T2", [])
 
-            for qubit, (t1, t2) in enumerate(zip(t1_times, t2_times)):
+            for qubit, (t1, t2) in enumerate(zip(t1_times, t2_times, strict=False)):
                 noise_model.set_coherence_time(qubit, t1, t2)
 
         return noise_model
@@ -410,12 +410,12 @@ class NoiseModel(BaseModel):
         readout_error: float = 1e-2
     ) -> "NoiseModel":
         """Create basic device noise model
-        
+
         Args:
             single_qubit_error: Single-qubit gate error rate
             two_qubit_error: Two-qubit gate error rate
             readout_error: Readout error rate
-            
+
         Returns:
             Basic noise model
 
@@ -438,9 +438,9 @@ class QuantumErrorCorrection:
     """
 
     @staticmethod
-    def three_qubit_bit_flip_code() -> Dict[str, Any]:
+    def three_qubit_bit_flip_code() -> dict[str, Any]:
         """Three-qubit repetition code for bit flip errors
-        
+
         Returns:
             Code properties and circuits
 
@@ -477,9 +477,9 @@ class QuantumErrorCorrection:
         }
 
     @staticmethod
-    def three_qubit_phase_flip_code() -> Dict[str, Any]:
+    def three_qubit_phase_flip_code() -> dict[str, Any]:
         """Three-qubit code for phase flip errors
-        
+
         Returns:
             Code properties and circuits
 
@@ -525,9 +525,9 @@ class QuantumErrorCorrection:
         }
 
     @staticmethod
-    def nine_qubit_shor_code() -> Dict[str, Any]:
+    def nine_qubit_shor_code() -> dict[str, Any]:
         """Nine-qubit Shor code (corrects arbitrary single-qubit errors)
-        
+
         Returns:
             Code properties and circuits
 
@@ -566,9 +566,9 @@ class QuantumErrorCorrection:
         }
 
     @staticmethod
-    def steane_code() -> Dict[str, Any]:
+    def steane_code() -> dict[str, Any]:
         """7-qubit Steane code
-        
+
         Returns:
             Code properties
 
@@ -598,13 +598,13 @@ class QuantumErrorCorrection:
         }
 
     @staticmethod
-    def decode_syndrome(syndrome: str, correction_table: Dict[str, str]) -> Optional[str]:
+    def decode_syndrome(syndrome: str, correction_table: dict[str, str]) -> str | None:
         """Decode error syndrome to determine correction
-        
+
         Args:
             syndrome: Measured syndrome bitstring
             correction_table: Syndrome to correction mapping
-            
+
         Returns:
             Correction operation or None if no error
 
@@ -617,11 +617,11 @@ class QuantumErrorCorrection:
         correction: str
     ) -> QuantumCircuit:
         """Apply error correction to circuit
-        
+
         Args:
             circuit: Circuit to correct
             correction: Correction operation (e.g., "X0", "Z2")
-            
+
         Returns:
             Corrected circuit
 
@@ -653,15 +653,15 @@ class ErrorMitigation:
     def randomized_compiling(
         circuit: QuantumCircuit,
         num_random_circuits: int = 10,
-        random_seed: Optional[int] = None
-    ) -> List[QuantumCircuit]:
+        random_seed: int | None = None
+    ) -> list[QuantumCircuit]:
         """Generate randomly compiled circuits for error mitigation
-        
+
         Args:
             circuit: Original circuit
             num_random_circuits: Number of random compilations
             random_seed: Random seed for reproducibility
-            
+
         Returns:
             List of randomly compiled circuits
 
@@ -679,7 +679,7 @@ class ErrorMitigation:
             for gate in random_circuit.gates:
                 if len(gate.qubits) == 1:
                     # Add random Pauli before and after
-                    qubit = gate.qubits[0]
+                    gate.qubits[0]
 
                     # Random Pauli group element
                     pauli_choice = np.random.choice(['I', 'X', 'Y', 'Z'])
@@ -698,15 +698,15 @@ class ErrorMitigation:
 
     @staticmethod
     def clifford_data_regression(
-        noisy_results: List[float],
-        clifford_expectation_values: List[float]
+        noisy_results: list[float],
+        clifford_expectation_values: list[float]
     ) -> float:
         """Perform Clifford data regression for error mitigation
-        
+
         Args:
             noisy_results: Noisy measurement results
             clifford_expectation_values: Expected values from Clifford simulation
-            
+
         Returns:
             Error-mitigated expectation value
 
@@ -734,14 +734,14 @@ class ErrorMitigation:
     @staticmethod
     def symmetry_verification(
         circuit: QuantumCircuit,
-        symmetry_generators: List[PauliString]
-    ) -> Dict[str, Any]:
+        symmetry_generators: list[PauliString]
+    ) -> dict[str, Any]:
         """Verify circuit preserves expected symmetries
-        
+
         Args:
             circuit: Quantum circuit
             symmetry_generators: List of Pauli symmetries to check
-            
+
         Returns:
             Symmetry verification results
 

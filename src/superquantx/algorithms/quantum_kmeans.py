@@ -5,7 +5,7 @@ quantum distance calculations and quantum amplitude estimation approaches.
 """
 
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import numpy as np
 from sklearn.cluster import KMeans
@@ -19,17 +19,17 @@ logger = logging.getLogger(__name__)
 
 class QuantumKMeans(UnsupervisedQuantumAlgorithm):
     """Quantum K-Means clustering algorithm.
-    
+
     This implementation uses quantum algorithms to perform K-means clustering,
     potentially offering speedup for high-dimensional data through quantum
     distance calculations and amplitude estimation.
-    
+
     The algorithm can use different quantum approaches:
     - Quantum Distance Calculation: Use quantum circuits to compute distances
     - Quantum Amplitude Estimation: For probabilistic distance measurements
     - Variational Quantum Clustering: Use VQC for cluster optimization
     - Quantum Annealing: For global cluster optimization
-    
+
     Args:
         backend: Quantum backend for circuit execution
         n_clusters: Number of clusters (k)
@@ -42,7 +42,7 @@ class QuantumKMeans(UnsupervisedQuantumAlgorithm):
         shots: Number of measurement shots
         classical_fallback: Use classical K-means if quantum fails
         **kwargs: Additional parameters
-        
+
     Example:
         >>> qkmeans = QuantumKMeans(backend='pennylane', n_clusters=3, method='distance')
         >>> qkmeans.fit(X_train)
@@ -53,7 +53,7 @@ class QuantumKMeans(UnsupervisedQuantumAlgorithm):
 
     def __init__(
         self,
-        backend: Union[str, Any],
+        backend: str | Any,
         n_clusters: int = 3,
         method: str = 'distance',
         distance_metric: str = 'euclidean',
@@ -64,7 +64,7 @@ class QuantumKMeans(UnsupervisedQuantumAlgorithm):
         shots: int = 1024,
         classical_fallback: bool = True,
         normalize_data: bool = True,
-        random_state: Optional[int] = None,
+        random_state: int | None = None,
         **kwargs
     ) -> None:
         super().__init__(backend=backend, shots=shots, **kwargs)
@@ -326,14 +326,14 @@ class QuantumKMeans(UnsupervisedQuantumAlgorithm):
         centroid_shift = np.max(np.linalg.norm(new_centroids - old_centroids, axis=1))
         return centroid_shift < self.tolerance
 
-    def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> 'QuantumKMeans':
+    def fit(self, X: np.ndarray, y: np.ndarray | None = None, **kwargs) -> 'QuantumKMeans':
         """Fit quantum K-means to the data.
-        
+
         Args:
             X: Training data
             y: Ignored (unsupervised learning)
             **kwargs: Additional fitting parameters
-            
+
         Returns:
             Self for method chaining
 
@@ -401,11 +401,11 @@ class QuantumKMeans(UnsupervisedQuantumAlgorithm):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """Predict cluster labels for new data.
-        
+
         Args:
             X: Data to cluster
             **kwargs: Additional parameters
-            
+
         Returns:
             Cluster labels
 
@@ -423,7 +423,7 @@ class QuantumKMeans(UnsupervisedQuantumAlgorithm):
         # Assign to nearest cluster
         return self._assign_clusters(distances)
 
-    def fit_predict(self, X: np.ndarray, y: Optional[np.ndarray] = None) -> np.ndarray:
+    def fit_predict(self, X: np.ndarray, y: np.ndarray | None = None) -> np.ndarray:
         """Fit K-means and return cluster labels."""
         return self.fit(X, y).labels_
 
@@ -439,7 +439,7 @@ class QuantumKMeans(UnsupervisedQuantumAlgorithm):
         # Return distances to all centroids
         return self._compute_distances_batch(X, self.cluster_centers_)
 
-    def get_quantum_advantage_metrics(self) -> Dict[str, Any]:
+    def get_quantum_advantage_metrics(self) -> dict[str, Any]:
         """Analyze potential quantum advantage."""
         if not self.is_fitted:
             raise ValueError("Must fit model first")
@@ -467,7 +467,7 @@ class QuantumKMeans(UnsupervisedQuantumAlgorithm):
 
         return metrics
 
-    def compare_with_classical(self, X: np.ndarray, y_true: Optional[np.ndarray] = None) -> Dict[str, Any]:
+    def compare_with_classical(self, X: np.ndarray, y_true: np.ndarray | None = None) -> dict[str, Any]:
         """Compare quantum K-means results with classical K-means."""
         if not self.is_fitted or not hasattr(self.classical_kmeans, 'cluster_centers_'):
             raise ValueError("Both quantum and classical K-means must be fitted")
@@ -531,7 +531,7 @@ class QuantumKMeans(UnsupervisedQuantumAlgorithm):
 
         return comparison
 
-    def analyze_convergence(self) -> Dict[str, Any]:
+    def analyze_convergence(self) -> dict[str, Any]:
         """Analyze convergence properties."""
         if not self.convergence_history:
             return {'message': 'No convergence history available'}
@@ -548,7 +548,7 @@ class QuantumKMeans(UnsupervisedQuantumAlgorithm):
             'inertia_variance': np.var(inertias[-10:]) if len(inertias) >= 10 else np.var(inertias),
         }
 
-    def get_params(self, deep: bool = True) -> Dict[str, Any]:
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get quantum K-means parameters."""
         params = super().get_params(deep)
         params.update({

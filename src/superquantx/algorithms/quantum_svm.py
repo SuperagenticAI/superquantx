@@ -5,7 +5,8 @@ for binary and multiclass classification tasks using quantum kernels.
 """
 
 import logging
-from typing import Any, Callable, Dict, Optional, Union
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 from sklearn.metrics import accuracy_score
@@ -19,16 +20,16 @@ logger = logging.getLogger(__name__)
 
 class QuantumSVM(SupervisedQuantumAlgorithm):
     """Quantum Support Vector Machine for classification.
-    
+
     This implementation uses quantum feature maps to transform data into
     a high-dimensional Hilbert space where linear separation is possible.
     The quantum kernel is computed using quantum circuits.
-    
+
     The algorithm works by:
     1. Encoding classical data into quantum states using feature maps
     2. Computing quantum kernels between data points
     3. Training a classical SVM using the quantum kernel matrix
-    
+
     Args:
         backend: Quantum backend for circuit execution
         feature_map: Type of quantum feature map ('ZZFeatureMap', 'PauliFeatureMap', etc.)
@@ -38,7 +39,7 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
         quantum_kernel: Custom quantum kernel function
         shots: Number of measurement shots
         **kwargs: Additional parameters
-    
+
     Example:
         >>> qsvm = QuantumSVM(backend='pennylane', feature_map='ZZFeatureMap')
         >>> qsvm.fit(X_train, y_train)
@@ -49,12 +50,12 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
 
     def __init__(
         self,
-        backend: Union[str, Any],
+        backend: str | Any,
         feature_map: str = 'ZZFeatureMap',
         feature_map_reps: int = 2,
         C: float = 1.0,
-        gamma: Optional[float] = None,
-        quantum_kernel: Optional[Callable] = None,
+        gamma: float | None = None,
+        quantum_kernel: Callable | None = None,
         shots: int = 1024,
         normalize_data: bool = True,
         **kwargs
@@ -103,13 +104,13 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
         logger.warning("Using default feature map - results may vary")
         return None
 
-    def _compute_quantum_kernel(self, X1: np.ndarray, X2: Optional[np.ndarray] = None) -> np.ndarray:
+    def _compute_quantum_kernel(self, X1: np.ndarray, X2: np.ndarray | None = None) -> np.ndarray:
         """Compute quantum kernel matrix between data points.
-        
+
         Args:
             X1: First set of data points
             X2: Second set of data points (if None, use X1)
-            
+
         Returns:
             Quantum kernel matrix
 
@@ -145,12 +146,12 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
 
     def fit(self, X: np.ndarray, y: np.ndarray, **kwargs) -> 'QuantumSVM':
         """Train the quantum SVM.
-        
+
         Args:
             X: Training data features
             y: Training data labels
             **kwargs: Additional training parameters
-            
+
         Returns:
             Self for method chaining
 
@@ -198,11 +199,11 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """Make predictions using the trained quantum SVM.
-        
+
         Args:
             X: Input data for prediction
             **kwargs: Additional prediction parameters
-            
+
         Returns:
             Predicted labels
 
@@ -223,11 +224,11 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
 
     def predict_proba(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """Predict class probabilities.
-        
+
         Args:
             X: Input data for prediction
             **kwargs: Additional parameters
-            
+
         Returns:
             Predicted class probabilities
 
@@ -249,10 +250,10 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
 
     def decision_function(self, X: np.ndarray) -> np.ndarray:
         """Compute decision function values.
-        
+
         Args:
             X: Input data
-            
+
         Returns:
             Decision function values
 
@@ -273,12 +274,12 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
 
         return self.X_train_[self.svm.support_]
 
-    def get_quantum_kernel_matrix(self, X: Optional[np.ndarray] = None) -> np.ndarray:
+    def get_quantum_kernel_matrix(self, X: np.ndarray | None = None) -> np.ndarray:
         """Get the quantum kernel matrix.
-        
+
         Args:
             X: Data to compute kernel matrix for (default: training data)
-            
+
         Returns:
             Quantum kernel matrix
 
@@ -292,9 +293,9 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
                 X = self.scaler.transform(X)
             return self._compute_quantum_kernel(X)
 
-    def analyze_kernel(self) -> Dict[str, Any]:
+    def analyze_kernel(self) -> dict[str, Any]:
         """Analyze properties of the quantum kernel.
-        
+
         Returns:
             Dictionary with kernel analysis results
 
@@ -324,7 +325,7 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
 
         return analysis
 
-    def get_params(self, deep: bool = True) -> Dict[str, Any]:
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get algorithm parameters."""
         params = super().get_params(deep)
         params.update({

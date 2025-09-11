@@ -19,7 +19,8 @@ without human intervention.
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 from sklearn.metrics import accuracy_score
@@ -36,11 +37,11 @@ logger = logging.getLogger(__name__)
 
 class QuantumAgent(BaseQuantumAlgorithm, ABC):
     """Base class for quantum agents.
-    
+
     Quantum agents are specialized combinations of quantum algorithms
     designed for specific problem domains. They provide high-level
     interfaces for complex quantum machine learning workflows.
-    
+
     Args:
         backend: Quantum backend for circuit execution
         agent_config: Configuration dictionary for the agent
@@ -51,8 +52,8 @@ class QuantumAgent(BaseQuantumAlgorithm, ABC):
 
     def __init__(
         self,
-        backend: Union[str, Any],
-        agent_config: Optional[Dict[str, Any]] = None,
+        backend: str | Any,
+        agent_config: dict[str, Any] | None = None,
         shots: int = 1024,
         **kwargs
     ) -> None:
@@ -75,18 +76,18 @@ class QuantumAgent(BaseQuantumAlgorithm, ABC):
     @abstractmethod
     def solve(self, problem_instance: Any, **kwargs) -> QuantumResult:
         """Solve a problem using the quantum agent.
-        
+
         Args:
             problem_instance: Problem data/specification
             **kwargs: Additional solving parameters
-            
+
         Returns:
             Solution result
 
         """
         pass
 
-    def get_agent_info(self) -> Dict[str, Any]:
+    def get_agent_info(self) -> dict[str, Any]:
         """Get information about the agent and its algorithms."""
         return {
             'agent_type': self.__class__.__name__,
@@ -98,11 +99,11 @@ class QuantumAgent(BaseQuantumAlgorithm, ABC):
 
 class QuantumPortfolioAgent(QuantumAgent):
     """Quantum agent for portfolio optimization.
-    
+
     This agent combines QAOA and VQE algorithms to solve portfolio
     optimization problems including mean-variance optimization,
     risk parity, and constrained optimization.
-    
+
     Args:
         backend: Quantum backend
         risk_model: Risk model to use ('mean_variance', 'black_litterman', 'factor')
@@ -110,7 +111,7 @@ class QuantumPortfolioAgent(QuantumAgent):
         constraints: List of constraint specifications
         rebalancing_frequency: How often to rebalance
         **kwargs: Additional parameters
-        
+
     Example:
         >>> agent = QuantumPortfolioAgent(
         ...     backend='pennylane',
@@ -124,10 +125,10 @@ class QuantumPortfolioAgent(QuantumAgent):
 
     def __init__(
         self,
-        backend: Union[str, Any],
+        backend: str | Any,
         risk_model: str = 'mean_variance',
         optimization_objective: str = 'sharpe',
-        constraints: Optional[List[Dict]] = None,
+        constraints: list[dict] | None = None,
         rebalancing_frequency: str = 'monthly',
         **kwargs
     ) -> None:
@@ -191,7 +192,7 @@ class QuantumPortfolioAgent(QuantumAgent):
 
         return H
 
-    def _encode_constraints(self, constraints: List[Dict], n_assets: int) -> List[Callable]:
+    def _encode_constraints(self, constraints: list[dict], n_assets: int) -> list[Callable]:
         """Encode portfolio constraints as quantum operators."""
         quantum_constraints = []
 
@@ -228,14 +229,14 @@ class QuantumPortfolioAgent(QuantumAgent):
 
         return quantum_constraints
 
-    def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> 'QuantumPortfolioAgent':
+    def fit(self, X: np.ndarray, y: np.ndarray | None = None, **kwargs) -> 'QuantumPortfolioAgent':
         """Fit the portfolio agent to historical data.
-        
+
         Args:
             X: Historical returns data (samples x assets)
             y: Not used
             **kwargs: Additional parameters
-            
+
         Returns:
             Self
 
@@ -275,11 +276,11 @@ class QuantumPortfolioAgent(QuantumAgent):
 
     def solve(self, problem_instance: np.ndarray, **kwargs) -> QuantumResult:
         """Solve portfolio optimization problem.
-        
+
         Args:
             problem_instance: Returns data or problem specification
             **kwargs: Solving parameters
-            
+
         Returns:
             Portfolio optimization result
 
@@ -300,7 +301,7 @@ class QuantumPortfolioAgent(QuantumAgent):
 
             elif method == 'qaoa':
                 # Use QAOA for discrete optimization
-                qaoa_result = self.algorithms['qaoa'].optimize(lambda x: self._portfolio_objective(x))
+                self.algorithms['qaoa'].optimize(lambda x: self._portfolio_objective(x))
                 optimal_solution = self.algorithms['qaoa'].predict(problem_instance)
 
                 # Convert binary solution to weights
@@ -398,11 +399,11 @@ class QuantumPortfolioAgent(QuantumAgent):
 
 class QuantumClassificationAgent(QuantumAgent):
     """Quantum agent for classification tasks.
-    
+
     This agent combines multiple quantum classifiers and provides
     automatic model selection, hyperparameter optimization, and
     ensemble methods for robust classification.
-    
+
     Args:
         backend: Quantum backend
         algorithms: List of algorithms to include ('quantum_svm', 'quantum_nn', 'hybrid')
@@ -414,8 +415,8 @@ class QuantumClassificationAgent(QuantumAgent):
 
     def __init__(
         self,
-        backend: Union[str, Any],
-        algorithms: Optional[List[str]] = None,
+        backend: str | Any,
+        algorithms: list[str] | None = None,
         ensemble_method: str = 'voting',
         auto_tune: bool = False,
         **kwargs
@@ -502,7 +503,7 @@ class QuantumClassificationAgent(QuantumAgent):
             best_algo = max(self.performance_metrics.items(), key=lambda x: x[1])[0]
             return predictions.get(best_algo, list(predictions.values())[0])
 
-    def _majority_voting(self, predictions: Dict[str, np.ndarray]) -> np.ndarray:
+    def _majority_voting(self, predictions: dict[str, np.ndarray]) -> np.ndarray:
         """Majority voting ensemble."""
         pred_arrays = list(predictions.values())
         n_samples = len(pred_arrays[0])
@@ -515,7 +516,7 @@ class QuantumClassificationAgent(QuantumAgent):
 
         return np.array(final_predictions)
 
-    def _weighted_voting(self, predictions: Dict[str, np.ndarray]) -> np.ndarray:
+    def _weighted_voting(self, predictions: dict[str, np.ndarray]) -> np.ndarray:
         """Weighted voting based on performance."""
         weights = {}
         total_weight = 0
@@ -548,7 +549,7 @@ class QuantumClassificationAgent(QuantumAgent):
 
         return np.array(final_predictions)
 
-    def solve(self, problem_instance: Tuple[np.ndarray, np.ndarray], **kwargs) -> QuantumResult:
+    def solve(self, problem_instance: tuple[np.ndarray, np.ndarray], **kwargs) -> QuantumResult:
         """Solve classification problem."""
         import time
 
@@ -595,11 +596,11 @@ class QuantumClassificationAgent(QuantumAgent):
 
 class QuantumTradingAgent(QuantumAgent):
     """Autonomous quantum trading agent for financial markets.
-    
+
     This agent combines quantum portfolio optimization, quantum risk analysis,
     and quantum-enhanced pattern recognition to make autonomous trading
     decisions with potential quantum advantages in complex market scenarios.
-    
+
     Args:
         backend: Quantum backend for computations
         strategy: Trading strategy ('momentum', 'mean_reversion', 'quantum_portfolio')
@@ -612,11 +613,11 @@ class QuantumTradingAgent(QuantumAgent):
 
     def __init__(
         self,
-        backend: Union[str, Any] = 'auto',
+        backend: str | Any = 'auto',
         strategy: str = 'quantum_portfolio',
         risk_tolerance: float = 0.5,
         quantum_advantage_threshold: float = 0.05,
-        markets: Optional[List[str]] = None,
+        markets: list[str] | None = None,
         **kwargs
     ) -> None:
         super().__init__(backend=backend, **kwargs)
@@ -640,7 +641,7 @@ class QuantumTradingAgent(QuantumAgent):
         """Initialize the trading agent."""
         self.is_fitted = True  # Agents are pre-configured
 
-    def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> 'QuantumTradingAgent':
+    def fit(self, X: np.ndarray, y: np.ndarray | None = None, **kwargs) -> 'QuantumTradingAgent':
         """Fit the trading agent (optional for pre-configured agents)."""
         return self
 
@@ -653,7 +654,7 @@ class QuantumTradingAgent(QuantumAgent):
         """Solve trading optimization problem."""
         return self.deploy(problem_instance, **kwargs)
 
-    def deploy(self, market_data: Optional[Any] = None, **kwargs) -> QuantumResult:
+    def deploy(self, market_data: Any | None = None, **kwargs) -> QuantumResult:
         """Deploy the trading agent and return performance metrics."""
         start_time = time.time()
 
@@ -693,7 +694,7 @@ class QuantumTradingAgent(QuantumAgent):
                 error=str(e),
             )
 
-    def _quantum_portfolio_optimization(self, market_data: Any, **kwargs) -> Dict[str, Any]:
+    def _quantum_portfolio_optimization(self, market_data: Any, **kwargs) -> dict[str, Any]:
         """Perform quantum portfolio optimization."""
         # Placeholder implementation
         return {
@@ -702,7 +703,7 @@ class QuantumTradingAgent(QuantumAgent):
             'sharpe_ratio': 0.8 + np.random.normal(0, 0.1),
         }
 
-    def _quantum_momentum_strategy(self, market_data: Any, **kwargs) -> Dict[str, Any]:
+    def _quantum_momentum_strategy(self, market_data: Any, **kwargs) -> dict[str, Any]:
         """Quantum-enhanced momentum trading strategy."""
         return {
             'expected_return': 0.10 + np.random.normal(0, 0.03),
@@ -710,7 +711,7 @@ class QuantumTradingAgent(QuantumAgent):
             'sharpe_ratio': 0.6 + np.random.normal(0, 0.1),
         }
 
-    def _basic_trading_strategy(self, market_data: Any, **kwargs) -> Dict[str, Any]:
+    def _basic_trading_strategy(self, market_data: Any, **kwargs) -> dict[str, Any]:
         """Basic trading strategy fallback."""
         return {
             'expected_return': 0.08 + np.random.normal(0, 0.02),
@@ -718,7 +719,7 @@ class QuantumTradingAgent(QuantumAgent):
             'sharpe_ratio': 0.4 + np.random.normal(0, 0.05),
         }
 
-    def _calculate_quantum_advantage(self, result: Dict[str, Any]) -> float:
+    def _calculate_quantum_advantage(self, result: dict[str, Any]) -> float:
         """Calculate quantum advantage over classical methods."""
         # Simplified quantum advantage calculation
         base_performance = 0.08  # Classical baseline
@@ -728,11 +729,11 @@ class QuantumTradingAgent(QuantumAgent):
 
 class QuantumResearchAgent(QuantumAgent):
     """Autonomous quantum research agent for scientific discovery.
-    
-    This agent combines quantum simulation, quantum machine learning, and 
+
+    This agent combines quantum simulation, quantum machine learning, and
     automated hypothesis generation to accelerate scientific research across
     domains like materials science, drug discovery, and physics.
-    
+
     Args:
         backend: Quantum backend for simulations
         domain: Research domain ('materials_science', 'drug_discovery', 'physics')
@@ -745,7 +746,7 @@ class QuantumResearchAgent(QuantumAgent):
 
     def __init__(
         self,
-        backend: Union[str, Any] = 'auto',
+        backend: str | Any = 'auto',
         domain: str = 'materials_science',
         hypothesis_generation: bool = True,
         experiment_design: bool = True,
@@ -784,7 +785,7 @@ class QuantumResearchAgent(QuantumAgent):
         """Initialize the research agent."""
         self.is_fitted = True  # Agents are pre-configured
 
-    def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> 'QuantumResearchAgent':
+    def fit(self, X: np.ndarray, y: np.ndarray | None = None, **kwargs) -> 'QuantumResearchAgent':
         """Fit the research agent (optional for pre-configured agents)."""
         return self
 
@@ -800,7 +801,7 @@ class QuantumResearchAgent(QuantumAgent):
     def investigate(
         self,
         research_question: str,
-        constraints: Optional[Dict[str, Any]] = None,
+        constraints: dict[str, Any] | None = None,
         **kwargs
     ) -> QuantumResult:
         """Investigate a research question and return research plan."""
@@ -841,7 +842,7 @@ class QuantumResearchAgent(QuantumAgent):
                 error=str(e),
             )
 
-    def _generate_research_plan(self, question: str, constraints: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    def _generate_research_plan(self, question: str, constraints: dict[str, Any] | None) -> dict[str, Any]:
         """Generate a research plan using quantum-enhanced methods."""
         constraints = constraints or {}
 
@@ -859,7 +860,7 @@ class QuantumResearchAgent(QuantumAgent):
             'expected_quantum_advantage': 'Exponential speedup for molecular simulations',
         }
 
-    def _generate_hypothesis(self, question: str) -> Dict[str, Any]:
+    def _generate_hypothesis(self, question: str) -> dict[str, Any]:
         """Generate research hypotheses using quantum ML."""
         return {
             'primary_hypothesis': f"Quantum effects in {self.domain} can be leveraged to solve: {question}",
@@ -873,7 +874,7 @@ class QuantumResearchAgent(QuantumAgent):
             ]
         }
 
-    def _design_experiments(self, question: str) -> List[Dict[str, Any]]:
+    def _design_experiments(self, question: str) -> list[dict[str, Any]]:
         """Design quantum experiments for research validation."""
         return [
             {
@@ -894,11 +895,11 @@ class QuantumResearchAgent(QuantumAgent):
 
 class QuantumOptimizationAgent(QuantumAgent):
     """Quantum agent for optimization problems.
-    
+
     This agent provides a unified interface for solving various
     optimization problems using QAOA, VQE, and other quantum
     optimization algorithms.
-    
+
     Args:
         backend: Quantum backend
         problem_type: Type of optimization ('combinatorial', 'continuous', 'mixed')
@@ -909,9 +910,9 @@ class QuantumOptimizationAgent(QuantumAgent):
 
     def __init__(
         self,
-        backend: Union[str, Any],
+        backend: str | Any,
         problem_type: str = 'combinatorial',
-        algorithms: Optional[List[str]] = None,
+        algorithms: list[str] | None = None,
         **kwargs
     ) -> None:
         agent_config = {
@@ -940,7 +941,7 @@ class QuantumOptimizationAgent(QuantumAgent):
                 shots=self.shots
             )
 
-    def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> 'QuantumOptimizationAgent':
+    def fit(self, X: np.ndarray, y: np.ndarray | None = None, **kwargs) -> 'QuantumOptimizationAgent':
         """Fit optimization algorithms to problem."""
         for name, algorithm in self.algorithms.items():
             algorithm.fit(X, y)

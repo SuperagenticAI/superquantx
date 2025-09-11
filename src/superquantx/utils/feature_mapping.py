@@ -5,8 +5,9 @@ which encode classical data into quantum states for machine learning algorithms.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -21,12 +22,12 @@ class FeatureMapConfig:
     entanglement: str = 'full'
     parameter_prefix: str = 'x'
     insert_barriers: bool = False
-    data_map_func: Optional[Callable] = None
+    data_map_func: Callable | None = None
 
 
 class QuantumFeatureMap(ABC):
     """Abstract base class for quantum feature maps.
-    
+
     Feature maps encode classical data into quantum states by applying
     parameterized quantum gates based on the input features.
     """
@@ -46,16 +47,16 @@ class QuantumFeatureMap(ABC):
         self._parameters = []
 
     @abstractmethod
-    def _build_circuit(self, parameters: np.ndarray) -> Dict[str, Any]:
+    def _build_circuit(self, parameters: np.ndarray) -> dict[str, Any]:
         """Build the quantum circuit for the feature map."""
         pass
 
-    def map_data_point(self, x: np.ndarray) -> Dict[str, Any]:
+    def map_data_point(self, x: np.ndarray) -> dict[str, Any]:
         """Map a single data point to quantum circuit parameters.
-        
+
         Args:
             x: Input data point of length n_features
-            
+
         Returns:
             Circuit representation with parameters
 
@@ -68,12 +69,12 @@ class QuantumFeatureMap(ABC):
 
         return self._build_circuit(parameters)
 
-    def map_data(self, X: np.ndarray) -> List[Dict[str, Any]]:
+    def map_data(self, X: np.ndarray) -> list[dict[str, Any]]:
         """Map multiple data points to quantum circuits.
-        
+
         Args:
             X: Input data of shape (n_samples, n_features)
-            
+
         Returns:
             List of circuit representations
 
@@ -88,7 +89,7 @@ class QuantumFeatureMap(ABC):
 
 class ZFeatureMap(QuantumFeatureMap):
     """Z-axis rotation feature map.
-    
+
     This feature map applies RZ rotations to encode features:
     RZ(2 * x_i) for each feature x_i
     """
@@ -101,7 +102,7 @@ class ZFeatureMap(QuantumFeatureMap):
     ):
         super().__init__(n_features, reps, 'none', parameter_prefix)
 
-    def _build_circuit(self, parameters: np.ndarray) -> Dict[str, Any]:
+    def _build_circuit(self, parameters: np.ndarray) -> dict[str, Any]:
         """Build Z feature map circuit."""
         gates = []
 
@@ -125,9 +126,9 @@ class ZFeatureMap(QuantumFeatureMap):
 
 class ZZFeatureMap(QuantumFeatureMap):
     """ZZ entangling feature map.
-    
+
     This feature map uses both single-qubit Z rotations and two-qubit ZZ interactions:
-    - Single qubit: RZ(2 * x_i) 
+    - Single qubit: RZ(2 * x_i)
     - Two qubit: RZZ(2 * x_i * x_j) for entangled qubits
     """
 
@@ -142,7 +143,7 @@ class ZZFeatureMap(QuantumFeatureMap):
         super().__init__(n_features, reps, entanglement, parameter_prefix)
         self.alpha = alpha
 
-    def _build_circuit(self, parameters: np.ndarray) -> Dict[str, Any]:
+    def _build_circuit(self, parameters: np.ndarray) -> dict[str, Any]:
         """Build ZZ feature map circuit."""
         gates = []
 
@@ -180,7 +181,7 @@ class ZZFeatureMap(QuantumFeatureMap):
             'entanglement': self.entanglement
         }
 
-    def _get_entangling_pairs(self) -> List[Tuple[int, int]]:
+    def _get_entangling_pairs(self) -> list[tuple[int, int]]:
         """Get pairs of qubits for entangling gates."""
         pairs = []
 
@@ -211,7 +212,7 @@ class ZZFeatureMap(QuantumFeatureMap):
 
 class PauliFeatureMap(QuantumFeatureMap):
     """Pauli feature map with arbitrary Pauli strings.
-    
+
     This feature map applies rotations based on Pauli operators:
     exp(i * alpha * phi * P) where P is a Pauli string and phi is the feature value.
     """
@@ -220,16 +221,18 @@ class PauliFeatureMap(QuantumFeatureMap):
         self,
         n_features: int,
         reps: int = 1,
-        paulis: List[str] = ['Z', 'ZZ'],
+        paulis: list[str] = None,
         entanglement: str = 'full',
         alpha: float = 2.0,
         parameter_prefix: str = 'x'
     ):
+        if paulis is None:
+            paulis = ['Z', 'ZZ']
         super().__init__(n_features, reps, entanglement, parameter_prefix)
         self.paulis = paulis
         self.alpha = alpha
 
-    def _build_circuit(self, parameters: np.ndarray) -> Dict[str, Any]:
+    def _build_circuit(self, parameters: np.ndarray) -> dict[str, Any]:
         """Build Pauli feature map circuit."""
         gates = []
 
@@ -256,7 +259,7 @@ class PauliFeatureMap(QuantumFeatureMap):
 
     def _add_single_pauli_gates(
         self,
-        gates: List[Dict],
+        gates: list[dict],
         pauli: str,
         parameters: np.ndarray,
         rep: int
@@ -283,7 +286,7 @@ class PauliFeatureMap(QuantumFeatureMap):
 
     def _add_multi_pauli_gates(
         self,
-        gates: List[Dict],
+        gates: list[dict],
         pauli_string: str,
         parameters: np.ndarray,
         rep: int
@@ -312,12 +315,12 @@ def create_feature_map(
     **kwargs
 ) -> QuantumFeatureMap:
     """Factory function to create quantum feature maps.
-    
+
     Args:
         feature_map_type: Type of feature map ('Z', 'ZZ', 'Pauli')
         n_features: Number of input features
         **kwargs: Additional arguments for specific feature maps
-        
+
     Returns:
         QuantumFeatureMap instance
 
@@ -336,24 +339,26 @@ def create_feature_map(
 
 def pauli_feature_map(
     n_features: int,
-    paulis: List[str] = ['Z', 'ZZ'],
+    paulis: list[str] = None,
     reps: int = 1,
     alpha: float = 2.0,
     entanglement: str = 'full'
 ) -> PauliFeatureMap:
     """Create a Pauli feature map with specified Pauli strings.
-    
+
     Args:
         n_features: Number of input features
         paulis: List of Pauli strings to use
         reps: Number of repetitions
         alpha: Scaling factor
         entanglement: Entanglement pattern
-        
+
     Returns:
         PauliFeatureMap instance
 
     """
+    if paulis is None:
+        paulis = ['Z', 'ZZ']
     return PauliFeatureMap(
         n_features=n_features,
         paulis=paulis,
@@ -370,13 +375,13 @@ def zz_feature_map(
     alpha: float = 2.0
 ) -> ZZFeatureMap:
     """Create a ZZ feature map with specified parameters.
-    
+
     Args:
         n_features: Number of input features
         reps: Number of repetitions
         entanglement: Entanglement pattern ('linear', 'circular', 'full')
         alpha: Scaling factor
-        
+
     Returns:
         ZZFeatureMap instance
 
@@ -391,10 +396,10 @@ def zz_feature_map(
 
 def feature_map_from_config(config: FeatureMapConfig) -> QuantumFeatureMap:
     """Create feature map from configuration.
-    
+
     Args:
         config: FeatureMapConfig instance
-        
+
     Returns:
         QuantumFeatureMap instance
 
@@ -419,18 +424,18 @@ def feature_map_from_config(config: FeatureMapConfig) -> QuantumFeatureMap:
 def evaluate_feature_map_expressibility(
     feature_map: QuantumFeatureMap,
     n_samples: int = 1000,
-    random_state: Optional[int] = None
-) -> Dict[str, float]:
+    random_state: int | None = None
+) -> dict[str, float]:
     """Evaluate the expressibility of a quantum feature map.
-    
+
     Expressibility measures how well a feature map can generate
     diverse quantum states across the Hilbert space.
-    
+
     Args:
         feature_map: QuantumFeatureMap to evaluate
         n_samples: Number of random data points to sample
         random_state: Random seed
-        
+
     Returns:
         Dictionary with expressibility metrics
 

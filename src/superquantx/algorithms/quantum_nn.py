@@ -5,7 +5,7 @@ tasks using parameterized quantum circuits as trainable layers.
 """
 
 import logging
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import numpy as np
 from sklearn.metrics import accuracy_score
@@ -18,15 +18,15 @@ logger = logging.getLogger(__name__)
 
 class QuantumNN(SupervisedQuantumAlgorithm):
     """Quantum Neural Network for classification and regression.
-    
+
     This implementation uses parameterized quantum circuits as neural network
     layers, with classical optimization to train the quantum parameters.
-    
+
     The network can be configured with different architectures:
     - Pure quantum: Only quantum layers
-    - Hybrid: Combination of quantum and classical layers  
+    - Hybrid: Combination of quantum and classical layers
     - Variational: Variational quantum circuits with measurement
-    
+
     Args:
         backend: Quantum backend for circuit execution
         n_layers: Number of quantum layers
@@ -39,7 +39,7 @@ class QuantumNN(SupervisedQuantumAlgorithm):
         batch_size: Training batch size
         shots: Number of measurement shots
         **kwargs: Additional parameters
-        
+
     Example:
         >>> qnn = QuantumNN(backend='pennylane', n_layers=3, architecture='hybrid')
         >>> qnn.fit(X_train, y_train)
@@ -50,7 +50,7 @@ class QuantumNN(SupervisedQuantumAlgorithm):
 
     def __init__(
         self,
-        backend: Union[str, Any],
+        backend: str | Any,
         n_layers: int = 3,
         architecture: str = 'hybrid',
         encoding: str = 'angle',
@@ -225,11 +225,11 @@ class QuantumNN(SupervisedQuantumAlgorithm):
 
     def _forward_pass(self, x: np.ndarray, weights: np.ndarray) -> np.ndarray:
         """Perform forward pass through the quantum neural network.
-        
+
         Args:
             x: Input data
             weights: Network weights
-            
+
         Returns:
             Network output
 
@@ -324,12 +324,12 @@ class QuantumNN(SupervisedQuantumAlgorithm):
 
     def fit(self, X: np.ndarray, y: np.ndarray, **kwargs) -> 'QuantumNN':
         """Train the quantum neural network.
-        
+
         Args:
             X: Training data features
             y: Training data labels
             **kwargs: Additional training parameters
-            
+
         Returns:
             Self for method chaining
 
@@ -429,11 +429,11 @@ class QuantumNN(SupervisedQuantumAlgorithm):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """Make predictions using the trained quantum neural network.
-        
+
         Args:
             X: Input data for prediction
             **kwargs: Additional prediction parameters
-            
+
         Returns:
             Predicted labels or values
 
@@ -459,11 +459,11 @@ class QuantumNN(SupervisedQuantumAlgorithm):
 
     def predict_proba(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """Predict class probabilities.
-        
+
         Args:
             X: Input data for prediction
             **kwargs: Additional parameters
-            
+
         Returns:
             Predicted class probabilities
 
@@ -487,14 +487,14 @@ class QuantumNN(SupervisedQuantumAlgorithm):
         else:
             return self.n_layers * 2  # Estimate
 
-    def get_training_history(self) -> Dict[str, List[float]]:
+    def get_training_history(self) -> dict[str, list[float]]:
         """Get training history."""
         history = {'loss': self.loss_history}
         if self.accuracy_history:
             history['accuracy'] = self.accuracy_history
         return history
 
-    def analyze_expressivity(self) -> Dict[str, Any]:
+    def analyze_expressivity(self) -> dict[str, Any]:
         """Analyze the expressivity of the quantum neural network."""
         analysis = {
             'n_qubits': self.n_qubits,
@@ -514,7 +514,7 @@ class QuantumNN(SupervisedQuantumAlgorithm):
 
         return analysis
 
-    def get_params(self, deep: bool = True) -> Dict[str, Any]:
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get quantum neural network parameters."""
         params = super().get_params(deep)
         params.update({

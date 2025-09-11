@@ -2,7 +2,8 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 from scipy.optimize import minimize
@@ -17,18 +18,18 @@ class QuantumAlgorithm(ABC):
     """Base class for quantum algorithms
     """
 
-    def __init__(self, client: Optional[SuperQuantXClient] = None):
+    def __init__(self, client: SuperQuantXClient | None = None):
         """Initialize quantum algorithm
-        
+
         Args:
             client: SuperQuantX client for quantum execution
 
         """
         self.client = client
-        self.result_history: List[Dict[str, Any]] = []
+        self.result_history: list[dict[str, Any]] = []
 
     @abstractmethod
-    def run(self, *args, **kwargs) -> Dict[str, Any]:
+    def run(self, *args, **kwargs) -> dict[str, Any]:
         """Execute the quantum algorithm"""
         pass
 
@@ -45,13 +46,13 @@ class VQE(QuantumAlgorithm):
         self,
         hamiltonian: Hamiltonian,
         ansatz: Callable[[np.ndarray], QuantumCircuit],
-        client: Optional[SuperQuantXClient] = None,
+        client: SuperQuantXClient | None = None,
         optimizer: str = "SLSQP",
         max_iterations: int = 1000,
         tolerance: float = 1e-6
     ):
         """Initialize VQE algorithm
-        
+
         Args:
             hamiltonian: Target Hamiltonian
             ansatz: Parameterized quantum circuit ansatz
@@ -68,16 +69,16 @@ class VQE(QuantumAlgorithm):
         self.max_iterations = max_iterations
         self.tolerance = tolerance
 
-        self.optimal_parameters: Optional[np.ndarray] = None
-        self.optimal_energy: Optional[float] = None
-        self.optimization_history: List[float] = []
+        self.optimal_parameters: np.ndarray | None = None
+        self.optimal_energy: float | None = None
+        self.optimization_history: list[float] = []
 
     def cost_function(self, parameters: np.ndarray) -> float:
         """VQE cost function: expectation value of Hamiltonian
-        
+
         Args:
             parameters: Ansatz parameters
-            
+
         Returns:
             Energy expectation value
 
@@ -171,7 +172,7 @@ class VQE(QuantumAlgorithm):
 
         for i in range(dim):
             control_bit = (i >> control) & 1
-            target_bit = (i >> target) & 1
+            (i >> target) & 1
 
             if control_bit == 1:
                 # Flip target bit
@@ -232,7 +233,7 @@ class VQE(QuantumAlgorithm):
 
     def _calculate_pauli_expectation(
         self,
-        measurement_results: Dict[str, Any],
+        measurement_results: dict[str, Any],
         pauli_string: PauliString
     ) -> float:
         """Calculate expectation value from measurement results"""
@@ -258,15 +259,15 @@ class VQE(QuantumAlgorithm):
 
     def run(
         self,
-        initial_parameters: Optional[np.ndarray] = None,
+        initial_parameters: np.ndarray | None = None,
         **optimizer_kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run VQE optimization
-        
+
         Args:
             initial_parameters: Initial parameter values
             **optimizer_kwargs: Additional optimizer parameters
-            
+
         Returns:
             VQE results dictionary
 
@@ -312,13 +313,13 @@ class QAOA(QuantumAlgorithm):
     def __init__(
         self,
         cost_hamiltonian: Hamiltonian,
-        mixer_hamiltonian: Optional[Hamiltonian] = None,
+        mixer_hamiltonian: Hamiltonian | None = None,
         p: int = 1,
-        client: Optional[SuperQuantXClient] = None,
+        client: SuperQuantXClient | None = None,
         optimizer: str = "SLSQP"
     ):
         """Initialize QAOA
-        
+
         Args:
             cost_hamiltonian: Problem Hamiltonian
             mixer_hamiltonian: Mixer Hamiltonian (default: X on all qubits)
@@ -345,10 +346,10 @@ class QAOA(QuantumAlgorithm):
 
     def create_qaoa_circuit(self, parameters: np.ndarray) -> QuantumCircuit:
         """Create QAOA circuit with given parameters
-        
+
         Args:
             parameters: [beta_1, gamma_1, beta_2, gamma_2, ...] for p layers
-            
+
         Returns:
             QAOA quantum circuit
 
@@ -458,15 +459,15 @@ class QAOA(QuantumAlgorithm):
 
     def run(
         self,
-        initial_parameters: Optional[np.ndarray] = None,
+        initial_parameters: np.ndarray | None = None,
         **optimizer_kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run QAOA optimization
-        
+
         Args:
             initial_parameters: Initial [beta, gamma] parameters
             **optimizer_kwargs: Additional optimizer options
-            
+
         Returns:
             QAOA results
 
@@ -502,12 +503,12 @@ class QuantumNeuralNetwork(BaseEstimator):
         num_qubits: int,
         num_layers: int = 2,
         entangling_gates: str = "CNOT",
-        client: Optional[SuperQuantXClient] = None,
+        client: SuperQuantXClient | None = None,
         optimizer: str = "SLSQP",
         learning_rate: float = 0.01
     ):
         """Initialize Quantum Neural Network
-        
+
         Args:
             num_qubits: Number of qubits
             num_layers: Number of variational layers
@@ -526,17 +527,17 @@ class QuantumNeuralNetwork(BaseEstimator):
 
         # Calculate number of parameters
         self.num_parameters = num_qubits * num_layers * 3  # 3 rotation angles per qubit per layer
-        self.parameters: Optional[np.ndarray] = None
+        self.parameters: np.ndarray | None = None
 
         self.is_fitted_ = False
 
-    def create_ansatz(self, parameters: np.ndarray, x: Optional[np.ndarray] = None) -> QuantumCircuit:
+    def create_ansatz(self, parameters: np.ndarray, x: np.ndarray | None = None) -> QuantumCircuit:
         """Create parameterized quantum circuit ansatz
-        
+
         Args:
             parameters: Variational parameters
             x: Input data for encoding (optional)
-            
+
         Returns:
             Quantum circuit
 
@@ -581,11 +582,11 @@ class QuantumNeuralNetwork(BaseEstimator):
 
     def forward(self, X: np.ndarray, parameters: np.ndarray) -> np.ndarray:
         """Forward pass through quantum neural network
-        
+
         Args:
             X: Input data
             parameters: Network parameters
-            
+
         Returns:
             Output predictions
 
@@ -642,11 +643,11 @@ class QuantumNeuralNetwork(BaseEstimator):
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "QuantumNeuralNetwork":
         """Fit the quantum neural network
-        
+
         Args:
             X: Training data
             y: Training labels
-            
+
         Returns:
             Fitted model
 
@@ -668,10 +669,10 @@ class QuantumNeuralNetwork(BaseEstimator):
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Make predictions
-        
+
         Args:
             X: Input data
-            
+
         Returns:
             Predictions
 
@@ -683,11 +684,11 @@ class QuantumNeuralNetwork(BaseEstimator):
 
     def score(self, X: np.ndarray, y: np.ndarray) -> float:
         """Calculate R² score
-        
+
         Args:
             X: Test data
             y: True labels
-            
+
         Returns:
             R² score
 
@@ -702,9 +703,9 @@ class QuantumFourierTransform(QuantumAlgorithm):
     """Quantum Fourier Transform implementation
     """
 
-    def __init__(self, num_qubits: int, client: Optional[SuperQuantXClient] = None):
+    def __init__(self, num_qubits: int, client: SuperQuantXClient | None = None):
         """Initialize QFT
-        
+
         Args:
             num_qubits: Number of qubits
             client: SuperQuantX client
@@ -715,10 +716,10 @@ class QuantumFourierTransform(QuantumAlgorithm):
 
     def create_qft_circuit(self, inverse: bool = False) -> QuantumCircuit:
         """Create QFT circuit
-        
+
         Args:
             inverse: Whether to create inverse QFT
-            
+
         Returns:
             QFT circuit
 
@@ -746,12 +747,12 @@ class QuantumFourierTransform(QuantumAlgorithm):
 
         return circuit
 
-    def run(self, initial_state: Optional[np.ndarray] = None) -> Dict[str, Any]:
+    def run(self, initial_state: np.ndarray | None = None) -> dict[str, Any]:
         """Execute QFT
-        
+
         Args:
             initial_state: Initial quantum state
-            
+
         Returns:
             QFT results
 
@@ -787,15 +788,15 @@ class QuantumFourierTransform(QuantumAlgorithm):
 def create_vqe_for_molecule(
     molecule_name: str,
     basis_set: str = "sto-3g",
-    client: Optional[SuperQuantXClient] = None
+    client: SuperQuantXClient | None = None
 ) -> VQE:
     """Create VQE instance for molecular ground state calculation
-    
+
     Args:
         molecule_name: Molecule identifier (e.g., "H2", "LiH")
         basis_set: Quantum chemistry basis set
         client: SuperQuantX client
-        
+
     Returns:
         Configured VQE instance
 
@@ -829,19 +830,19 @@ def create_vqe_for_molecule(
 
 
 def create_qaoa_for_max_cut(
-    graph_edges: List[Tuple[int, int]],
+    graph_edges: list[tuple[int, int]],
     num_nodes: int,
     p: int = 1,
-    client: Optional[SuperQuantXClient] = None
+    client: SuperQuantXClient | None = None
 ) -> QAOA:
     """Create QAOA instance for Max-Cut problem
-    
+
     Args:
         graph_edges: List of graph edges as (node1, node2) tuples
         num_nodes: Number of nodes in graph
         p: QAOA depth parameter
         client: SuperQuantX client
-        
+
     Returns:
         Configured QAOA instance
 

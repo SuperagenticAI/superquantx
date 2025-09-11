@@ -8,14 +8,14 @@ import logging
 import sys
 import warnings
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from loguru import logger
 
 
 class SuperQuantXLogger:
     """Centralized logger for SuperQuantX with research-focused features.
-    
+
     This logger provides:
     - Structured logging for research experiments
     - Performance tracking and benchmarking
@@ -28,19 +28,19 @@ class SuperQuantXLogger:
         """Initialize SuperQuantX logger."""
         self._configured = False
         self._log_level = "INFO"
-        self._log_file: Optional[Path] = None
-        self._experiment_id: Optional[str] = None
+        self._log_file: Path | None = None
+        self._experiment_id: str | None = None
 
     def configure(
         self,
-        level: Union[str, int] = "INFO",
-        log_file: Optional[Union[str, Path]] = None,
-        experiment_id: Optional[str] = None,
+        level: str | int = "INFO",
+        log_file: str | Path | None = None,
+        experiment_id: str | None = None,
         enable_research_mode: bool = True,
         silence_warnings: bool = True,
     ) -> None:
         """Configure SuperQuantX logging.
-        
+
         Args:
             level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
             log_file: Optional file path for log output
@@ -103,7 +103,7 @@ class SuperQuantXLogger:
         self._configured = True
         logger.info("SuperQuantX logging configured", extra={"component": "logging"})
 
-    def _get_log_format(self, enable_research_mode: bool, experiment_id: Optional[str]) -> str:
+    def _get_log_format(self, enable_research_mode: bool, experiment_id: str | None) -> str:
         """Get logging format string based on configuration."""
         base_format = "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{line} | {message}"
 
@@ -114,7 +114,7 @@ class SuperQuantXLogger:
 
         return base_format
 
-    def _configure_stdlib_logging(self, level: Union[str, int]) -> None:
+    def _configure_stdlib_logging(self, level: str | int) -> None:
         """Configure standard library logging to work with loguru."""
         class InterceptHandler(logging.Handler):
             def emit(self, record: logging.LogRecord) -> None:
@@ -162,10 +162,10 @@ class SuperQuantXLogger:
 
     def get_experiment_logger(self, experiment_name: str) -> "loguru.Logger":
         """Get a logger for a specific research experiment.
-        
+
         Args:
             experiment_name: Name of the experiment
-            
+
         Returns:
             Configured logger instance with experiment context
 
@@ -174,10 +174,10 @@ class SuperQuantXLogger:
 
     def get_algorithm_logger(self, algorithm_name: str) -> "loguru.Logger":
         """Get a logger for a specific quantum algorithm.
-        
+
         Args:
             algorithm_name: Name of the algorithm
-            
+
         Returns:
             Configured logger instance with algorithm context
 
@@ -186,10 +186,10 @@ class SuperQuantXLogger:
 
     def get_backend_logger(self, backend_name: str) -> "loguru.Logger":
         """Get a logger for a specific quantum backend.
-        
+
         Args:
             backend_name: Name of the backend
-            
+
         Returns:
             Configured logger instance with backend context
 
@@ -200,10 +200,10 @@ class SuperQuantXLogger:
         self,
         operation: str,
         duration: float,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Log performance metrics for research analysis.
-        
+
         Args:
             operation: Name of the operation being measured
             duration: Duration in seconds
@@ -224,11 +224,11 @@ class SuperQuantXLogger:
     def log_experiment_result(
         self,
         experiment_name: str,
-        results: Dict[str, Any],
-        metadata: Optional[Dict[str, Any]] = None,
+        results: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Log experiment results for research tracking.
-        
+
         Args:
             experiment_name: Name of the experiment
             results: Experiment results dictionary
@@ -252,23 +252,23 @@ class SuperQuantXLogger:
         return self._configured
 
     @property
-    def log_file(self) -> Optional[Path]:
+    def log_file(self) -> Path | None:
         """Get the current log file path."""
         return self._log_file
 
     @property
-    def experiment_id(self) -> Optional[str]:
+    def experiment_id(self) -> str | None:
         """Get the current experiment ID."""
         return self._experiment_id
 
 
 # Global logger instance
-_logger_instance: Optional[SuperQuantXLogger] = None
+_logger_instance: SuperQuantXLogger | None = None
 
 
 def get_logger() -> SuperQuantXLogger:
     """Get the global SuperQuantX logger instance.
-    
+
     Returns:
         Global logger instance
 
@@ -280,14 +280,14 @@ def get_logger() -> SuperQuantXLogger:
 
 
 def configure_logging(
-    level: Union[str, int] = "INFO",
-    log_file: Optional[Union[str, Path]] = None,
-    experiment_id: Optional[str] = None,
+    level: str | int = "INFO",
+    log_file: str | Path | None = None,
+    experiment_id: str | None = None,
     enable_research_mode: bool = True,
     silence_warnings: bool = True,
 ) -> None:
     """Configure SuperQuantX logging (convenience function).
-    
+
     Args:
         level: Logging level
         log_file: Optional log file path

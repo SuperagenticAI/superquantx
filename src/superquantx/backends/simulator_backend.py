@@ -5,7 +5,8 @@ require external quantum computing libraries, useful for testing and fallback.
 """
 
 import logging
-from typing import Any, Callable, Dict, List, Optional, Union
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 
@@ -22,7 +23,7 @@ class QuantumState:
         self.state = np.zeros(2**n_qubits, dtype=complex)
         self.state[0] = 1.0  # |00...0⟩ state
 
-    def apply_gate(self, gate_matrix: np.ndarray, qubits: List[int]) -> None:
+    def apply_gate(self, gate_matrix: np.ndarray, qubits: list[int]) -> None:
         """Apply gate matrix to specified qubits."""
         if len(qubits) == 1:
             self._apply_single_qubit_gate(gate_matrix, qubits[0])
@@ -56,7 +57,7 @@ class QuantumState:
         # Apply gate
         self.state = full_gate @ self.state
 
-    def _apply_two_qubit_gate(self, gate: np.ndarray, qubits: List[int]) -> None:
+    def _apply_two_qubit_gate(self, gate: np.ndarray, qubits: list[int]) -> None:
         """Apply two qubit gate."""
         # Simplified implementation for CNOT and other 2-qubit gates
         q1, q2 = qubits
@@ -95,7 +96,7 @@ class QuantumState:
                 return False
         return True
 
-    def measure(self, shots: int = 1024) -> Dict[str, int]:
+    def measure(self, shots: int = 1024) -> dict[str, int]:
         """Measure the quantum state."""
         probabilities = np.abs(self.state)**2
 
@@ -116,11 +117,11 @@ class QuantumState:
 
 class SimulatorBackend(BaseBackend):
     """Pure Python quantum simulator backend.
-    
+
     This backend provides a simple quantum simulator implementation
     that doesn't require external libraries. Useful for testing,
     development, and as a fallback when other backends are unavailable.
-    
+
     Args:
         device: Device name (always 'simulator')
         max_qubits: Maximum number of qubits to simulate
@@ -149,7 +150,7 @@ class SimulatorBackend(BaseBackend):
         """Initialize simulator backend."""
         logger.info(f"Initialized Python quantum simulator with max {self.max_qubits} qubits")
 
-    def _define_gates(self) -> Dict[str, np.ndarray]:
+    def _define_gates(self) -> dict[str, np.ndarray]:
         """Define quantum gate matrices."""
         # Pauli matrices
         I = np.array([[1, 0], [0, 1]], dtype=complex)
@@ -222,8 +223,8 @@ class SimulatorBackend(BaseBackend):
 
         return QuantumState(n_qubits)
 
-    def add_gate(self, circuit: QuantumState, gate: str, qubits: Union[int, List[int]],
-                 params: Optional[List[float]] = None) -> QuantumState:
+    def add_gate(self, circuit: QuantumState, gate: str, qubits: int | list[int],
+                 params: list[float] | None = None) -> QuantumState:
         """Add a quantum gate to the circuit."""
         if isinstance(qubits, int):
             qubits = [qubits]
@@ -257,7 +258,7 @@ class SimulatorBackend(BaseBackend):
 
         return circuit
 
-    def _apply_toffoli(self, circuit: QuantumState, qubits: List[int]) -> None:
+    def _apply_toffoli(self, circuit: QuantumState, qubits: list[int]) -> None:
         """Apply Toffoli gate (simplified implementation)."""
         # This is a simplified implementation
         # Full implementation would require proper 3-qubit gate matrix
@@ -268,12 +269,12 @@ class SimulatorBackend(BaseBackend):
         cnot_matrix = self.gates['CNOT']
         circuit.apply_gate(cnot_matrix, qubits[1:3])
 
-    def add_measurement(self, circuit: QuantumState, qubits: Optional[List[int]] = None) -> QuantumState:
+    def add_measurement(self, circuit: QuantumState, qubits: list[int] | None = None) -> QuantumState:
         """Add measurement operations (no-op in this implementation)."""
         # Measurements are handled in execute_circuit
         return circuit
 
-    def execute_circuit(self, circuit: QuantumState, shots: Optional[int] = None) -> Dict[str, Any]:
+    def execute_circuit(self, circuit: QuantumState, shots: int | None = None) -> dict[str, Any]:
         """Execute quantum circuit and return results."""
         shots = shots or self.shots
 
@@ -310,7 +311,7 @@ class SimulatorBackend(BaseBackend):
     # ========================================================================
 
     def compute_kernel_matrix(self, X1: np.ndarray, X2: np.ndarray,
-                            feature_map: Any, shots: Optional[int] = None) -> np.ndarray:
+                            feature_map: Any, shots: int | None = None) -> np.ndarray:
         """Compute quantum kernel matrix using simulator."""
         n1, n2 = len(X1), len(X2)
         kernel_matrix = np.zeros((n1, n2))
@@ -423,7 +424,7 @@ class SimulatorBackend(BaseBackend):
         return ansatz_circuit
 
     def compute_expectation(self, circuit: QuantumState, hamiltonian: Any,
-                          shots: Optional[int] = None) -> float:
+                          shots: int | None = None) -> float:
         """Compute expectation value of Hamiltonian."""
         try:
             if isinstance(hamiltonian, np.ndarray):
@@ -440,7 +441,7 @@ class SimulatorBackend(BaseBackend):
             logger.error(f"Expectation computation failed: {e}")
             return 0.0
 
-    def get_version_info(self) -> Dict[str, Any]:
+    def get_version_info(self) -> dict[str, Any]:
         """Get simulator version information."""
         info = super().get_version_info()
         info.update({

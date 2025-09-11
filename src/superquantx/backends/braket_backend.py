@@ -5,7 +5,7 @@ on AWS quantum hardware and simulators.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 
@@ -34,22 +34,22 @@ except ImportError:
 
 class BraketBackend(BaseBackend):
     """AWS Braket backend for quantum computing operations.
-    
+
     This backend provides access to AWS Braket's quantum devices including
     local simulators, managed simulators, and QPU hardware from IonQ, Rigetti,
     and other providers available on AWS.
-    
+
     Args:
         device: Device name or ARN (e.g., 'local:braket/braket_sv', 'arn:aws:braket::device/qpu/ionq/ionQdevice')
         shots: Number of measurement shots
         aws_session: Optional AWS session for authentication
         s3_folder: S3 bucket folder for results (required for hardware)
         **kwargs: Additional device configuration
-        
+
     Example:
         >>> # Local simulator
         >>> backend = BraketBackend(device='local:braket/braket_sv')
-        >>> 
+        >>>
         >>> # AWS hardware (requires authentication)
         >>> backend = BraketBackend(
         ...     device='arn:aws:braket::device/qpu/ionq/ionQdevice',
@@ -63,7 +63,7 @@ class BraketBackend(BaseBackend):
         device: str = 'local:braket/braket_sv',
         shots: int = 1024,
         aws_session = None,
-        s3_folder: Optional[Tuple[str, str]] = None,
+        s3_folder: tuple[str, str] | None = None,
         **kwargs
     ) -> None:
         if not BRAKET_AVAILABLE:
@@ -134,7 +134,7 @@ class BraketBackend(BaseBackend):
         else:
             return 30  # Conservative estimate for hardware
 
-    def _get_native_gates(self) -> List[str]:
+    def _get_native_gates(self) -> list[str]:
         """Get native gates supported by the device."""
         # Common Braket gates
         return [
@@ -155,8 +155,8 @@ class BraketBackend(BaseBackend):
 
         return BraketCircuit()
 
-    def add_gate(self, circuit: BraketCircuit, gate: str, qubits: Union[int, List[int]],
-                 params: Optional[List[float]] = None) -> BraketCircuit:
+    def add_gate(self, circuit: BraketCircuit, gate: str, qubits: int | list[int],
+                 params: list[float] | None = None) -> BraketCircuit:
         """Add a quantum gate to the circuit."""
         if isinstance(qubits, int):
             qubits = [qubits]
@@ -209,7 +209,7 @@ class BraketBackend(BaseBackend):
 
         return circuit
 
-    def add_measurement(self, circuit: BraketCircuit, qubits: Union[int, List[int]]) -> BraketCircuit:
+    def add_measurement(self, circuit: BraketCircuit, qubits: int | list[int]) -> BraketCircuit:
         """Add measurement instructions to specified qubits."""
         if isinstance(qubits, int):
             qubits = [qubits]
@@ -223,7 +223,7 @@ class BraketBackend(BaseBackend):
 
         return circuit
 
-    def execute_circuit(self, circuit: BraketCircuit, shots: Optional[int] = None) -> Dict[str, Any]:
+    def execute_circuit(self, circuit: BraketCircuit, shots: int | None = None) -> dict[str, Any]:
         """Execute quantum circuit and return results."""
         shots = shots or self.shots
 
@@ -281,7 +281,7 @@ class BraketBackend(BaseBackend):
     # Algorithm-Specific Operations
     # ========================================================================
 
-    def create_parameterized_circuit(self, n_qubits: int, n_params: int) -> Tuple[BraketCircuit, List[str]]:
+    def create_parameterized_circuit(self, n_qubits: int, n_params: int) -> tuple[BraketCircuit, list[str]]:
         """Create a parameterized quantum circuit for variational algorithms."""
         circuit = self.create_circuit(n_qubits)
 
@@ -294,7 +294,7 @@ class BraketBackend(BaseBackend):
 
         return circuit, param_names
 
-    def bind_parameters(self, circuit: BraketCircuit, param_values: Dict[str, float]) -> BraketCircuit:
+    def bind_parameters(self, circuit: BraketCircuit, param_values: dict[str, float]) -> BraketCircuit:
         """Bind parameter values to parameterized circuit."""
         # Braket handles parameterization differently - would need custom implementation
         # For now, create a new circuit with bound parameters
@@ -306,8 +306,8 @@ class BraketBackend(BaseBackend):
 
         return bound_circuit
 
-    def expectation_value(self, circuit: BraketCircuit, observable: Union[str, np.ndarray],
-                         shots: Optional[int] = None) -> float:
+    def expectation_value(self, circuit: BraketCircuit, observable: str | np.ndarray,
+                         shots: int | None = None) -> float:
         """Calculate expectation value of observable."""
         shots = shots or self.shots
 
@@ -347,7 +347,7 @@ class BraketBackend(BaseBackend):
     # Backend Information
     # ========================================================================
 
-    def get_backend_info(self) -> Dict[str, Any]:
+    def get_backend_info(self) -> dict[str, Any]:
         """Get information about the Braket backend."""
         info = {
             'backend_name': 'braket',
@@ -371,7 +371,7 @@ class BraketBackend(BaseBackend):
 
         return info
 
-    def get_version_info(self) -> Dict[str, str]:
+    def get_version_info(self) -> dict[str, str]:
         """Get version information for Braket dependencies."""
         import braket
         return {
@@ -383,7 +383,7 @@ class BraketBackend(BaseBackend):
         """Check if the backend is available and properly configured."""
         return BRAKET_AVAILABLE and self._device is not None
 
-    def get_circuit_info(self) -> Dict[str, Any]:
+    def get_circuit_info(self) -> dict[str, Any]:
         """Get information about circuit execution capabilities."""
         return {
             'max_qubits': self._get_max_qubits(),

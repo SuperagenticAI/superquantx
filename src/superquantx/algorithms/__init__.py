@@ -6,7 +6,7 @@ make decisions and optimize complex problems independently.
 
 The module is organized in layers:
 - Quantum ML Algorithms: QSVM, VQE, QAOA, Quantum NN
-- Quantum AI Models: Advanced neural networks and transformers  
+- Quantum AI Models: Advanced neural networks and transformers
 - Quantum Agents: Autonomous systems for trading, research, optimization
 - Hybrid Intelligence: Quantum-classical integrated systems
 """

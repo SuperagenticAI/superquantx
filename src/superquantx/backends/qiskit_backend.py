@@ -5,7 +5,7 @@ operations and access to IBM Quantum hardware.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -52,10 +52,10 @@ except ImportError:
 
 class QiskitBackend(BaseBackend):
     """Qiskit backend for quantum computing operations.
-    
+
     This backend provides access to Qiskit simulators and IBM Quantum
     hardware for quantum algorithm execution.
-    
+
     Args:
         device: Qiskit backend name ('aer_simulator', 'ibmq_qasm_simulator', etc.)
         provider: IBM Quantum provider (if using IBMQ)
@@ -64,7 +64,7 @@ class QiskitBackend(BaseBackend):
 
     """
 
-    def __init__(self, device: str = 'aer_simulator', provider: Optional[str] = None,
+    def __init__(self, device: str = 'aer_simulator', provider: str | None = None,
                  shots: int = 1024, **kwargs):
         if not QISKIT_AVAILABLE:
             raise ImportError("Qiskit is required for QiskitBackend. Install with: pip install qiskit")
@@ -130,8 +130,8 @@ class QiskitBackend(BaseBackend):
         circuit = QuantumCircuit(qreg, creg)
         return circuit
 
-    def add_gate(self, circuit: Any, gate: str, qubits: Union[int, List[int]],
-                 params: Optional[List[float]] = None) -> Any:
+    def add_gate(self, circuit: Any, gate: str, qubits: int | list[int],
+                 params: list[float] | None = None) -> Any:
         """Add a quantum gate to the circuit."""
         if isinstance(qubits, int):
             qubits = [qubits]
@@ -169,7 +169,7 @@ class QiskitBackend(BaseBackend):
 
         return circuit
 
-    def add_measurement(self, circuit: Any, qubits: Optional[List[int]] = None) -> Any:
+    def add_measurement(self, circuit: Any, qubits: list[int] | None = None) -> Any:
         """Add measurement operations to the circuit."""
         if qubits is None:
             qubits = list(range(circuit.num_qubits))
@@ -180,7 +180,7 @@ class QiskitBackend(BaseBackend):
 
         return circuit
 
-    def execute_circuit(self, circuit: Any, shots: Optional[int] = None) -> Dict[str, Any]:
+    def execute_circuit(self, circuit: Any, shots: int | None = None) -> dict[str, Any]:
         """Execute quantum circuit and return results."""
         shots = shots or self.shots
 
@@ -293,7 +293,7 @@ class QiskitBackend(BaseBackend):
         return circuit
 
     def compute_kernel_matrix(self, X1: np.ndarray, X2: np.ndarray,
-                            feature_map: QuantumCircuit, shots: Optional[int] = None) -> np.ndarray:
+                            feature_map: QuantumCircuit, shots: int | None = None) -> np.ndarray:
         """Compute quantum kernel matrix using Qiskit."""
         n1, n2 = len(X1), len(X2)
         kernel_matrix = np.zeros((n1, n2))
@@ -377,7 +377,7 @@ class QiskitBackend(BaseBackend):
         return circuit
 
     def compute_expectation(self, circuit: Any, hamiltonian: Any,
-                          shots: Optional[int] = None) -> float:
+                          shots: int | None = None) -> float:
         """Compute expectation value of Hamiltonian."""
         try:
             # For Qiskit, we need to decompose Hamiltonian into Pauli terms
@@ -405,7 +405,7 @@ class QiskitBackend(BaseBackend):
             circuit.h(i)
 
         # QAOA layers
-        for gamma, beta in zip(gammas, betas):
+        for gamma, beta in zip(gammas, betas, strict=False):
             # Problem Hamiltonian layer
             self._apply_problem_hamiltonian(circuit, gamma, problem_instance)
 
@@ -434,7 +434,7 @@ class QiskitBackend(BaseBackend):
         for i in range(circuit.num_qubits):
             circuit.rx(2 * beta, i)
 
-    def get_version_info(self) -> Dict[str, Any]:
+    def get_version_info(self) -> dict[str, Any]:
         """Get Qiskit version information."""
         info = super().get_version_info()
 

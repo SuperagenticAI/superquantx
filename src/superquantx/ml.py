@@ -2,7 +2,6 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
 
 import numpy as np
 from scipy.optimize import minimize
@@ -20,7 +19,7 @@ class QuantumFeatureMap(ABC):
 
     def __init__(self, num_qubits: int, num_features: int):
         """Initialize feature map
-        
+
         Args:
             num_qubits: Number of qubits
             num_features: Number of input features
@@ -32,10 +31,10 @@ class QuantumFeatureMap(ABC):
     @abstractmethod
     def map_features(self, x: np.ndarray) -> QuantumCircuit:
         """Map classical features to quantum state
-        
+
         Args:
             x: Feature vector
-            
+
         Returns:
             Quantum circuit encoding the features
 
@@ -51,10 +50,10 @@ class AngleEmbeddingFeatureMap(QuantumFeatureMap):
         self,
         num_qubits: int,
         num_features: int,
-        rotation_gates: List[str] = None
+        rotation_gates: list[str] = None
     ):
         """Initialize angle embedding
-        
+
         Args:
             num_qubits: Number of qubits
             num_features: Number of features
@@ -117,7 +116,7 @@ class IQPFeatureMap(QuantumFeatureMap):
 
     def __init__(self, num_qubits: int, num_features: int, degree: int = 2):
         """Initialize IQP feature map
-        
+
         Args:
             num_qubits: Number of qubits
             num_features: Number of features
@@ -158,10 +157,10 @@ class QuantumKernel:
     def __init__(
         self,
         feature_map: QuantumFeatureMap,
-        client: Optional[SuperQuantXClient] = None
+        client: SuperQuantXClient | None = None
     ):
         """Initialize quantum kernel
-        
+
         Args:
             feature_map: Quantum feature map
             client: SuperQuantX client for execution
@@ -172,11 +171,11 @@ class QuantumKernel:
 
     def kernel_matrix(self, X1: np.ndarray, X2: np.ndarray = None) -> np.ndarray:
         """Compute quantum kernel matrix
-        
+
         Args:
             X1: First set of data points
             X2: Second set of data points (default: same as X1)
-            
+
         Returns:
             Kernel matrix K[i,j] = ⟨φ(x_i)|φ(x_j)⟩
 
@@ -194,11 +193,11 @@ class QuantumKernel:
 
     def _kernel_value(self, x1: np.ndarray, x2: np.ndarray) -> float:
         """Compute kernel value between two data points
-        
+
         Args:
             x1: First data point
             x2: Second data point
-            
+
         Returns:
             Kernel value ⟨φ(x1)|φ(x2)⟩
 
@@ -260,7 +259,7 @@ class QuantumKernel:
 
         return kernel_circuit
 
-    def _inverse_gate(self, gate: QuantumGate, mapped_qubits: List[int]) -> QuantumGate:
+    def _inverse_gate(self, gate: QuantumGate, mapped_qubits: list[int]) -> QuantumGate:
         """Create inverse gate with mapped qubits"""
         # Simplified inverse gate creation
         inverse_params = [-p for p in gate.parameters] if gate.parameters else []
@@ -305,7 +304,7 @@ class QuantumSVM(BaseEstimator, ClassifierMixin):
         C: float = 1.0
     ):
         """Initialize Quantum SVM
-        
+
         Args:
             quantum_kernel: Quantum kernel for classification
             C: Regularization parameter
@@ -316,19 +315,19 @@ class QuantumSVM(BaseEstimator, ClassifierMixin):
         self.is_fitted_ = False
 
         # Will be set during training
-        self.support_vectors_: Optional[np.ndarray] = None
-        self.support_: Optional[np.ndarray] = None
-        self.alpha_: Optional[np.ndarray] = None
-        self.intercept_: Optional[float] = None
-        self.classes_: Optional[np.ndarray] = None
+        self.support_vectors_: np.ndarray | None = None
+        self.support_: np.ndarray | None = None
+        self.alpha_: np.ndarray | None = None
+        self.intercept_: float | None = None
+        self.classes_: np.ndarray | None = None
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "QuantumSVM":
         """Fit Quantum SVM
-        
+
         Args:
             X: Training data
             y: Training labels
-            
+
         Returns:
             Fitted model
 
@@ -411,10 +410,10 @@ class QuantumSVM(BaseEstimator, ClassifierMixin):
 
     def decision_function(self, X: np.ndarray) -> np.ndarray:
         """Compute decision function
-        
+
         Args:
             X: Input data
-            
+
         Returns:
             Decision function values
 
@@ -444,10 +443,10 @@ class QuantumSVM(BaseEstimator, ClassifierMixin):
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Make predictions
-        
+
         Args:
             X: Input data
-            
+
         Returns:
             Predicted labels
 
@@ -467,12 +466,12 @@ class QuantumClassifier(BaseEstimator, ClassifierMixin):
         self,
         feature_map: QuantumFeatureMap,
         ansatz_layers: int = 2,
-        client: Optional[SuperQuantXClient] = None,
+        client: SuperQuantXClient | None = None,
         optimizer: str = "SLSQP",
         max_iter: int = 1000
     ):
         """Initialize quantum classifier
-        
+
         Args:
             feature_map: Quantum feature map
             ansatz_layers: Number of variational layers
@@ -488,8 +487,8 @@ class QuantumClassifier(BaseEstimator, ClassifierMixin):
         self.max_iter = max_iter
 
         self.is_fitted_ = False
-        self.parameters_: Optional[np.ndarray] = None
-        self.classes_: Optional[np.ndarray] = None
+        self.parameters_: np.ndarray | None = None
+        self.classes_: np.ndarray | None = None
         self.label_encoder_ = LabelEncoder()
 
     def _create_circuit(self, x: np.ndarray, parameters: np.ndarray) -> QuantumCircuit:
@@ -581,11 +580,11 @@ class QuantumClassifier(BaseEstimator, ClassifierMixin):
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "QuantumClassifier":
         """Fit quantum classifier
-        
+
         Args:
             X: Training data
             y: Training labels
-            
+
         Returns:
             Fitted model
 
@@ -613,10 +612,10 @@ class QuantumClassifier(BaseEstimator, ClassifierMixin):
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """Predict class probabilities
-        
+
         Args:
             X: Input data
-            
+
         Returns:
             Class probabilities
 
@@ -628,10 +627,10 @@ class QuantumClassifier(BaseEstimator, ClassifierMixin):
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Make predictions
-        
+
         Args:
             X: Input data
-            
+
         Returns:
             Predicted labels
 
@@ -649,11 +648,11 @@ class QuantumRegressor(BaseEstimator, RegressorMixin):
         self,
         feature_map: QuantumFeatureMap,
         ansatz_layers: int = 2,
-        client: Optional[SuperQuantXClient] = None,
+        client: SuperQuantXClient | None = None,
         optimizer: str = "SLSQP"
     ):
         """Initialize quantum regressor
-        
+
         Args:
             feature_map: Quantum feature map
             ansatz_layers: Number of variational layers
@@ -667,7 +666,7 @@ class QuantumRegressor(BaseEstimator, RegressorMixin):
         self.optimizer = optimizer
 
         self.is_fitted_ = False
-        self.parameters_: Optional[np.ndarray] = None
+        self.parameters_: np.ndarray | None = None
         self.scaler_ = StandardScaler()
 
     def _create_circuit(self, x: np.ndarray, parameters: np.ndarray) -> QuantumCircuit:
@@ -720,11 +719,11 @@ class QuantumRegressor(BaseEstimator, RegressorMixin):
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "QuantumRegressor":
         """Fit quantum regressor
-        
+
         Args:
             X: Training data
             y: Training targets
-            
+
         Returns:
             Fitted model
 
@@ -755,10 +754,10 @@ class QuantumRegressor(BaseEstimator, RegressorMixin):
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Make predictions
-        
+
         Args:
             X: Input data
-            
+
         Returns:
             Predicted values
 
@@ -783,10 +782,10 @@ class QuantumGAN:
         num_qubits: int,
         generator_layers: int = 3,
         discriminator_layers: int = 2,
-        client: Optional[SuperQuantXClient] = None
+        client: SuperQuantXClient | None = None
     ):
         """Initialize Quantum GAN
-        
+
         Args:
             num_qubits: Number of qubits
             generator_layers: Generator circuit depth
@@ -800,8 +799,8 @@ class QuantumGAN:
         self.client = client
 
         # Parameters will be set during training
-        self.generator_params: Optional[np.ndarray] = None
-        self.discriminator_params: Optional[np.ndarray] = None
+        self.generator_params: np.ndarray | None = None
+        self.discriminator_params: np.ndarray | None = None
 
     def create_generator(self, noise: np.ndarray, params: np.ndarray) -> QuantumCircuit:
         """Create generator circuit"""
@@ -858,14 +857,14 @@ class QuantumGAN:
         training_data: np.ndarray,
         num_epochs: int = 100,
         learning_rate: float = 0.01
-    ) -> Dict[str, List[float]]:
+    ) -> dict[str, list[float]]:
         """Train Quantum GAN
-        
+
         Args:
             training_data: Real training data
             num_epochs: Number of training epochs
             learning_rate: Learning rate
-            
+
         Returns:
             Training history
 
@@ -918,7 +917,7 @@ class QuantumGAN:
 
         return circuit
 
-    def generate_samples(self, num_samples: int) -> List[np.ndarray]:
+    def generate_samples(self, num_samples: int) -> list[np.ndarray]:
         """Generate samples using trained generator"""
         if self.generator_params is None:
             raise ValueError("GAN must be trained before generating samples")
@@ -926,7 +925,7 @@ class QuantumGAN:
         samples = []
         for _ in range(num_samples):
             noise = np.random.uniform(0, 2*np.pi, self.num_qubits)
-            generator_circuit = self.create_generator(noise, self.generator_params)
+            self.create_generator(noise, self.generator_params)
 
             # Extract generated sample (simplified)
             # Would measure and extract amplitudes in practice

@@ -1,35 +1,35 @@
 """SuperQuantX: Experimental Quantum AI Research Platform.
 
-⚠️ RESEARCH SOFTWARE WARNING: This is experimental research software developed by 
-SuperXLab (Superagentic AI Research Division). NOT intended for production use. 
+⚠️ RESEARCH SOFTWARE WARNING: This is experimental research software developed by
+SuperXLab (Superagentic AI Research Division). NOT intended for production use.
 For research and educational purposes only.
 
-Part of SuperXLab's comprehensive quantum research program - the practical implementation 
+Part of SuperXLab's comprehensive quantum research program - the practical implementation
 platform for validating theoretical research in:
     🔬 Quantum-Inspired Agentic Systems: Superposition, interference, entanglement in agents
-    🔬 Quantum Neural Networks (QNNs): Hardware-validated quantum neural architectures  
+    🔬 Quantum Neural Networks (QNNs): Hardware-validated quantum neural architectures
     🔬 QuantumML for AI Training: Quantum-accelerated machine learning techniques
     🔬 Quantinuum Integration: Real hardware validation on H-Series quantum computers
 
 Research Examples:
     Experimental quantum agent research:
         >>> import superquantx as sqx  # EXPERIMENTAL
-        >>> agent = sqx.QuantumTradingAgent(strategy="quantum_portfolio", backend="simulator") 
+        >>> agent = sqx.QuantumTradingAgent(strategy="quantum_portfolio", backend="simulator")
         >>> results = agent.solve(research_data)  # Research use only
         >>> print(f"Research findings: {results.metadata}")
-        
+
     Quantum neural network experiments:
         >>> qnn = sqx.QuantumNN(architecture='hybrid', backend='pennylane')  # EXPERIMENTAL
         >>> qnn.fit(X_research, y_research)  # Research data only
         >>> analysis = qnn.analyze_expressivity()  # Research analysis
-        
+
     Quantum algorithm benchmarking:
-        >>> qsvm = sqx.QuantumSVM(backend='simulator')  # EXPERIMENTAL  
+        >>> qsvm = sqx.QuantumSVM(backend='simulator')  # EXPERIMENTAL
         >>> benchmark = sqx.benchmark_algorithm(qsvm, classical_baseline)
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 # Core imports - make available at top level
 from . import algorithms, backends, cli, datasets, utils
@@ -172,7 +172,7 @@ def get_version() -> str:
     """Get SuperQuantX version."""
     return __version__
 
-def get_backend_info() -> Dict[str, Any]:
+def get_backend_info() -> dict[str, Any]:
     """Get information about available backends."""
     info = {}
 
