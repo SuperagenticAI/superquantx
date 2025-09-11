@@ -1,0 +1,334 @@
+[build-system]
+requires = ["hatchling>=1.21.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "superquantx"
+dynamic = ["version"]
+description = "Quantum AI Research Platform - Unified API for QuantumAgentic AIsystems research"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Shashi Jagtap", email = "shashi@super-agentic.ai" },
+    { name = "Shashi Jagtap", email = "shashikant.jagtap@icloud.com" },
+    { name = "SuperXLab Research Team", email = "research@super-agentic.ai" },
+]
+maintainers = [
+    { name = "Shashi Jagtap", email = "shashi@super-agentic.ai" },
+    { name = "Shashi Jagtap", email = "shashikant.jagtap@icloud.com" },
+    { name = "SuperXLab Research Team", email = "research@super-agentic.ai" },
+]
+keywords = [
+    "quantum-computing",
+    "quantum-machine-learning",
+    "agentic-ai",
+    "quantum-agents",
+    "research-platform",
+    "unified-api",
+    "quantum-algorithms",
+    "pennylane",
+    "qiskit",
+    "cirq",
+    "braket",
+    "experimental"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Education",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    # Core scientific computing stack - latest versions
+    "numpy>=1.26.0",
+    "scipy>=1.12.0",
+    "scikit-learn>=1.4.0",
+    "matplotlib>=3.8.0",
+    "networkx>=3.2.0",
+
+    # Modern Python utilities - latest versions
+    "pydantic>=2.5.0",
+    "typer>=0.12.0",
+    "rich>=13.7.0",
+    "loguru>=0.7.2",
+    "httpx>=0.25.0",
+    "click>=8.0.0",
+    "typing-extensions>=4.9.0; python_version<'3.11'",
+]
+
+[project.optional-dependencies]
+# Quantum computing backends - latest versions
+pennylane = [
+    "pennylane>=0.35.0",
+    "pennylane-lightning>=0.35.0",
+]
+qiskit = [
+    "qiskit>=1.0.0",
+    "qiskit-aer>=0.13.0",
+    "qiskit-ibm-runtime>=0.20.0",
+]
+cirq = [
+    "cirq>=1.3.0",
+]
+braket = [
+    "amazon-braket-sdk>=1.75.0",
+]
+tket = [
+    "pytket>=1.25.0",
+    "pytket-qiskit>=0.50.0",
+]
+ocean = [
+    "dwave-ocean-sdk>=7.0.0",
+    "dimod>=0.12.14",
+]
+
+# Development dependencies - latest versions
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "pytest-xdist>=3.5.0",
+    "pytest-benchmark>=4.0.0",
+    "black>=24.0.0",
+    "ruff>=0.2.0",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+    "coverage[toml]>=7.4.0",
+    "build>=1.0.0",
+    "twine>=5.0.0",
+]
+
+# Documentation - latest versions
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.24.0",
+    "mkdocs-jupyter>=0.24.0",
+    "mkdocs-gen-files>=0.5.0",
+]
+
+# All quantum backends
+all-backends = [
+    "superquantx[pennylane,qiskit,cirq,braket,tket,ocean]"
+]
+
+# Complete development environment
+full-dev = [
+    "superquantx[dev,docs,all-backends]"
+]
+
+[project.urls]
+Homepage = "https://github.com/SuperagenticAI/superquantx"
+Documentation = "https://superagenticai.github.io/superquantx"
+Repository = "https://github.com/SuperagenticAI/superquantx"
+"Bug Tracker" = "https://github.com/SuperagenticAI/superquantx/issues"
+"Source Code" = "https://github.com/SuperagenticAI/superquantx"
+Changelog = "https://github.com/SuperagenticAI/superquantx/blob/main/CHANGELOG.md"
+"Discussions" = "https://github.com/SuperagenticAI/superquantx/discussions"
+"Funding" = "https://github.com/sponsors/SuperagenticAI"
+
+[project.scripts]
+superquantx = "superquantx.cli:main"
+
+[tool.hatch.version]
+path = "src/superquantx/version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/superquantx"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.github",
+    "/.vscode",
+    "/docs",
+    "/examples",
+    "/tests",
+    "/.pre-commit-config.yaml",
+]
+
+# Ruff configuration (replaces flake8, isort, and some black functionality)
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+]
+ignore = [
+    "E501", # Line too long (handled by formatter)
+    "B007", # Loop control variable not used within loop body
+    "C401", # Unnecessary generator (allow for readability)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # Allow asserts in tests
+"examples/*" = ["N806"] # Allow uppercase variable names in examples (X, Y common in ML)
+
+[tool.ruff.lint.isort]
+known-first-party = ["superquantx"]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.black]
+line-length = 88
+target-version = ['py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+pretty = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pennylane.*",
+    "qiskit.*",
+    "cirq.*",
+    "braket.*",
+    "pytket.*",
+    "dwave.*",
+    "pyquil.*",
+    "tensorflow_quantum.*",
+    "cupy.*",
+    "cuquantum.*",
+    "openfermion.*",
+    "pyscf.*",
+    "rdkit.*",
+    "plotly.*",
+    "optuna.*",
+    "hyperopt.*",
+    "cvxpy.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=superquantx",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "gpu: marks tests that require GPU",
+    "quantum_hardware: marks tests that require quantum hardware",
+    "asyncio: marks tests as async tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src/superquantx"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+    "src/superquantx/__main__.py",
+]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if False:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+    "TYPE_CHECKING",
+]
+show_missing = true
+skip_covered = true
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+# Performance profiling
+[tool.pytest-benchmark]
+only_run_when_specified = true
+sort = "mean"
+compare_fail = "mean:10%"
