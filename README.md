@@ -1,4 +1,4 @@
-# SuperQuantX 🔬⚡
+# SuperQuantX
 
 [![PyPI - Version](https://img.shields.io/pypi/v/superquantx)](https://pypi.org/project/superquantx/)
 [![Python Version](https://img.shields.io/pypi/pyversions/superquantx)](https://pypi.org/project/superquantx/)
@@ -8,11 +8,13 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
+![SuperQuantX Logo](resources/logo-small.png)
+
 **Unified Quantum Computing Platform - Building autonomous quantum-enhanced AI systems**
 
 > 📖 **[Read the Full Documentation →](https://superagenticai.github.io/superquantx/)**
 
-**Research by [Superagentic AI](https://superagentic.ai) - Quantum AI Research**
+**Research by [Superagentic AI](https://super-agentic.ai) - Quantum AI Research**
 
 ## 🚀 What is SuperQuantX?
 
@@ -107,7 +109,7 @@ solution = qaoa.solve()
 The documentation includes comprehensive guides for getting started, detailed API references, tutorials, and examples for all supported quantum backends. Visit the documentation site for:
 
 - **Getting Started** - Installation, configuration, and your first quantum program
-- **User Guides** - Platform overview, backends, and algorithms  
+- **User Guides** - Platform overview, backends, and algorithms
 - **Tutorials** - Hands-on quantum computing and machine learning examples
 - **API Reference** - Complete API documentation with examples
 - **Development** - Contributing guidelines, architecture, and testing
@@ -116,14 +118,14 @@ The documentation includes comprehensive guides for getting started, detailed AP
 
 SuperQuantX provides unified access to **all major quantum computing platforms**:
 
-| Backend | Provider | Hardware | Simulator | Status |
-|---------|----------|----------|-----------|---------|
-| **PennyLane** | Multi-vendor | ✅ Various | ✅ | Production |
-| **Qiskit** | IBM | ✅ IBM Quantum | ✅ | Production |
-| **Cirq** | Google | ✅ Google Quantum AI | ✅ | Production |
-| **AWS Braket** | Amazon | ✅ IonQ, Rigetti | ✅ | Production |
-| **TKET** | Quantinuum | ✅ H-Series | ✅ | Production |
-| **Ocean** | D-Wave | ✅ Advantage | ✅ | Production |
+| Backend | Provider | Hardware | Simulator |
+|---------|----------|----------|-----------|
+| **PennyLane** | Multi-vendor | ✅ Various | ✅ |
+| **Qiskit** | IBM | ✅ IBM Quantum | ✅ |
+| **Cirq** | Google | ✅ Google Quantum AI | ✅ |
+| **AWS Braket** | Amazon | ✅ IonQ, Rigetti | ✅ |
+| **TKET** | Quantinuum | ✅ H-Series | ✅ |
+| **Ocean** | D-Wave | ✅ Advantage | ✅ |
 
 ## 🤖 Quantum Agents
 
@@ -201,7 +203,7 @@ Help improve our documentation:
 
 ## 📄 License
 
-SuperQuantX is released under the [MIT License](LICENSE). Feel free to use it in your projects, research, and commercial applications.
+SuperQuantX is released under the [Apache License 2.0](LICENSE). Feel free to use it in your projects, research, and commercial applications.
 
 ---
 
@@ -229,7 +231,7 @@ print('✅ SuperQuantX is ready!')
 
 **SuperQuantX: Making Quantum Computing Accessible**
 
-*Built with ❤️ by [Superagentic AI](https://superagentic.ai)*
+*Built with ❤️ by [Superagentic AI](https://super-agentic.ai)*
 
 ⭐ **Star this repo** if SuperQuantX helps your quantum journey!
 

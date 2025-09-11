@@ -164,7 +164,7 @@ __title__ = "SuperQuantX"
 __description__ = "Experimental Quantum AI Research Platform - NOT for production use"
 __author__ = "SuperXLab - Superagentic AI Research Division"
 __author_email__ = "research@superagentic.ai"
-__license__ = "MIT (Research and Educational Use)"
+__license__ = "Apache-2.0"
 __url__ = "https://github.com/superagentic/superquantx"
 
 # Version information

@@ -17,7 +17,7 @@ authors = [
 maintainers = [
     { name = "Shashi Jagtap", email = "shashi@super-agentic.ai" },
     { name = "Shashi Jagtap", email = "shashikant.jagtap@icloud.com" },
-    { name = "SuperXLab Research Team", email = "research@super-agentic.ai" },
+    { name = "Superagentic AI Research Team", email = "research@super-agentic.ai" },
 ]
 keywords = [
     "quantum-computing",
@@ -138,8 +138,6 @@ Repository = "https://github.com/SuperagenticAI/superquantx"
 "Bug Tracker" = "https://github.com/SuperagenticAI/superquantx/issues"
 "Source Code" = "https://github.com/SuperagenticAI/superquantx"
 Changelog = "https://github.com/SuperagenticAI/superquantx/blob/main/CHANGELOG.md"
-"Discussions" = "https://github.com/SuperagenticAI/superquantx/discussions"
-"Funding" = "https://github.com/sponsors/SuperagenticAI"
 
 [project.scripts]
 superquantx = "superquantx.cli:main"

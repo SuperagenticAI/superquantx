@@ -1,10 +1,10 @@
 """Version information for SuperQuantX."""
 
-__version__ = "0.1.0"
-__version_info__ = (0, 1, 0)
+__version__ = "0.1.1"
+__version_info__ = (0, 1, 1)
 
 # Release information
-__release_date__ = "2024-09-06"
+__release_date__ = "2025-09-11"
 __release_name__ = "Agentic AI Genesis"
 
 # Build information - will be updated during CI/CD
