@@ -322,6 +322,7 @@ logs/
 plots/
 figures/
 *.png
+!resources/*.png
 *.jpg
 *.jpeg
 *.gif
