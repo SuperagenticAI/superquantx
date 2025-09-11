@@ -229,7 +229,7 @@ print('✅ SuperQuantX is ready!')
 
 <div align="center">
 
-**SuperQuantX: Making Quantum Computing Accessible**
+**SuperQuantX: Making Quantum Computing Accessible to all**
 
 *Built with ❤️ by [Superagentic AI](https://super-agentic.ai)*
 

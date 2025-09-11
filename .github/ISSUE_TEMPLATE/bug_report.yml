@@ -1,0 +1,98 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees:
+  - shashijagtap
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version of SuperQuantX are you running?
+      placeholder: e.g., 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Quantum Backend
+      description: Which quantum backend are you using?
+      options:
+        - PennyLane
+        - Qiskit
+        - Cirq
+        - AWS Braket
+        - TKET
+        - D-Wave Ocean
+        - Multiple backends
+        - Not applicable
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: What environment are you running in?
+      placeholder: e.g., Python 3.11, macOS 13.1, Jupyter Notebook
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of what the bug is.
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: What should have happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Please provide detailed steps to reproduce the issue
+      placeholder: |
+        1. Import superquantx
+        2. Create quantum circuit with...
+        3. Execute with backend...
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: code-sample
+    attributes:
+      label: Code sample
+      description: Please provide a minimal code sample that reproduces the issue
+      render: python
+      placeholder: |
+        import superquantx as sqx
+        # Your code here
+    validations:
+      required: false
+  - type: textarea
+    id: error-message
+    attributes:
+      label: Error message/traceback
+      description: If applicable, add the full error message or traceback
+      render: text
+      placeholder: Paste the full error message here
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here (screenshots, logs, etc.)
+    validations:
+      required: false
