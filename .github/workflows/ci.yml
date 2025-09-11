@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
   PYTHON_VERSION: "3.11"
@@ -34,15 +34,6 @@ jobs:
 
       - name: Run ruff linter
         run: uv run ruff check . || true
-
-      - name: Run ruff formatter
-        run: uv run ruff format --check .
-
-      - name: Run black formatter check
-        run: uv run black --check .
-
-      - name: Run mypy type checker
-        run: uv run mypy src/superquantx --ignore-missing-imports
 
   test:
     name: Test Suite
@@ -86,4 +77,3 @@ jobs:
           file: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
-

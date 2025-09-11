@@ -1,0 +1,188 @@
+site_name: SuperQuantX Documentation
+site_description: Quantum AI research platform that provides a unified API for future quantum agentic AI systems research
+site_author: Superagentic AI
+site_url: https://superagenticai.github.io/superquantx/
+
+repo_url: https://github.com/SuperagenticAI/superquantx
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.indexes
+    - navigation.instant
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+    - toc.integrate
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+    - header.autohide
+  palette:
+    # Palette toggle for light mode  
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+  logo: assets/logo.png
+
+plugins:
+  - search:
+      lang: en
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: ["src"]
+          options:
+            docstring_style: google
+            show_source: true
+            show_bases: true
+            show_inheritance_diagram: false
+            show_root_heading: true
+            show_root_toc_entry: true
+            show_object_full_path: false
+            show_category_heading: true
+            show_signature_annotations: true
+            separate_signature: true
+            filters: ["!^_"]
+            heading_level: 1
+            members_order: source
+            docstring_section_style: table
+            merge_init_into_class: true
+            show_submodules: true
+      watch:
+        - src/superquantx
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:materialx.emoji.twemoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: SuperagenticAI
+      repo: superquantx
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra:
+  generator: false
+  analytics:
+    provider: google
+    property: !ENV GOOGLE_ANALYTICS_KEY
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/SuperagenticAI/superquantx
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/superquantx/
+    - icon: material/email
+      link: mailto:research@super-agentic.ai
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: 
+    - Overview: index.md
+    - Quick Start: getting-started/quickstart.md
+    - Installation: getting-started/installation.md
+  - Getting Started:
+    - Installation Guide: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - First Program: getting-started/first-program.md
+    - Configuration: getting-started/configuration.md
+  - User Guide:
+    - Overview: user-guide/overview.md
+    - Quantum Backends: user-guide/backends.md
+    - Algorithms: user-guide/algorithms.md
+  - Tutorials:
+    - Basic Quantum Computing: tutorials/basic-quantum.md
+    - Quantum Machine Learning: tutorials/quantum-ml.md
+  - Backends:
+    - Overview: BACKENDS.md
+    - Simulator: backends/simulator.md
+    - PennyLane: backends/pennylane.md
+    - Qiskit: backends/qiskit.md
+    - Cirq: backends/cirq.md
+    - Amazon Braket: backends/braket.md
+    - TKET: backends/tket.md
+    - D-Wave Ocean: backends/ocean.md
+  - API Reference:
+    - Core: api/core.md
+    - Backends: api/backends.md
+    - Algorithms: api/algorithms.md
+    - Circuits: api/circuits.md
+    - Agents: api/agents.md
+    - Utilities: api/utilities.md
+  - Development:
+    - Contributing: development/contributing.md
+    - Architecture: development/architecture.md
+    - Testing: development/testing.md
+    - Release Process: development/releases.md
+    - Code Standards: development/standards.md
+
+copyright: |
+  Copyright &copy; 2025 <a href="https://super-agentic.ai" target="_blank">Superagentic AI</a> - 
+  <a href="https://github.com/SuperagenticAI/superquantx" target="_blank">SuperQuantX</a>

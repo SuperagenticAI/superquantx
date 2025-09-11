@@ -298,6 +298,7 @@ google_quantum_cache/
 *.json
 *.yaml
 *.yml
+!mkdocs.yml
 !.github/**/*.yml
 !.github/**/*.yaml
 data/
