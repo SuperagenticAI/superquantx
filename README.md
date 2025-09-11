@@ -2,13 +2,17 @@
 
 [![PyPI - Version](https://img.shields.io/pypi/v/superquantx)](https://pypi.org/project/superquantx/)
 [![Python Version](https://img.shields.io/pypi/pyversions/superquantx)](https://pypi.org/project/superquantx/)
-[![License](https://img.shields.io/github/license/SuperagenticAI/superquantx)](https://github.com/SuperagenticAI/superquantx/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Tests](https://github.com/SuperagenticAI/superquantx/workflows/Tests/badge.svg)](https://github.com/SuperagenticAI/superquantx/actions)
 [![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://superagenticai.github.io/superquantx)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-![SuperQuantX Logo](resources/logo.png)
+<p align="center">
+  <a href="https://super-agentic.ai" target="_blank">
+    <img src="resources/logo.png" alt="SuperQuantX Logo" width="500">
+  </a>
+</p>
 
 **Unified Quantum Computing Platform - Building autonomous quantum-enhanced AI systems**
 
