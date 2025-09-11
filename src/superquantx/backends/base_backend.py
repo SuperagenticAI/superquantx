@@ -307,6 +307,7 @@ class BaseBackend(ABC):
             'backend_name': self.__class__.__name__,
             'device': self.device,
             'capabilities': self.capabilities,
+            'backend_version': '1.0.0',  # Default backend version
         }
 
     def get_device_info(self) -> dict[str, Any]:

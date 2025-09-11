@@ -214,7 +214,7 @@ class TestOceanBackend:
                 ({'x0': 1, 'x1': 0}, -1.0, 1),
                 ({'x0': 0, 'x1': 1}, -0.5, 1)
             ]
-            mock_sampleset.__len__.return_value = 2
+            mock_sampleset.__len__ = Mock(return_value=2)
             mock_sampleset.info = {'timing': {}}
 
             mock_sampler_instance = Mock()

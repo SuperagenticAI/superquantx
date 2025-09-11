@@ -33,10 +33,12 @@ from typing import Any
 
 # Core imports - make available at top level
 from . import algorithms, backends, cli, utils
+
+
 # Import datasets lazily to avoid circular imports
 try:
     from . import datasets
-except ImportError as e:
+except ImportError:
     # If datasets import fails, create a placeholder
     import sys
     import types

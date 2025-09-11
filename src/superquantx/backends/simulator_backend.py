@@ -141,6 +141,8 @@ class SimulatorBackend(BaseBackend):
             'supports_backprop': False,
             'supports_hardware': False,
             'supports_noise_models': False,
+            'supports_measurements': True,  # Can perform measurements
+            'supports_parameterized_circuits': True,  # Can handle parameterized circuits
         }
 
         # Gate matrices
@@ -450,6 +452,17 @@ class SimulatorBackend(BaseBackend):
             'available_gates': list(self.gates.keys()),
         })
         return info
+
+    def get_backend_info(self) -> dict[str, Any]:
+        """Get backend information."""
+        return {
+            'backend_name': self.__class__.__name__,
+            'device': self.device_name,
+            'capabilities': self.capabilities,
+            'simulator_type': 'pure_python',
+            'max_qubits': self.max_qubits,
+            'available_gates': list(self.gates.keys()),
+        }
 
     def is_available(self) -> bool:
         """Check if the backend is available."""
