@@ -17,7 +17,7 @@ SuperQuantX bridges the gap between quantum computing and artificial intelligenc
 ### 🚀 Key Features
 
 - **🔗 Unified API**: Single interface for multiple quantum computing backends
-- **🎯 Agentic AI Focus**: Specialized tools for quantum agent development  
+- **🎯 Agentic AI Focus**: Specialized tools for quantum agent development
 - **🚀 Multi-Backend Support**: PennyLane, Qiskit, Cirq, Amazon Braket, TKET, D-Wave Ocean
 - **📊 Advanced Algorithms**: Pre-built quantum machine learning and optimization algorithms
 - **🛠️ Developer Friendly**: Comprehensive documentation and examples
@@ -28,7 +28,7 @@ SuperQuantX bridges the gap between quantum computing and artificial intelligenc
 | Backend | Provider | Features |
 |---------|----------|----------|
 | **PennyLane** | Multi-vendor | Differentiable programming, ML integration |
-| **Qiskit** | IBM | IBM hardware, advanced transpilation |  
+| **Qiskit** | IBM | IBM hardware, advanced transpilation |
 | **Cirq** | Google | Google hardware, NISQ algorithms |
 | **Amazon Braket** | AWS | AWS cloud quantum computing |
 | **TKET** | Cambridge Quantum Computing | Advanced optimization |
@@ -68,7 +68,7 @@ Learn the basics and get up and running quickly.
 </div>
 
 <div markdown>
-### 👨‍💻 User Guide  
+### 👨‍💻 User Guide
 Comprehensive guides for using SuperQuantX.
 
 - [Platform Overview](user-guide/overview.md)
@@ -102,7 +102,7 @@ Complete API documentation.
 SuperQuantX accelerates research in:
 
 - **Quantum Machine Learning**: QSVM, QNN, quantum feature maps
-- **Quantum Optimization**: QAOA, VQE, quantum annealing  
+- **Quantum Optimization**: QAOA, VQE, quantum annealing
 - **Quantum Agents**: Decision-making quantum systems
 - **Hybrid Algorithms**: Classical-quantum hybrid approaches
 - **NISQ Applications**: Near-term quantum device algorithms
@@ -117,6 +117,6 @@ SuperQuantX accelerates research in:
 ---
 
 <div align="center">
-  <p><strong>Built with ❤️ for the quantum computing research community</strong></p>
+  <p><strong>Built with ❤️ for the Quantum AI research community</strong></p>
   <p><em>Developed by <a href="https://super-agentic.ai">Superagentic AI</a></em></p>
 </div>
