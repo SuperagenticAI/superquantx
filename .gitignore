@@ -434,7 +434,6 @@ credentials/
 
 # UV (Astral UV package manager)
 .uv/
-uv.lock
 
 # Conda
 .conda/
