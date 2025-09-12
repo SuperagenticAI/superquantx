@@ -365,8 +365,7 @@ cache/
 .cached/
 *.cache
 
-# Lock files
-*.lock
+# Lock files (excluding uv.lock which should be tracked)
 
 # ==============================================
 # Development and Testing

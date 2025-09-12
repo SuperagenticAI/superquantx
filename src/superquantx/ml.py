@@ -9,7 +9,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-from .circuits import QuantumCircuit
+from .circuits import QuantumCircuit, QuantumGate
 from .client import SuperQuantXClient
 
 

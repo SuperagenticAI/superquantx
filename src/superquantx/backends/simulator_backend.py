@@ -6,7 +6,7 @@ require external quantum computing libraries, useful for testing and fallback.
 
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 
@@ -14,6 +14,16 @@ from .base_backend import BaseBackend
 
 
 logger = logging.getLogger(__name__)
+
+class QuantumResult:
+    """Container for quantum circuit execution results."""
+    
+    def __init__(self, result_dict: dict[str, Any]):
+        self._result_dict = result_dict
+    
+    def get_counts(self) -> dict[str, int]:
+        """Get measurement counts."""
+        return self._result_dict.get('counts', {})
 
 class QuantumState:
     """Simple quantum state representation."""
@@ -96,24 +106,124 @@ class QuantumState:
                 return False
         return True
 
-    def measure(self, shots: int = 1024) -> dict[str, int]:
-        """Measure the quantum state."""
-        probabilities = np.abs(self.state)**2
+    def measure(self, qubit_or_shots=None, classical_bit=None, shots: int = 1024) -> Union[dict[str, int], "QuantumState"]:
+        """Measure quantum state or add measurement to circuit."""
+        # If called with two arguments, it's measure(qubit, classical_bit) - for circuit building
+        if qubit_or_shots is not None and classical_bit is not None:
+            # This is a circuit building operation, just return self for chaining
+            # Actual measurement happens during execution
+            return self
+        
+        # If called with one argument that's an int < 100, treat as shots
+        # If called with no arguments, use default shots
+        if qubit_or_shots is None or (isinstance(qubit_or_shots, int) and qubit_or_shots >= 100):
+            actual_shots = qubit_or_shots if qubit_or_shots is not None else shots
+            
+            probabilities = np.abs(self.state)**2
 
-        # Sample outcomes
-        outcomes = np.random.choice(len(self.state), size=shots, p=probabilities)
+            # Sample outcomes
+            outcomes = np.random.choice(len(self.state), size=actual_shots, p=probabilities)
 
-        # Convert to bit strings and count
-        counts = {}
-        for outcome in outcomes:
-            bit_string = format(outcome, f'0{self.n_qubits}b')
-            counts[bit_string] = counts.get(bit_string, 0) + 1
+            # Convert to bit strings and count
+            counts = {}
+            for outcome in outcomes:
+                bit_string = format(outcome, f'0{self.n_qubits}b')
+                counts[bit_string] = counts.get(bit_string, 0) + 1
 
-        return counts
+            return counts
+        else:
+            # Called as measure(qubit, classical_bit) format
+            return self
 
     def get_statevector(self) -> np.ndarray:
         """Get the current statevector."""
         return self.state.copy()
+
+    def measure_all(self) -> "QuantumState":
+        """Measure all qubits (for API compatibility)."""
+        # This is a no-op since measurements are handled in the measure() method
+        return self
+
+    def h(self, qubit: int) -> "QuantumState":
+        """Apply Hadamard gate to specified qubit."""
+        H = np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2)
+        self.apply_gate(H, [qubit])
+        return self
+
+    def x(self, qubit: int) -> "QuantumState":
+        """Apply X (Pauli-X) gate to specified qubit."""
+        X = np.array([[0, 1], [1, 0]], dtype=complex)
+        self.apply_gate(X, [qubit])
+        return self
+
+    def y(self, qubit: int) -> "QuantumState":
+        """Apply Y (Pauli-Y) gate to specified qubit."""
+        Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
+        self.apply_gate(Y, [qubit])
+        return self
+
+    def z(self, qubit: int) -> "QuantumState":
+        """Apply Z (Pauli-Z) gate to specified qubit."""
+        Z = np.array([[1, 0], [0, -1]], dtype=complex)
+        self.apply_gate(Z, [qubit])
+        return self
+
+    def cnot(self, control: int, target: int) -> "QuantumState":
+        """Apply CNOT gate between control and target qubits."""
+        CNOT = np.array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0]
+        ], dtype=complex)
+        self.apply_gate(CNOT, [control, target])
+        return self
+
+    def cx(self, control: int, target: int) -> "QuantumState":
+        """Apply CX (CNOT) gate between control and target qubits. Alias for cnot."""
+        return self.cnot(control, target)
+
+    def cz(self, control: int, target: int) -> "QuantumState":
+        """Apply CZ (controlled-Z) gate between control and target qubits."""
+        CZ = np.array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, -1]
+        ], dtype=complex)
+        self.apply_gate(CZ, [control, target])
+        return self
+
+    def rx(self, angle: float, qubit: int) -> "QuantumState":
+        """Apply RX rotation gate around X-axis."""
+        cos_half = np.cos(angle / 2)
+        sin_half = np.sin(angle / 2)
+        RX = np.array([
+            [cos_half, -1j * sin_half],
+            [-1j * sin_half, cos_half]
+        ], dtype=complex)
+        self.apply_gate(RX, [qubit])
+        return self
+
+    def ry(self, angle: float, qubit: int) -> "QuantumState":
+        """Apply RY rotation gate around Y-axis."""
+        cos_half = np.cos(angle / 2)
+        sin_half = np.sin(angle / 2)
+        RY = np.array([
+            [cos_half, -sin_half],
+            [sin_half, cos_half]
+        ], dtype=complex)
+        self.apply_gate(RY, [qubit])
+        return self
+
+    def rz(self, angle: float, qubit: int) -> "QuantumState":
+        """Apply RZ rotation gate around Z-axis."""
+        RZ = np.array([
+            [np.exp(-1j * angle / 2), 0],
+            [0, np.exp(1j * angle / 2)]
+        ], dtype=complex)
+        self.apply_gate(RZ, [qubit])
+        return self
 
 class SimulatorBackend(BaseBackend):
     """Pure Python quantum simulator backend.
@@ -282,7 +392,16 @@ class SimulatorBackend(BaseBackend):
 
         try:
             # Measure the circuit
-            counts = circuit.measure(shots)
+            probabilities = np.abs(circuit.state)**2
+            
+            # Sample outcomes
+            outcomes = np.random.choice(len(circuit.state), size=shots, p=probabilities)
+            
+            # Convert to bit strings and count
+            counts = {}
+            for outcome in outcomes:
+                bit_string = format(outcome, f'0{circuit.n_qubits}b')
+                counts[bit_string] = counts.get(bit_string, 0) + 1
 
             return {
                 'counts': counts,
@@ -457,12 +576,17 @@ class SimulatorBackend(BaseBackend):
         """Get backend information."""
         return {
             'backend_name': self.__class__.__name__,
-            'device': self.device_name,
+            'device': self.device,
             'capabilities': self.capabilities,
             'simulator_type': 'pure_python',
             'max_qubits': self.max_qubits,
             'available_gates': list(self.gates.keys()),
         }
+
+    def run(self, circuit: QuantumState, shots: int | None = None) -> "QuantumResult":
+        """Run a quantum circuit and return results."""
+        result_dict = self.execute_circuit(circuit, shots)
+        return QuantumResult(result_dict)
 
     def is_available(self) -> bool:
         """Check if the backend is available."""

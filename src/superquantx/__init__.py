@@ -34,6 +34,11 @@ from typing import Any
 # Core imports - make available at top level
 from . import algorithms, backends, cli, utils
 
+# Core circuit and client classes
+from .circuits import QuantumCircuit
+from .client import SuperQuantXClient
+from .gates import Hamiltonian, PauliString
+
 
 # Import datasets lazily to avoid circular imports
 try:
@@ -314,6 +319,12 @@ __all__ = [
     "get_backend_info",
     "print_system_info",
     "run_diagnostics",
+
+    # Core classes
+    "QuantumCircuit",
+    "SuperQuantXClient",
+    "Hamiltonian",
+    "PauliString",
 
     # Configuration
     "config",

@@ -359,9 +359,9 @@ def main():
     # Use factory function
     print("Using VQE factory function...")
     vqe_h2 = create_vqe_for_molecule("H2", client=client)
-    h2_results = vqe_h2.run()
+    h2_ground_energy = vqe_h2.find_ground_state()
 
-    print(f"Factory VQE result: {h2_results['optimal_energy']:.6f} Hartree")
+    print(f"Factory VQE result: {h2_ground_energy:.6f} Hartree")
 
     # Example 2: Custom ansatz comparison
     print("\n\n2. Ansatz Comparison")

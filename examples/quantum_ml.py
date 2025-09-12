@@ -18,14 +18,13 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
-from superquantx import SuperQuantXClient
+from superquantx import SuperQuantXClient, QuantumNN
 from superquantx.ml import (
     AmplitudeEmbeddingFeatureMap,
     AngleEmbeddingFeatureMap,
     IQPFeatureMap,
     QuantumClassifier,
     QuantumKernel,
-    QuantumNeuralNetwork,
     QuantumRegressor,
     QuantumSVM,
 )
@@ -383,7 +382,7 @@ def quantum_neural_network_example(datasets, client=None):
     print("-" * 27)
 
     try:
-        qnn = QuantumNeuralNetwork(
+        qnn = QuantumNN(
             num_qubits=4,
             num_layers=3,
             entangling_gates="CNOT",
