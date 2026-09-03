@@ -145,6 +145,8 @@ SuperQuantX provides unified access to **all major quantum computing platforms**
 | **TKET** | Quantinuum | ✅ H-Series | ✅ |
 | **Ocean** | D-Wave | ✅ Advantage | ✅ |
 
+> **Python**: SuperQuantX requires **Python 3.11+**. See [backend compatibility](docs/BACKENDS.md#backend-version-compatibility) for optional-extra version floors.
+
 ## 🤖 Quantum Agents
 
 Pre-built autonomous agents for complex problem solving:

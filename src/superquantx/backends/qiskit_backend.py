@@ -134,8 +134,13 @@ class QiskitBackend(BaseBackend):
                 logger.info(f"Initialized IBM Quantum backend: {self.device}")
 
             else:
-                # Try to get backend from Aer
-                self.backend = Aer.get_backend(self.device)
+                # Prefer AerSimulator; device string may be an Aer method name
+                try:
+                    self.backend = AerSimulator(method=self.device) if self.device not in (
+                        'aer_simulator', 'qasm_simulator', 'statevector_simulator'
+                    ) else AerSimulator()
+                except Exception:
+                    self.backend = AerSimulator()
                 logger.info(f"Initialized Aer backend: {self.device}")
 
         except Exception as e:
@@ -213,8 +218,12 @@ class QiskitBackend(BaseBackend):
             )
             
             if not has_measurements:
-                circuit.add_register(ClassicalRegister(circuit.num_qubits, 'c'))
-                circuit.measure_all()
+                # create_circuit already adds ClassicalRegister('c'); avoid duplicate name
+                if circuit.num_clbits < circuit.num_qubits:
+                    circuit.add_register(
+                        ClassicalRegister(circuit.num_qubits - circuit.num_clbits, 'meas')
+                    )
+                circuit.measure(range(circuit.num_qubits), range(circuit.num_qubits))
 
             # Transpile circuit
             transpiled = transpile(circuit, self.backend)
@@ -247,13 +256,18 @@ class QiskitBackend(BaseBackend):
             circuit_copy = circuit.copy()
             circuit_copy.remove_final_measurements()
 
-            # Execute
-            job = execute(circuit_copy, backend, shots=1)
+            # Execute with BackendV2.run (qiskit.execute removed in Qiskit 2.x)
+            job = backend.run(circuit_copy, shots=1)
             result = job.result()
 
-            # Get statevector
-            statevector = result.get_statevector()
-            return np.array(statevector.data)
+            # Prefer quantum_info.Statevector when available
+            try:
+                statevector = Statevector.from_instruction(circuit_copy)
+                return np.array(statevector.data)
+            except Exception:
+                statevector = result.get_statevector()
+                data = getattr(statevector, 'data', statevector)
+                return np.array(data)
 
         except Exception as e:
             logger.error(f"Statevector computation failed: {e}")
@@ -329,10 +343,10 @@ class QiskitBackend(BaseBackend):
                     circuit = QuantumCircuit(feature_map.num_qubits, feature_map.num_qubits)
 
                     # Encode first data point
-                    circuit.compose(feature_map.bind_parameters(X1[i]), inplace=True)
+                    circuit.compose(feature_map.assign_parameters(X1[i]), inplace=True)
 
                     # Encode second data point with inverse
-                    inverse_map = feature_map.bind_parameters(-X2[j]).inverse()
+                    inverse_map = feature_map.assign_parameters(-X2[j]).inverse()
                     circuit.compose(inverse_map, inplace=True)
 
                     # Measure
@@ -466,7 +480,7 @@ class QiskitBackend(BaseBackend):
             import qiskit
             info.update({
                 'qiskit_version': qiskit.__version__,
-                'backend_name': self.backend.name() if self.backend else 'Unknown',
+                'backend_name': (self.backend.name if hasattr(self.backend, 'name') else str(self.backend)) if self.backend else 'Unknown',
                 'backend_version': getattr(self.backend, 'version', 'Unknown'),
             })
         except Exception as e:
