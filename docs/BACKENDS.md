@@ -241,6 +241,22 @@ G = nx.complete_graph(4)
 result = ocean_backend.solve_max_cut(G, num_reads=1000)
 ```
 
+
+## Backend Version Compatibility
+
+Declared optional-extra floors (PyPI majors verified 2026-09-04). Installs target **Python ≥3.11**.
+
+| Extra | Packages (declared floor) | Latest verified | Notes |
+|-------|---------------------------|-----------------|-------|
+| `pennylane` | `pennylane>=0.45.0`, `pennylane-lightning>=0.45.0` | 0.45.1 / 0.45.0 | Requires Python ≥3.11 |
+| `qiskit` | `qiskit>=2.0,<3`, `qiskit-aer>=0.17.0`, `qiskit-ibm-runtime>=0.49.0` | 2.5.2 / 0.17.2 / 0.49.0 | Explicit Qiskit **2.x** policy (not open-ended ≥1.0) |
+| `cirq` | `cirq>=1.7.0` | 1.7.0 | Requires Python ≥3.11 |
+| `braket` | `amazon-braket-sdk>=1.127.0` | 1.127.0 | Requires Python ≥3.11 |
+| `tket` | `pytket>=2.18.0`, `pytket-qiskit>=0.78.0` | 2.18.1 / 0.78.0 | pytket 2.x |
+| `ocean` | `dwave-ocean-sdk>=9.0.0`, `dimod>=0.12.22` | 9.4.0 / 0.12.22 | Ocean 9.x |
+
+Core scientific stack floors stay **3.11-compatible** (NumPy/SciPy latest majors that need Python ≥3.12 are intentionally not forced).
+
 ## Installation Requirements
 
 ### Core Backends (Included)

@@ -18,7 +18,7 @@ Thank you for your interest in contributing to SuperQuantX! We welcome contribut
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.11 or higher
 - Git
 - [uv](https://github.com/astral-sh/uv) (recommended) or pip
 - Basic understanding of quantum computing concepts

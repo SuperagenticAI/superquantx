@@ -4,7 +4,7 @@ Get up and running with SuperQuantX in just 5 minutes! This guide will take you 
 
 ## 📦 Installation
 
-SuperQuantX requires Python 3.10 or higher. Install it using pip:
+SuperQuantX requires Python 3.11 or higher. Install it using pip:
 
 === "Basic Installation"
 

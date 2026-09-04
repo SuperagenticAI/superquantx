@@ -475,7 +475,7 @@ class TestQuantumGates:
 # pyproject.toml
 [tool.black]
 line-length = 88
-target-version = ['py39', 'py310', 'py311']
+target-version = ['py311', 'py312', 'py313']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -520,7 +520,7 @@ per-file-ignores =
 ```ini
 # mypy.ini
 [mypy]
-python_version = 3.9
+python_version = 3.11
 warn_return_any = True
 warn_unused_configs = True
 disallow_untyped_defs = True

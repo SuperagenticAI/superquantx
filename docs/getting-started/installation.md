@@ -10,11 +10,11 @@ This guide provides detailed instructions for installing SuperQuantX in various 
 - **Windows**: Windows 10 or Windows 11
 
 ### Python Requirements
-- **Python**: 3.10, 3.11, or 3.12
+- **Python**: 3.11, 3.12, or 3.13
 - **pip**: 21.0 or later (for proper dependency resolution)
 
 !!! warning "Python Version Important"
-    SuperQuantX requires Python 3.10+ due to dependencies in quantum frameworks. Python 3.9 and earlier are not supported.
+    SuperQuantX requires Python 3.11+ due to dependencies in quantum frameworks. Python 3.10 and earlier are not supported.
 
 ### Hardware Requirements
 - **RAM**: Minimum 4GB, recommended 8GB+
@@ -301,7 +301,7 @@ print(f"Test successful! Results: {result['counts']}")
 
 #### Python Version Issues
 
-**Problem**: `SuperQuantX requires Python 3.10+`
+**Problem**: `SuperQuantX requires Python 3.11+`
 
 **Solutions**:
 ```bash

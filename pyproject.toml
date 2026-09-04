@@ -7,7 +7,7 @@ name = "superquantx"
 dynamic = ["version"]
 description = "Quantum AI Research Platform - Unified API for QuantumAgentic AIsystems research"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [
     { name = "Shashi Jagtap", email = "shashi@super-agentic.ai" },
@@ -41,9 +41,9 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering",
@@ -58,7 +58,7 @@ dependencies = [
     "scipy>=1.12.0",
     "scikit-learn>=1.4.0",
     "matplotlib>=3.8.0",
-    "networkx>=3.2.0",
+    "networkx>=3.3.0",
 
     # Modern Python utilities - latest versions
     "pydantic>=2.5.0",
@@ -67,34 +67,33 @@ dependencies = [
     "loguru>=0.7.2",
     "httpx>=0.25.0",
     "click>=8.0.0",
-    "typing-extensions>=4.9.0; python_version<'3.11'",
     "PyYAML>=6.0.0",
 ]
 
 [project.optional-dependencies]
 # Quantum computing backends - latest versions
 pennylane = [
-    "pennylane>=0.35.0",
-    "pennylane-lightning>=0.35.0",
+    "pennylane>=0.45.0",
+    "pennylane-lightning>=0.45.0",
 ]
 qiskit = [
-    "qiskit>=1.0.0",
-    "qiskit-aer>=0.13.0",
-    "qiskit-ibm-runtime>=0.20.0",
+    "qiskit>=2.0,<3",
+    "qiskit-aer>=0.17.0",
+    "qiskit-ibm-runtime>=0.49.0",
 ]
 cirq = [
-    "cirq>=1.3.0",
+    "cirq>=1.7.0",
 ]
 braket = [
-    "amazon-braket-sdk>=1.75.0",
+    "amazon-braket-sdk>=1.127.0",
 ]
 tket = [
-    "pytket>=1.25.0",
-    "pytket-qiskit>=0.50.0",
+    "pytket>=2.18.0",
+    "pytket-qiskit>=0.78.0",
 ]
 ocean = [
-    "dwave-ocean-sdk>=7.0.0",
-    "dimod>=0.12.14",
+    "dwave-ocean-sdk>=9.0.0",
+    "dimod>=0.12.22",
 ]
 
 # Development dependencies - latest versions
@@ -162,7 +161,7 @@ exclude = [
 # Ruff configuration (replaces flake8, isort, and some black functionality)
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py311"
 exclude = [
     ".bzr",
     ".direnv",
@@ -213,7 +212,7 @@ lines-after-imports = 2
 
 [tool.black]
 line-length = 88
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py311', 'py312', 'py313']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -231,7 +230,7 @@ extend-exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

@@ -276,14 +276,14 @@ dynamic = ["version"]
 description = "Experimental quantum AI research platform"
 authors = [{name = "SuperXLab Research Team"}]
 license = {text = "Apache-2.0"}
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Physics",
 ]
 ```
@@ -316,11 +316,11 @@ build:
 
 requirements:
   host:
-    - python >=3.9
+    - python >=3.11
     - pip
     - setuptools
   run:
-    - python >=3.9
+    - python >=3.11
     - numpy >=1.21.0
     - scipy >=1.7.0
     - matplotlib >=3.5.0
