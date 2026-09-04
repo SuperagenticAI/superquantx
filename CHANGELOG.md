@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fault-tolerant quantum algorithms
 - Quantum federated learning
 
+## [0.2.0] - 2026-09-04
+
+### Changed
+- Raised supported Python floor to **3.11+** (3.10 no longer supported).
+- Bumped optional quantum backend extras to current majors (PennyLane 0.45, Qiskit 2.x, Cirq 1.7, Braket 1.127, pytket 2.18, D-Wave Ocean 9).
+- Qiskit backend wrapper updated for Qiskit 2.x (removed `execute` / legacy bind APIs).
+- Docs and install guides updated for the new Python and backend floors.
+
+### Added
+- Backend compatibility table in `docs/BACKENDS.md`.
+
 ## [0.1.1] - 2025-09-11
 
 ### Added
