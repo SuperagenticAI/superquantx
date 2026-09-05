@@ -70,7 +70,7 @@ jobs:
           - PyPI: https://pypi.org/project/superquantx/{version}/
           - Docs: https://superagenticai.github.io/superquantx/
           """)
-          pathlibu.Ath("release-notes.md").write_text(notes)
+          pathlib.Path("release-notes.md").write_text(notes)
           print(f"Wrote release notes for {version}")
           PY
           if gh release view "$tag" >/dev/null 2>&1; then
