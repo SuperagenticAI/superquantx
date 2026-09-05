@@ -39,7 +39,7 @@ jobs:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: uv publish
 
-      - name: Create GitHub release
+      - name: Create or update GitHub release from CHANGELOG
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -50,8 +50,34 @@ jobs:
             tag="${GITHUB_REF_NAME}"
           fi
           version="${tag#v}"
+          export VERSION="$version"
+          python3 <<'PY'
+          import os, pathlib, re, textwrap
+          version = os.environ["VERSION"]
+          text = pathlib.Path("CHANGELOG.md").read_text()
+          m = re.search(rf"## \[{re.escape(version)}\].*?(?=\n## \[|\Z)", text, re.S)
+          section = m.group(0).strip() if m else f"## [{version}]\n\nSee CHANGELOG.md."
+          notes = textwrap.dedent(f"""\
+          ## SuperQuantX {version}
+
+          {section}
+
+          ### Install
+          ```bash
+          pip install superquantx=={version}
+          ```
+
+          - PyPI: https://pypi.org/project/superquantx/{version}/
+          - Docs: https://superagenticai.github.io/superquantx/
+          """)
+          pathlibu.Ath("release-notes.md").write_text(notes)
+          print(f"Wrote release notes for {version}")
+          PY
           if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists"
+            gh release edit "$tag" --title "SuperQuantX ${version}" --notes-file release-notes.md
+            gh release upload "$tag" dist/* --clobber || true
+            echo "Updated existing release $tag"
           else
-            gh release create "$tag" dist/* --title "SuperQuantX ${version}" --generate-notes
+            gh release create "$tag" dist/* --title "SuperQuantX ${version}" --notes-file release-notes.md
+            echo "Created release $tag"
           fi
