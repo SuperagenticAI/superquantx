@@ -250,11 +250,24 @@ class CirqBackend(BaseBackend):
             circuit_info = self._create_pauli_feature_map(n_features, reps)
         elif feature_map == 'AmplitudeMap':
             circuit_info = self._create_amplitude_map(n_features)
+        elif feature_map == 'ZFeatureMap':
+            circuit_info = self._create_z_feature_map(n_features, reps)
+        elif feature_map == 'AngleEncoding':
+            circuit_info = self._create_angle_encoding_map(n_features)
         else:
             logger.warning(f"Unknown feature map '{feature_map}', using angle encoding")
             circuit_info = self._create_angle_encoding_map(n_features)
 
         return circuit_info
+
+    def _create_z_feature_map(self, n_features: int, reps: int) -> tuple[Any, list]:
+        """Create separable Z-rotation feature map."""
+        qubits = [cirq.LineQubit(i) for i in range(n_features)]
+        circuit = cirq.Circuit()
+        for r in range(reps):
+            for i, q in enumerate(qubits):
+                circuit.append(cirq.rz(cirq.Symbol(f'x_{i}_z_{r}'))(q))
+        return circuit, qubits
 
     def _create_zz_feature_map(self, n_features: int, reps: int) -> tuple[Any, list]:
         """Create ZZ feature map circuit."""

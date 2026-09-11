@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Spike: `QuantumSVM(feature_map="auto")` Qmes-style encoding selection with
+  optional Qmes extra and a classical heuristic fallback
+  (`docs/design/qmes-feature-map-auto.md`).
+
 ### Planned
 - Quantum reinforcement learning algorithms
 - Quantum natural language processing
