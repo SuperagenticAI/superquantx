@@ -149,9 +149,23 @@ class PennyLaneBackend(BaseBackend):
             return self._create_pauli_feature_map(n_features, reps)
         elif feature_map == 'AmplitudeMap':
             return self._create_amplitude_map(n_features)
+        elif feature_map == 'ZFeatureMap':
+            return self._create_z_feature_map(n_features, reps)
+        elif feature_map == 'AngleEncoding':
+            return self._create_angle_encoding_map(n_features)
         else:
             logger.warning(f"Unknown feature map '{feature_map}', using angle encoding")
             return self._create_angle_encoding_map(n_features)
+
+    def _create_z_feature_map(self, n_features: int, reps: int) -> Callable:
+        """Create separable Z-rotation feature map."""
+        def z_feature_map(x):
+            for r in range(reps):
+                for i in range(min(n_features, self.wires)):
+                    qml.RZ(2.0 * x[i], wires=i)
+            return [qml.expval(qml.PauliZ(i)) for i in range(min(n_features, self.wires))]
+
+        return z_feature_map
 
     def _create_zz_feature_map(self, n_features: int, reps: int) -> Callable:
         """Create ZZ feature map circuit."""

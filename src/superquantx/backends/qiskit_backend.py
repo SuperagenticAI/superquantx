@@ -289,9 +289,21 @@ class QiskitBackend(BaseBackend):
             return self._create_pauli_feature_map(n_features, reps)
         elif feature_map == 'AmplitudeMap':
             return self._create_amplitude_map(n_features)
+        elif feature_map == 'ZFeatureMap':
+            return self._create_z_feature_map(n_features, reps)
+        elif feature_map == 'AngleEncoding':
+            return self._create_angle_encoding_map(n_features)
         else:
             logger.warning(f"Unknown feature map '{feature_map}', using angle encoding")
             return self._create_angle_encoding_map(n_features)
+
+    def _create_z_feature_map(self, n_features: int, reps: int) -> Any:
+        """Create separable Z-rotation feature map."""
+        circuit = QuantumCircuit(n_features)
+        for r in range(reps):
+            for i in range(n_features):
+                circuit.rz(0.0, i)
+        return circuit
 
     def _create_pauli_feature_map(self, n_features: int, reps: int) -> Any:
         """Create Pauli feature map circuit."""

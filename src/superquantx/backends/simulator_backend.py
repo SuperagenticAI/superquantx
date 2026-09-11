@@ -480,6 +480,16 @@ class SimulatorBackend(BaseBackend):
                     for i in range(n_features - 1):
                         circuit = self.add_gate(circuit, 'CNOT', [i, i + 1])
 
+                elif feature_map == 'ZFeatureMap':
+                    for i in range(n_features):
+                        circuit = self.add_gate(circuit, 'RZ', i, [2.0 * x[i]])
+
+                elif feature_map in ('AngleEncoding', 'AmplitudeMap'):
+                    # AmplitudeMap falls back to angle encoding on the pure
+                    # simulator (full amplitude prep is backend-specific).
+                    for i in range(n_features):
+                        circuit = self.add_gate(circuit, 'RY', i, [x[i]])
+
                 else:  # Default angle encoding
                     for i in range(n_features):
                         circuit = self.add_gate(circuit, 'RY', i, [x[i]])
