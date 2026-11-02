@@ -9,6 +9,7 @@ This example demonstrates:
 """
 
 import os
+
 import numpy as np
 
 from superquantx import QuantumCircuit, SuperQuantXClient

@@ -422,13 +422,13 @@ class VQE(OptimizationQuantumAlgorithm):
 
     def find_ground_state(self) -> float:
         """Find the ground state energy of the Hamiltonian.
-        
+
         This is a convenience method that combines fit() and _run_optimization()
         to find the ground state energy in a single call.
-        
+
         Returns:
             Ground state energy
-            
+
         Example:
             >>> vqe = VQE(backend='simulator', hamiltonian=hamiltonian)
             >>> ground_energy = vqe.find_ground_state()
@@ -436,10 +436,10 @@ class VQE(OptimizationQuantumAlgorithm):
         # Fit if not already fitted
         if not self.is_fitted:
             self.fit()
-            
+
         # Run optimization
         self._run_optimization()
-        
+
         # Return the optimal energy
         return self.optimal_value_
 

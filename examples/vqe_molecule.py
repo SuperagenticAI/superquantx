@@ -16,6 +16,7 @@ import time
 import superquantx as sqx
 from superquantx.algorithms import create_vqe_for_molecule
 
+
 CHEMICAL_ACCURACY = 1.6e-3  # Hartree, about 1 kcal/mol
 
 

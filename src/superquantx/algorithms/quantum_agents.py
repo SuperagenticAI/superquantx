@@ -40,6 +40,7 @@ from .quantum_nn import QuantumNN
 from .quantum_svm import QuantumSVM
 from .vqe import H2_STO3G_0735, VQE
 
+
 logger = logging.getLogger(__name__)
 
 

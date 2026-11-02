@@ -98,10 +98,10 @@ def version(ctx: click.Context):
 def shell():
     """Start interactive SuperQuantX shell."""
     try:
-        import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt  # noqa: F401 - exposed in the shell
 
         # Import common modules for convenience
-        import numpy as np
+        import numpy as np  # noqa: F401 - exposed in the shell
         from IPython import embed
 
         banner = """

@@ -72,7 +72,7 @@ def test_table_and_dict(result):
 
 def test_same_folds_are_deterministic(moons):
     X, y = moons
-    kw = dict(cv=3, seed=5)
+    kw = {"cv": 3, "seed": 5}
     a = compare_to_classical(X, y, KNeighborsClassifier(), **kw)
     b = compare_to_classical(X, y, KNeighborsClassifier(), **kw)
     assert [s.fold_accuracies for s in a.scores] == [s.fold_accuracies for s in b.scores]

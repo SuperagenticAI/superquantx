@@ -10,6 +10,7 @@ This example demonstrates:
 """
 
 import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.datasets import make_classification, make_moons, make_regression
@@ -19,7 +20,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
-from superquantx import SuperQuantXClient, QuantumNN
+from superquantx import QuantumNN, SuperQuantXClient
 from superquantx.ml import (
     AmplitudeEmbeddingFeatureMap,
     AngleEmbeddingFeatureMap,

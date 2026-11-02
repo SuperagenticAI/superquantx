@@ -22,6 +22,7 @@ import os
 import time
 import warnings
 
+
 warnings.filterwarnings("ignore")
 logging.disable(logging.WARNING)
 
@@ -30,6 +31,7 @@ from sklearn.datasets import make_moons  # noqa: E402
 
 import superquantx as sqx  # noqa: E402
 from superquantx.algorithms.qaoa import brute_force_maxcut  # noqa: E402
+
 
 SHOTS = 1000
 GATE_BACKENDS = [

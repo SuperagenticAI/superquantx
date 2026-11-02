@@ -9,8 +9,8 @@ import numpy as np
 import pytest
 
 import superquantx as sqx
-from superquantx.algorithms.qaoa import brute_force_maxcut, cut_value
 from superquantx.algorithms import create_vqe_for_molecule
+from superquantx.algorithms.qaoa import brute_force_maxcut, cut_value
 from superquantx.algorithms.vqe import H2_STO3G_0735
 from superquantx.backends.base_backend import hamiltonian_to_matrix
 
@@ -78,7 +78,7 @@ class TestQAOAIntegration:
         assert 0.0 < result["approximation_ratio"] <= 1.0
 
     def test_qaoa_rejects_non_square(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="square adjacency"):
             sqx.QAOA(backend="simulator", p=1).solve(np.ones((2, 3)))
 
 
