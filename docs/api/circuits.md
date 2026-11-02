@@ -1,5 +1,9 @@
 # Circuits API Reference
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 0 of 13 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 SuperQuantX provides comprehensive quantum circuit construction, manipulation, and execution capabilities. This API reference covers quantum circuits, gates, measurements, and noise modeling.
 
 ## Quantum Circuits
@@ -539,6 +543,5 @@ print(f"Average execution time: {avg_execution_time:.3f}s")
 ---
 
 For more detailed examples and tutorials, see:
-- [Circuit Construction Tutorial](../tutorials/circuits.md)
-- [Noise Modeling Guide](../user-guide/noise.md)
+- [Circuit Construction Tutorial](../tutorials/basic-quantum.md)
 - [Backend Integration](../backends/)

@@ -1,5 +1,9 @@
 # Quantum Algorithms
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 0 of 22 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](backends.md).
+
+
 SuperQuantX provides a comprehensive library of quantum algorithms, from fundamental quantum computing primitives to cutting-edge quantum machine learning methods. This guide covers how to use, customize, and combine these algorithms in your research.
 
 ## 🎯 Algorithm Categories
@@ -992,7 +996,7 @@ For algorithm-specific help:
 
 - **[Tutorials](../tutorials/quantum-ml.md)**: Step-by-step algorithm tutorials
 - **[API Reference](../api/algorithms.md)**: Detailed function documentation
-- **[Examples](../tutorials/advanced-examples.md)**: Real-world algorithm applications
+- **[Examples](../showcase.md)**: Real-world algorithm applications
 - **[GitHub Issues](https://github.com/SuperagenticAI/superquantx/issues)**: Report algorithm bugs
 
 ---

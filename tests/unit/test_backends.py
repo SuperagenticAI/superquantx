@@ -5,8 +5,6 @@ Tests the unified API across all quantum computing backends,
 including the new AWS Braket, TKET/Quantinuum, and D-Wave Ocean backends.
 """
 
-from unittest.mock import Mock, patch
-
 import numpy as np
 import pytest
 
@@ -89,211 +87,160 @@ class TestBackendCreation:
             get_backend('totally_invalid_backend')
 
 
+GATE_MODEL_BACKENDS = [
+    ('simulator', {}),
+    ('qiskit', {}),
+    ('pennylane', {}),
+    ('cirq', {}),
+    ('braket', {'device': 'local:braket_sv'}),
+    ('tket', {}),
+]
+
+
+def _backend_or_skip(name, **kwargs):
+    try:
+        return get_backend(name, **kwargs)
+    except ImportError as exc:
+        pytest.skip(f"{name} not installed: {exc}")
+
+
+@pytest.mark.parametrize("name,kwargs", GATE_MODEL_BACKENDS)
+class TestGateModelBackends:
+    """Every gate-model backend must agree on real circuit results."""
+
+    def test_bell_state_counts(self, name, kwargs):
+        backend = _backend_or_skip(name, **kwargs)
+        circuit = backend.create_circuit(2)
+        circuit = backend.add_gate(circuit, 'H', 0)
+        circuit = backend.add_gate(circuit, 'CNOT', [0, 1])
+        circuit = backend.add_measurement(circuit)
+        counts = backend.execute_circuit(circuit, shots=400)['counts']
+        assert sum(counts.values()) == 400
+        assert set(counts) <= {'00', '11'}
+        assert min(counts.get('00', 0), counts.get('11', 0)) > 100
+
+    def test_qubit_order_is_normalised(self, name, kwargs):
+        backend = _backend_or_skip(name, **kwargs)
+        circuit = backend.create_circuit(3)
+        circuit = backend.add_gate(circuit, 'X', 0)
+        sv = backend.statevector_big_endian(circuit)
+        assert np.argmax(np.abs(sv)) == 0b100
+        circuit = backend.add_measurement(circuit)
+        counts = backend.counts_big_endian(backend.execute_circuit(circuit, shots=20)['counts'])
+        assert counts == {'100': 20}
+
+    def test_exact_expectation(self, name, kwargs):
+        backend = _backend_or_skip(name, **kwargs)
+        circuit = backend.create_circuit(1)
+        circuit = backend.add_gate(circuit, 'RY', 0, [np.pi])
+        assert backend.compute_expectation(circuit, {'Z': 1.0}) == pytest.approx(-1.0, abs=1e-6)
+
+    def test_fidelity_kernel_matches_simulator(self, name, kwargs):
+        backend = _backend_or_skip(name, **kwargs)
+        X = np.array([[0.1, 0.2], [0.5, 0.9], [1.3, -0.4]])
+        K = backend.compute_kernel_matrix(X, X)
+        K_ref = get_backend('simulator').compute_kernel_matrix(X, X)
+        np.testing.assert_allclose(np.diag(K), 1.0, atol=1e-6)
+        np.testing.assert_allclose(K, K_ref, atol=1e-6)
+
+    def test_kernel_uses_feature_map(self, name, kwargs):
+        backend = _backend_or_skip(name, **kwargs)
+        X = np.array([[0.1, 0.2, 0.3], [0.7, -0.4, 1.1]])
+        off_diag = {}
+        for fm in ('ZZFeatureMap', 'ZFeatureMap', 'PauliFeatureMap', 'AngleEncoding'):
+            K = backend.compute_kernel_matrix(X, X, feature_map=fm)
+            np.testing.assert_allclose(np.diag(K), 1.0, atol=1e-6)
+            off_diag[fm] = K[0, 1]
+        assert len({round(float(v), 6) for v in off_diag.values()}) == 4
+        # Same map through QuantumSVM's spec path
+        spec = backend.create_feature_map(3, 'AngleEncoding', reps=2)
+        assert backend.compute_kernel_matrix(X, X, feature_map=spec)[0, 1] == pytest.approx(
+            off_diag['AngleEncoding'], abs=1e-6)
+
+    def test_unknown_gate_raises(self, name, kwargs):
+        backend = _backend_or_skip(name, **kwargs)
+        circuit = backend.create_circuit(1)
+        with pytest.raises(ValueError):
+            backend.add_gate(circuit, 'NOT_A_GATE', 0)
+
+
 class TestBraketBackend:
-    """Test AWS Braket backend functionality."""
+    """AWS Braket specifics (local simulator only)."""
 
-    @pytest.fixture
-    def mock_braket(self):
-        """Mock Braket SDK components."""
-        with patch('superquantx.backends.braket_backend.BRAKET_AVAILABLE', True), \
-             patch('superquantx.backends.braket_backend.BraketCircuit') as mock_circuit, \
-             patch('superquantx.backends.braket_backend.LocalSimulator') as mock_sim:
+    def test_device_name_accepts_braket_prefix(self):
+        pytest.importorskip("braket.circuits")
+        from superquantx.backends.braket_backend import BraketBackend
+        backend = BraketBackend(device='local:braket/braket_sv')
+        assert backend.device_name == 'local:braket/braket_sv'
+        assert backend.is_available()
 
-            mock_circuit.return_value = Mock()
-            mock_sim.return_value = Mock()
-            yield mock_circuit, mock_sim
-
-    def test_braket_backend_creation(self, mock_braket):
-        """Test Braket backend creation."""
-        try:
-            from superquantx.backends.braket_backend import BraketBackend
-            backend = BraketBackend(device='local:braket/braket_sv')
-            assert backend.device_name == 'local:braket/braket_sv'
-        except ImportError:
-            pytest.skip("Braket not available")
-
-    def test_braket_circuit_creation(self, mock_braket):
-        """Test Braket circuit creation."""
-        try:
-            from superquantx.backends.braket_backend import BraketBackend
-            backend = BraketBackend()
-            circuit = backend.create_circuit(4)
-            assert circuit is not None
-        except ImportError:
-            pytest.skip("Braket not available")
-
-    def test_braket_gate_mapping(self, mock_braket):
-        """Test Braket gate operations."""
-        try:
-            from superquantx.backends.braket_backend import BraketBackend
-            backend = BraketBackend()
-            circuit = backend.create_circuit(2)
-
-            # Test basic gates
-            backend.add_gate(circuit, 'h', 0)
-            backend.add_gate(circuit, 'cnot', [0, 1])
-            backend.add_gate(circuit, 'rx', 0, [np.pi/4])
-        except ImportError:
-            pytest.skip("Braket not available")
+    def test_register_size_is_fixed(self):
+        pytest.importorskip("braket.circuits")
+        from superquantx.backends.braket_backend import BraketBackend
+        backend = BraketBackend()
+        circuit = backend.create_circuit(4)
+        backend.add_gate(circuit, 'rx', 0, [np.pi / 4])
+        assert circuit.qubit_count == 4
 
 
 class TestTKETBackend:
-    """Test TKET/Quantinuum backend functionality."""
+    """TKET specifics."""
 
-    @pytest.fixture
-    def mock_tket(self):
-        """Mock TKET components."""
-        with patch('superquantx.backends.tket_backend.TKET_AVAILABLE', True), \
-             patch('superquantx.backends.tket_backend.Circuit') as mock_circuit, \
-             patch('superquantx.backends.tket_backend.OpType') as mock_optype:
+    def test_rotation_angles_are_radians(self):
+        pytest.importorskip("pytket.extensions.qiskit")
+        from superquantx.backends.tket_backend import TKETBackend
+        backend = TKETBackend(device='aer_simulator')
+        circuit = backend.add_gate(backend.create_circuit(1), 'RX', 0, [np.pi])
+        counts = backend.execute_circuit(circuit, shots=50)['counts']
+        assert counts == {'1': 50}
 
-            mock_circuit.return_value = Mock()
-            mock_circuit.return_value.qubits = [Mock() for _ in range(10)]
-            mock_circuit.return_value.bits = [Mock() for _ in range(10)]
-            mock_circuit.return_value.n_qubits = 4
-            mock_circuit.return_value.n_bits = 0
-            mock_circuit.return_value.n_gates = 5
-
-            yield mock_circuit, mock_optype
-
-    def test_tket_backend_creation(self, mock_tket):
-        """Test TKET backend creation."""
-        try:
-            from superquantx.backends.tket_backend import TKETBackend
-            backend = TKETBackend(device='aer_simulator')
-            assert backend.device_name == 'aer_simulator'
-        except ImportError:
-            pytest.skip("TKET not available")
-
-    def test_tket_circuit_optimization(self, mock_tket):
-        """Test TKET circuit optimization."""
-        try:
-            from superquantx.backends.tket_backend import TKETBackend
-            backend = TKETBackend()
-
-            mock_circuit = Mock()
-            mock_circuit.copy.return_value = mock_circuit
-            mock_circuit.n_gates = 10
-
-            # Should not crash even without real TKET
-            optimized = backend.optimize_circuit(mock_circuit, optimization_level=1)
-            assert optimized is not None
-        except ImportError:
-            pytest.skip("TKET not available")
-
-    def test_tket_parameterized_circuits(self, mock_tket):
-        """Test TKET parameterized circuit creation."""
-        try:
-            from superquantx.backends.tket_backend import TKETBackend
-            backend = TKETBackend()
-            circuit, param_names = backend.create_parameterized_circuit(4, 8)
-
-            assert len(param_names) == 8
-            assert all(name.startswith('theta_') for name in param_names)
-        except ImportError:
-            pytest.skip("TKET not available")
+    def test_circuit_optimization(self):
+        pytest.importorskip("pytket.extensions.qiskit")
+        from superquantx.backends.tket_backend import TKETBackend
+        backend = TKETBackend()
+        circuit = backend.create_circuit(2)
+        for _ in range(2):
+            backend.add_gate(circuit, 'H', 0)
+        optimized = backend.optimize_circuit(circuit, optimization_level=1)
+        assert optimized.n_gates <= circuit.n_gates
 
 
 class TestOceanBackend:
-    """Test D-Wave Ocean backend functionality."""
+    """D-Wave Ocean backend (simulated annealing, no hardware)."""
 
     @pytest.fixture
-    def mock_ocean(self):
-        """Mock Ocean SDK components."""
-        with patch('superquantx.backends.ocean_backend.OCEAN_AVAILABLE', True), \
-             patch('superquantx.backends.ocean_backend.dimod') as mock_dimod, \
-             patch('superquantx.backends.ocean_backend.SimulatedAnnealingSampler') as mock_sampler:
+    def ocean(self):
+        pytest.importorskip("dimod")
+        from superquantx.backends.ocean_backend import OceanBackend
+        return OceanBackend(device='simulator')
 
-            # Mock BQM and sampleset
-            mock_bqm = Mock()
-            mock_dimod.BinaryQuadraticModel.from_qubo.return_value = mock_bqm
-            mock_dimod.BinaryQuadraticModel.from_ising.return_value = mock_bqm
+    def test_ocean_backend_creation(self, ocean):
+        assert ocean.device_name == 'simulator'
+        assert ocean._is_quantum_annealing
+        assert ocean.gate_model is False
 
-            mock_sampleset = Mock()
-            mock_sampleset.data.return_value = [
-                ({'x0': 1, 'x1': 0}, -1.0, 1),
-                ({'x0': 0, 'x1': 1}, -0.5, 1)
-            ]
-            mock_sampleset.__len__ = Mock(return_value=2)
-            mock_sampleset.info = {'timing': {}}
+    def test_ocean_qubo_solving(self, ocean):
+        Q = {(0, 0): -1, (1, 1): -1, (0, 1): 2}
+        result = ocean.solve_qubo(Q, num_reads=50)
+        assert result['success']
+        assert result['problem_type'] == 'QUBO'
+        assert min(result['energies']) == pytest.approx(-1.0)
 
-            mock_sampler_instance = Mock()
-            mock_sampler_instance.sample.return_value = mock_sampleset
-            mock_sampler.return_value = mock_sampler_instance
+    def test_ocean_ising_solving(self, ocean):
+        result = ocean.solve_ising({0: -1, 1: 1}, {(0, 1): -1}, num_reads=50)
+        assert result['success']
+        assert result['problem_type'] == 'Ising'
 
-            yield mock_dimod, mock_sampler, mock_sampleset
+    def test_ocean_max_cut_finds_maximum(self, ocean):
+        # Square 0-1-2-3-0: maximum cut is 4 (alternate colouring)
+        result = ocean.solve_max_cut([(0, 1), (1, 2), (2, 3), (3, 0)], num_reads=50)
+        assert result['best_cut_value'] == pytest.approx(4.0)
 
-    def test_ocean_backend_creation(self, mock_ocean):
-        """Test Ocean backend creation."""
-        try:
-            from superquantx.backends.ocean_backend import OceanBackend
-            backend = OceanBackend(device='simulator')
-            assert backend.device_name == 'simulator'
-            assert backend._is_quantum_annealing
-        except ImportError:
-            pytest.skip("Ocean not available")
-
-    def test_ocean_qubo_solving(self, mock_ocean):
-        """Test QUBO problem solving."""
-        try:
-            from superquantx.backends.ocean_backend import OceanBackend
-            backend = OceanBackend()
-
-            Q = {(0, 0): -1, (1, 1): -1, (0, 1): 2}
-            result = backend.solve_qubo(Q, num_reads=100)
-
-            assert result['success']
-            assert 'samples' in result
-            assert 'energies' in result
-            assert result['problem_type'] == 'QUBO'
-        except ImportError:
-            pytest.skip("Ocean not available")
-
-    def test_ocean_ising_solving(self, mock_ocean):
-        """Test Ising model solving."""
-        try:
-            from superquantx.backends.ocean_backend import OceanBackend
-            backend = OceanBackend()
-
-            h = {0: -1, 1: 1}
-            J = {(0, 1): -1}
-            result = backend.solve_ising(h, J, num_reads=50)
-
-            assert result['success']
-            assert result['problem_type'] == 'Ising'
-        except ImportError:
-            pytest.skip("Ocean not available")
-
-    def test_ocean_max_cut(self, mock_ocean):
-        """Test Max Cut problem solving."""
-        try:
-            from superquantx.backends.ocean_backend import OceanBackend
-            backend = OceanBackend()
-
-            # Simple graph as edge list
-            edges = [(0, 1), (1, 2), (2, 0)]
-            result = backend.solve_max_cut(edges, num_reads=100)
-
-            assert 'samples' in result
-        except ImportError:
-            pytest.skip("Ocean not available")
-
-    def test_ocean_circuit_compatibility(self, mock_ocean):
-        """Test Ocean backend circuit compatibility warnings."""
-        try:
-            from superquantx.backends.ocean_backend import OceanBackend
-            backend = OceanBackend()
-
-            # Should return placeholder
-            circuit = backend.create_circuit(4)
-            assert circuit['type'] == 'optimization_placeholder'
-
-            # Should warn about gate operations
-            backend.add_gate(circuit, 'h', 0)  # Should warn
-            result = backend.execute_circuit(circuit)  # Should warn
-            assert not result['success']
-        except ImportError:
-            pytest.skip("Ocean not available")
+    def test_ocean_rejects_gate_model_calls(self, ocean):
+        with pytest.raises(NotImplementedError, match="annealer"):
+            ocean.create_circuit(4)
+        with pytest.raises(NotImplementedError):
+            ocean.execute_circuit({})
 
 
 class TestUnifiedAPIIntegration:

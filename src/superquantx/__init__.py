@@ -1,31 +1,24 @@
-"""SuperQuantX: Experimental Quantum AI Research Platform.
+"""SuperQuantX: experimental quantum machine learning research toolkit.
 
-⚠️ RESEARCH SOFTWARE WARNING: This is experimental research software developed by
-SuperXLab (Superagentic AI Research Division). NOT intended for production use.
-For research and educational purposes only.
+Research software, not intended for production use. One API runs circuits
+and algorithms on PennyLane, Qiskit, Cirq, Amazon Braket, pytket and a
+built-in simulator, and every algorithm reports a classical reference.
 
-Part of SuperXLab's comprehensive quantum research program - the practical implementation
-platform for validating theoretical research in:
-    🔬 Quantum-Inspired Agentic Systems: Superposition, interference, entanglement in agents
-    🔬 Quantum Neural Networks (QNNs): Hardware-validated quantum neural architectures
-    🔬 QuantumML for AI Training: Quantum-accelerated machine learning techniques
-    🔬 Quantinuum Integration: Real hardware validation on H-Series quantum computers
+Examples:
+    Classifier against tuned classical baselines (arXiv:2610.42029 protocol):
+        >>> import superquantx as sqx
+        >>> from sklearn.datasets import make_moons
+        >>> X, y = make_moons(100, noise=0.2, random_state=0)
+        >>> result = sqx.compare_to_classical(X, y, sqx.QuantumSVM(backend="simulator"))
+        >>> print(result.table())
 
-Research Examples:
-    Experimental quantum agent research:
-        >>> import superquantx as sqx  # EXPERIMENTAL
-        >>> agent = sqx.QuantumTradingAgent(strategy="quantum_portfolio", backend="simulator")
-        >>> results = agent.solve(research_data)  # Research use only
-        >>> print(f"Research findings: {results.metadata}")
+    H2 ground state, checked against exact diagonalisation:
+        >>> vqe = sqx.create_vqe_for_molecule("H2", backend="simulator")
+        >>> vqe.find_ground_state(), vqe.exact_ground_energy()
 
-    Quantum neural network experiments:
-        >>> qnn = sqx.QuantumNN(architecture='hybrid', backend='pennylane')  # EXPERIMENTAL
-        >>> qnn.fit(X_research, y_research)  # Research data only
-        >>> analysis = qnn.analyze_expressivity()  # Research analysis
-
-    Quantum algorithm benchmarking:
-        >>> qsvm = sqx.QuantumSVM(backend='simulator')  # EXPERIMENTAL
-        >>> benchmark = sqx.benchmark_algorithm(qsvm, classical_baseline)
+    Portfolio selection, checked against brute force:
+        >>> agent = sqx.QuantumPortfolioAgent(backend="simulator", n_select=3)
+        >>> agent.solve(returns).result["matches_classical_optimum"]
 """
 
 import logging
@@ -88,11 +81,14 @@ except (ImportError, AttributeError, NameError):
 from .algorithms import (
     QAOA,
     VQE,
+    BaseQuantumAlgorithm,
     HybridClassifier,
     QuantumKMeans,
+    QuantumNeuralNetwork,
     QuantumNN,
     QuantumPCA,
     QuantumSVM,
+    create_vqe_for_molecule,
 )
 from .backends import (
     BaseBackend,
@@ -179,6 +175,8 @@ except ImportError:
     benchmark_algorithm = None
     QuantumFeatureMap = None
 
+from .benchmarks import ComparisonResult, compare_to_classical
+
 # Set up logging
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
@@ -195,71 +193,39 @@ def get_version() -> str:
     """Get SuperQuantX version."""
     return __version__
 
-def get_backend_info() -> dict[str, Any]:
-    """Get information about available backends."""
-    info = {}
+# Distribution names used to read installed versions without importing the
+# (sometimes slow or side-effecting) backend packages themselves.
+_BACKEND_DISTRIBUTIONS = {
+    'pennylane': ('pennylane',),
+    'qiskit': ('qiskit',),
+    'cirq': ('cirq-core', 'cirq'),
+    'braket': ('amazon-braket-sdk',),
+    'azure_quantum': ('azure-quantum',),
+    'pytket': ('pytket',),
+    'dwave': ('dwave-ocean-sdk', 'dwave-system'),
+    'pyquil': ('pyquil',),
+    'tensorflow_quantum': ('tensorflow-quantum',),
+    'cuquantum': ('cuquantum-python', 'cuquantum'),
+}
 
-    # Check which backends are available
-    try:
-        import pennylane
-        info['pennylane'] = pennylane.__version__
-    except ImportError:
-        info['pennylane'] = None
 
-    try:
-        import qiskit
-        info['qiskit'] = qiskit.__version__
-    except ImportError:
-        info['qiskit'] = None
+def get_backend_info() -> dict[str, str | None]:
+    """Return the installed version of each backend SDK, or None if absent.
 
-    try:
-        import cirq
-        info['cirq'] = cirq.__version__
-    except ImportError:
-        info['cirq'] = None
+    Versions come from :mod:`importlib.metadata`, so a package that does not
+    define ``__version__`` (for example ``braket``) is still reported.
+    """
+    from importlib.metadata import PackageNotFoundError, version
 
-    try:
-        import braket
-        info['braket'] = braket.__version__
-    except ImportError:
-        info['braket'] = None
-
-    try:
-        import azure.quantum
-        info['azure_quantum'] = azure.quantum.__version__
-    except (ImportError, AttributeError):
-        info['azure_quantum'] = None
-
-    try:
-        import pytket
-        info['pytket'] = pytket.__version__
-    except ImportError:
-        info['pytket'] = None
-
-    try:
-        import dwave
-        info['dwave'] = dwave.ocean.__version__
-    except (ImportError, AttributeError):
-        info['dwave'] = None
-
-    try:
-        import pyquil
-        info['pyquil'] = pyquil.__version__
-    except ImportError:
-        info['pyquil'] = None
-
-    try:
-        import tensorflow_quantum
-        info['tensorflow_quantum'] = tensorflow_quantum.__version__
-    except ImportError:
-        info['tensorflow_quantum'] = None
-
-    try:
-        import cuquantum
-        info['cuquantum'] = cuquantum.__version__
-    except (ImportError, AttributeError):
-        info['cuquantum'] = None
-
+    info: dict[str, str | None] = {}
+    for key, dists in _BACKEND_DISTRIBUTIONS.items():
+        info[key] = None
+        for dist in dists:
+            try:
+                info[key] = version(dist)
+                break
+            except PackageNotFoundError:
+                continue
     return info
 
 def print_system_info() -> None:
@@ -362,6 +328,9 @@ __all__ = [
     "cli",
 
     # Common algorithms
+    "BaseQuantumAlgorithm",
+    "QuantumNeuralNetwork",
+    "create_vqe_for_molecule",
     "QuantumSVM",
     "QAOA",
     "VQE",
@@ -401,5 +370,7 @@ __all__ = [
     "optimize_circuit",
     "visualize_results",
     "benchmark_algorithm",
+    "compare_to_classical",
+    "ComparisonResult",
     "QuantumFeatureMap",
 ]

@@ -8,9 +8,13 @@ import logging
 import sys
 import warnings
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
+
+
+if TYPE_CHECKING:
+    import loguru
 
 
 class SuperQuantXLogger:

@@ -17,33 +17,33 @@ logger = logging.getLogger(__name__)
 # Try to import TKET/pytket
 try:
     from pytket import Circuit, OpType
-    from pytket.backends import Backend
-    from pytket.backends.simulator import AerBackend
-    from pytket.circuit import Bit, Qubit
-
-    # Try to import Quantinuum backend
-    try:
-        from pytket.extensions.quantinuum import QuantinuumBackend
-        QUANTINUUM_AVAILABLE = True
-    except ImportError:
-        QUANTINUUM_AVAILABLE = False
-
-    # Try to import other TKET backends
-    try:
-        from pytket.extensions.cirq import CirqBackend as TKETCirqBackend
-        from pytket.extensions.qiskit import AerStateBackend
-        TKET_EXTENSIONS_AVAILABLE = True
-    except ImportError:
-        TKET_EXTENSIONS_AVAILABLE = False
-
     TKET_AVAILABLE = True
-
 except ImportError:
     TKET_AVAILABLE = False
-    QUANTINUUM_AVAILABLE = False
-    TKET_EXTENSIONS_AVAILABLE = False
     Circuit = None
     OpType = None
+
+# Local shot-based simulation goes through pytket-qiskit's AerBackend.
+try:
+    from pytket.extensions.qiskit import AerBackend
+    TKET_EXTENSIONS_AVAILABLE = True
+except ImportError:
+    AerBackend = None
+    TKET_EXTENSIONS_AVAILABLE = False
+
+try:
+    from pytket.extensions.quantinuum import QuantinuumBackend
+    QUANTINUUM_AVAILABLE = True
+except ImportError:
+    QuantinuumBackend = None
+    QUANTINUUM_AVAILABLE = False
+
+try:
+    from pytket.extensions.cirq import CirqStateSampleBackend as TKETCirqBackend
+    TKET_CIRQ_AVAILABLE = True
+except ImportError:
+    TKETCirqBackend = None
+    TKET_CIRQ_AVAILABLE = False
 
 class TKETBackend(BaseBackend):
     """TKET (Quantum Toolkit) backend for quantum computing operations.
@@ -92,56 +92,36 @@ class TKETBackend(BaseBackend):
 
     def _initialize_backend(self) -> None:
         """Initialize TKET backend and device."""
-        try:
-            if self.device_name in ['aer_simulator', 'simulator']:
-                # Use TKET Aer simulator
-                if TKET_EXTENSIONS_AVAILABLE:
-                    from pytket.extensions.qiskit import AerBackend
-                    self._backend = AerBackend()
-                else:
-                    # Fallback to basic simulator
-                    logger.warning("TKET extensions not available, using basic simulator")
-                    self._backend = None
-
-            elif self.device_name.startswith('H') and '-' in self.device_name:
-                # Quantinuum hardware (H1-1E, H1-2E, H2-1, etc.)
-                if not QUANTINUUM_AVAILABLE:
-                    raise ImportError("Quantinuum backend not available. Install with: pip install pytket-quantinuum")
-
-                if not self.api_key:
-                    raise ValueError("API key required for Quantinuum hardware")
-
-                self._backend = QuantinuumBackend(
-                    device_name=self.machine,
-                    api_key=self.api_key
+        if self.device_name in ('aer_simulator', 'simulator'):
+            if not TKET_EXTENSIONS_AVAILABLE:
+                raise ImportError(
+                    "Local TKET simulation needs pytket-qiskit. Install with: pip install pytket-qiskit"
                 )
-                logger.info(f"Initialized Quantinuum backend: {self.machine}")
+            self._backend = AerBackend()
+        elif self.device_name.startswith('H') and '-' in self.device_name:
+            # Quantinuum hardware or emulators (untested: needs a Quantinuum account)
+            if not QUANTINUUM_AVAILABLE:
+                raise ImportError("Quantinuum backend not available. Install with: pip install pytket-quantinuum")
+            self._backend = QuantinuumBackend(device_name=self.machine)
+        elif self.device_name in ('cirq', 'cirq_simulator'):
+            if not TKET_CIRQ_AVAILABLE:
+                raise ImportError("TKET Cirq extension not available. Install with: pip install pytket-cirq")
+            self._backend = TKETCirqBackend()
+        else:
+            raise ValueError(
+                f"Unknown TKET device '{self.device_name}'. Use 'aer_simulator', "
+                "'cirq_simulator' or a Quantinuum device name such as 'H1-1E'."
+            )
 
-            elif self.device_name in ['cirq', 'cirq_simulator']:
-                # TKET Cirq integration
-                if TKET_EXTENSIONS_AVAILABLE:
-                    self._backend = TKETCirqBackend()
-                else:
-                    raise ImportError("TKET Cirq extension not available")
-
-            else:
-                # Try to create generic backend
-                logger.warning(f"Unknown device {self.device_name}, using simulator fallback")
-                self._backend = None
-
-            self.capabilities = {
-                'supports_measurements': True,
-                'supports_parameterized_circuits': True,
-                'supports_classical_control': True,
-                'supports_mid_circuit_measurement': True,
-                'max_qubits': self._get_max_qubits(),
-                'native_gates': self._get_native_gates(),
-                'supports_optimization': True,  # TKET's key feature
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to initialize TKET backend: {e}")
-            raise
+        self.capabilities = {
+            'supports_measurements': True,
+            'supports_parameterized_circuits': True,
+            'supports_classical_control': True,
+            'supports_mid_circuit_measurement': True,
+            'max_qubits': self._get_max_qubits(),
+            'native_gates': self._get_native_gates(),
+            'supports_optimization': True,
+        }
 
     def _get_max_qubits(self) -> int:
         """Get maximum number of qubits for the device."""
@@ -187,131 +167,64 @@ class TKETBackend(BaseBackend):
         circuit = Circuit(n_qubits)
         return circuit
 
+    _GATES = {
+        'i': 'noop', 'x': 'X', 'y': 'Y', 'z': 'Z', 'h': 'H', 'hadamard': 'H',
+        's': 'S', 'sdg': 'Sdg', 't': 'T', 'tdg': 'Tdg',
+        'rx': 'Rx', 'ry': 'Ry', 'rz': 'Rz', 'p': 'U1', 'phase': 'U1', 'u1': 'U1',
+        'cnot': 'CX', 'cx': 'CX', 'cz': 'CZ', 'cy': 'CY', 'ch': 'CH', 'swap': 'SWAP',
+        'crx': 'CRx', 'cry': 'CRy', 'crz': 'CRz',
+        'ccnot': 'CCX', 'ccx': 'CCX', 'toffoli': 'CCX', 'cswap': 'CSWAP', 'fredkin': 'CSWAP',
+    }
+
     def add_gate(self, circuit: Circuit, gate: str, qubits: int | list[int],
                  params: list[float] | None = None) -> Circuit:
-        """Add a quantum gate to the circuit."""
+        """Add a gate. Angles are given in radians (converted to TKET half-turns)."""
         if isinstance(qubits, int):
             qubits = [qubits]
-
-        params = params or []
-
-        # Map gate names to TKET OpTypes
-        gate_mapping = {
-            'i': OpType.noop,  # Identity
-            'x': OpType.X, 'y': OpType.Y, 'z': OpType.Z, 'h': OpType.H,
-            's': OpType.S, 'sdg': OpType.Sdg, 't': OpType.T, 'tdg': OpType.Tdg,
-            'rx': OpType.Rx, 'ry': OpType.Ry, 'rz': OpType.Rz,
-            'cnot': OpType.CX, 'cx': OpType.CX, 'cz': OpType.CZ, 'cy': OpType.CY,
-            'ch': OpType.CH, 'swap': OpType.SWAP,
-            'ccnot': OpType.CCX, 'ccx': OpType.CCX, 'toffoli': OpType.CCX,
-            'cswap': OpType.CSWAP, 'fredkin': OpType.CSWAP,
-            'iswap': OpType.ISWAPMax,
-            'u1': OpType.U1, 'u2': OpType.U2, 'u3': OpType.U3,
-        }
-
-        gate_upper = gate.upper()
-        gate_lower = gate.lower()
-
-        # Try exact match first, then case variations
-        op_type = None
-        if hasattr(OpType, gate_upper):
-            op_type = getattr(OpType, gate_upper)
-        elif gate_lower in gate_mapping:
-            op_type = gate_mapping[gate_lower]
-
-        if op_type is None:
+        name = self._GATES.get(gate.lower())
+        if name is None:
             raise ValueError(f"Gate '{gate}' not supported in TKET backend")
-
-        try:
-            # Convert qubit indices to TKET Qubit objects
-            tket_qubits = [circuit.qubits[q] for q in qubits]
-
-            if len(params) == 0:
-                # Parameter-less gates
-                circuit.add_gate(op_type, tket_qubits)
-            else:
-                # Parameterized gates
-                circuit.add_gate(op_type, tket_qubits, params)
-
-        except Exception as e:
-            logger.error(f"Failed to add gate {gate} to TKET circuit: {e}")
-            raise
-
+        op_type = getattr(OpType, name)
+        tket_qubits = [circuit.qubits[q] for q in qubits]
+        if params:
+            circuit.add_gate(op_type, [float(p) / np.pi for p in params], tket_qubits)
+        else:
+            circuit.add_gate(op_type, tket_qubits)
         return circuit
 
-    def add_measurement(self, circuit: Circuit, qubits: int | list[int]) -> Circuit:
-        """Add measurement instructions to specified qubits."""
-        if isinstance(qubits, int):
+    def add_measurement(self, circuit: Circuit, qubits: int | list[int] | None = None) -> Circuit:
+        """Measure ``qubits`` (all qubits by default) into classical bits 0..k-1."""
+        if qubits is None:
+            qubits = list(range(circuit.n_qubits))
+        elif isinstance(qubits, int):
             qubits = [qubits]
-
-        # TKET requires explicit bit allocation for measurements
-        n_bits = len(qubits)
-        if circuit.n_bits < n_bits:
-            circuit.add_c_register("c", n_bits - circuit.n_bits)
-
+        if circuit.n_bits < len(qubits):
+            circuit.add_c_register("c", len(qubits) - circuit.n_bits)
         for i, qubit in enumerate(qubits):
             circuit.Measure(circuit.qubits[qubit], circuit.bits[i])
-
         return circuit
 
     def execute_circuit(self, circuit: Circuit, shots: int | None = None) -> dict[str, Any]:
-        """Execute quantum circuit and return results."""
+        """Compile and run the circuit. Counts are big-endian (bit 0 is the leftmost character).
+
+        Unmeasured circuits get all qubits measured on a copy.
+        """
         shots = shots or self.shots
-
-        try:
-            if self._backend is None:
-                # Simple simulation fallback
-                logger.warning("No TKET backend available, using simulation fallback")
-                n_qubits = circuit.n_qubits
-                n_bits = circuit.n_bits or n_qubits
-
-                # Generate random results for fallback
-                counts = {}
-                for _ in range(shots):
-                    bitstring = ''.join([str(np.random.randint(0, 2)) for _ in range(n_bits)])
-                    counts[bitstring] = counts.get(bitstring, 0) + 1
-
-                return {
-                    'counts': counts,
-                    'shots': shots,
-                    'success': True,
-                    'backend': 'tket_fallback',
-                }
-
-            # Compile circuit for backend
-            compiled_circuit = self._backend.get_compiled_circuit(circuit)
-
-            # Execute on backend
-            handle = self._backend.process_circuit(compiled_circuit, n_shots=shots)
-            result = self._backend.get_result(handle)
-
-            # Extract counts
-            counts_dict = {}
-            if hasattr(result, 'get_counts'):
-                counts_dict = result.get_counts()
-            elif hasattr(result, 'counts'):
-                counts_dict = result.counts
-            else:
-                logger.warning("Could not extract counts from TKET result")
-
-            return {
-                'counts': counts_dict,
-                'shots': shots,
-                'success': True,
-                'backend': self._backend.__class__.__name__,
-                'compiled': True,
-                'device': self.device_name,
-            }
-
-        except Exception as e:
-            logger.error(f"TKET circuit execution failed: {e}")
-            return {
-                'counts': {},
-                'shots': shots,
-                'success': False,
-                'error': str(e),
-                'device': self.device_name,
-            }
+        if circuit.n_gates_of_type(OpType.Measure) == 0:
+            circuit = circuit.copy()
+            circuit.measure_all()
+        compiled_circuit = self._backend.get_compiled_circuit(circuit)
+        handle = self._backend.process_circuit(compiled_circuit, n_shots=shots)
+        result = self._backend.get_result(handle)
+        counts = {''.join(str(int(b)) for b in key): int(v) for key, v in result.get_counts().items()}
+        return {
+            'counts': counts,
+            'shots': shots,
+            'success': True,
+            'backend': self._backend.__class__.__name__,
+            'compiled': True,
+            'device': self.device_name,
+        }
 
     # ========================================================================
     # TKET-Specific Features
@@ -359,78 +272,6 @@ class TKETBackend(BaseBackend):
         except Exception as e:
             logger.error(f"Circuit optimization failed: {e}")
             return circuit
-
-    def create_parameterized_circuit(self, n_qubits: int, n_params: int) -> tuple[Circuit, list[str]]:
-        """Create a parameterized quantum circuit for variational algorithms."""
-        from pytket.circuit import fresh_symbol
-
-        circuit = self.create_circuit(n_qubits)
-
-        # Create symbolic parameters
-        symbols = [fresh_symbol(f"theta_{i}") for i in range(n_params)]
-        param_names = [str(symbol) for symbol in symbols]
-
-        # Store parameter info
-        circuit._symbols = symbols
-        circuit._param_names = param_names
-
-        return circuit, param_names
-
-    def bind_parameters(self, circuit: Circuit, param_values: dict[str, float]) -> Circuit:
-        """Bind parameter values to parameterized circuit."""
-        try:
-            bound_circuit = circuit.copy()
-
-            # Create symbol substitution map
-            if hasattr(circuit, '_symbols'):
-                symbol_map = {}
-                for symbol, name in zip(circuit._symbols, circuit._param_names, strict=False):
-                    if name in param_values:
-                        symbol_map[symbol] = param_values[name]
-
-                # Substitute symbols with values
-                bound_circuit.symbol_substitution(symbol_map)
-
-            return bound_circuit
-
-        except Exception as e:
-            logger.error(f"Parameter binding failed: {e}")
-            return circuit
-
-    def expectation_value(self, circuit: Circuit, observable: str | np.ndarray,
-                         shots: int | None = None) -> float:
-        """Calculate expectation value of observable using TKET."""
-        shots = shots or self.shots
-
-        try:
-            if isinstance(observable, str) and observable.upper() == 'Z':
-                # Measure in Z basis
-                measured_circuit = circuit.copy()
-                measured_circuit.add_c_register("c", 1)
-                measured_circuit.Measure(measured_circuit.qubits[0], measured_circuit.bits[0])
-
-                result = self.execute_circuit(measured_circuit, shots)
-                counts = result['counts']
-
-                # Calculate <Z> expectation
-                expectation = 0.0
-                total_counts = sum(counts.values())
-
-                for bitstring, count in counts.items():
-                    prob = count / total_counts
-                    if bitstring[0] == '0':
-                        expectation += prob
-                    else:
-                        expectation -= prob
-
-                return expectation
-            else:
-                logger.warning("Only Z observable currently implemented")
-                return 0.0
-
-        except Exception as e:
-            logger.error(f"Expectation value calculation failed: {e}")
-            return 0.0
 
     # ========================================================================
     # Backend Information
@@ -499,21 +340,10 @@ class TKETBackend(BaseBackend):
         return circuit.n_qubits
 
     def get_statevector(self, circuit: Circuit) -> np.ndarray:
-        """Get statevector from TKET circuit."""
-        try:
-            if TKET_EXTENSIONS_AVAILABLE:
-                from pytket.extensions.qiskit import AerStateBackend
-                state_backend = AerStateBackend()
-                compiled_circuit = state_backend.get_compiled_circuit(circuit)
-                handle = state_backend.process_circuit(compiled_circuit)
-                result = state_backend.get_result(handle)
-
-                if hasattr(result, 'get_state'):
-                    return result.get_state()
-
-            logger.warning("Statevector not available with current TKET setup")
-            return np.zeros(2**circuit.n_qubits, dtype=complex)
-
-        except Exception as e:
-            logger.error(f"Failed to get statevector: {e}")
-            return np.zeros(2**circuit.n_qubits, dtype=complex)
+        """Exact statevector (big-endian) computed by pytket, ignoring measurements."""
+        clean = Circuit(circuit.n_qubits)
+        for cmd in circuit.get_commands():
+            if cmd.op.type == OpType.Measure:
+                continue
+            clean.add_gate(cmd.op, cmd.args)
+        return np.asarray(clean.get_statevector(), dtype=complex)

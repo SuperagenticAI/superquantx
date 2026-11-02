@@ -1,5 +1,9 @@
 # Backends API Reference
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 4 of 13 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 SuperQuantX provides a unified interface to multiple quantum computing backends, enabling seamless switching between simulators and real quantum hardware from different providers.
 
 ## Base Classes

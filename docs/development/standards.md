@@ -1,5 +1,9 @@
 # Code Standards
 
+!!! warning "Unverified examples"
+    Code on this page is illustrative and partly written as fragments. Only 6 of 17 snippets run as-is against the current release. The test suite in `tests/` is the source of truth.
+
+
 Comprehensive coding standards and guidelines for SuperQuantX development to ensure consistency, maintainability, and quality across the codebase.
 
 ## 🎯 General Principles

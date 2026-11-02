@@ -149,7 +149,7 @@ class TestSuperQuantXClient:
 
                 assert result == {"success": True}
                 assert mock_client.request.call_count == 2
-                mock_sleep.assert_called_once_with(2)  # Exponential backoff
+                mock_sleep.assert_called_once_with(1)  # Exponential backoff: 2**0 after the first failure
 
     @pytest.mark.asyncio
     async def test_submit_job(self):

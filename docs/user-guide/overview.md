@@ -1,5 +1,9 @@
 # What is SuperQuantX?
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 4 of 14 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](backends.md).
+
+
 SuperQuantX is a cutting-edge **experimental quantum AI research platform** that provides a unified API for quantum-agentic systems research. It bridges the gap between multiple quantum computing frameworks and makes quantum machine learning accessible to researchers, developers, and students.
 
 ## 🔬 The Vision

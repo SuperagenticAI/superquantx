@@ -1,5 +1,9 @@
 # Release Process
 
+!!! warning "Unverified examples"
+    Code on this page is illustrative and partly written as fragments. Only 2 of 4 snippets run as-is against the current release. The test suite in `tests/` is the source of truth.
+
+
 This document outlines the release process for SuperQuantX, including versioning, testing, and deployment procedures.
 
 ## 🏷️ Versioning Strategy

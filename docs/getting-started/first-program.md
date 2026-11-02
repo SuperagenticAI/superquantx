@@ -1,5 +1,9 @@
 # Your First Quantum Program
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 4 of 13 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 Welcome to your first quantum program with SuperQuantX! This comprehensive guide will walk you through building quantum applications from the ground up, explaining each concept along the way.
 
 ## 🎯 What You'll Learn
@@ -460,8 +464,8 @@ Congratulations! You've built your first quantum programs. Here's what to explor
 ### Intermediate Topics
 
 4. **[Quantum Machine Learning](../tutorials/quantum-ml.md)**: Apply QML algorithms
-5. **[Multi-Backend Usage](../tutorials/multi-backend.md)**: Compare frameworks
-6. **[Circuit Optimization](../user-guide/circuits.md)**: Efficient circuit design
+5. **[Multi-Backend Usage](../user-guide/backends.md)**: Compare frameworks
+6. **[Circuit Optimization](../api/circuits.md)**: Efficient circuit design
 
 ### Advanced Projects
 

@@ -1,5 +1,9 @@
 # Quantum Machine Learning Tutorial
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 1 of 8 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 Learn how to apply quantum computing to machine learning problems using SuperQuantX. This tutorial covers the fundamentals of quantum machine learning (QML) and provides hands-on examples you can run today.
 
 ## 🎯 Learning Objectives
@@ -1194,7 +1198,7 @@ You've now mastered the fundamentals of quantum machine learning! Here's what yo
 
 ### Advanced QML Topics
 
-1. **[Quantum Neural Networks Tutorial](quantum-nn.md)** - Deep dive into advanced QNN architectures
+1. **[Quantum Neural Networks Tutorial](../user-guide/algorithms.md)** - Deep dive into advanced QNN architectures
 2. **Quantum Generative Models** - QGANs, QVAEs, and quantum generative modeling
 3. **Quantum Reinforcement Learning** - QL algorithms and quantum environments
 4. **Quantum Natural Language Processing** - Applying QML to text and language tasks
@@ -1215,7 +1219,7 @@ You've now mastered the fundamentals of quantum machine learning! Here's what yo
 
 ## 🤝 Need Help?
 
-- **[Advanced Examples](advanced-examples.md)** - More complex QML implementations
+- **[Advanced Examples](../showcase.md)** - More complex QML implementations
 - **[API Reference](../api/algorithms.md)** - Detailed documentation  
 - **[GitHub Issues](https://github.com/SuperagenticAI/superquantx/issues)** - Ask questions
 - **QML Community** - Join quantum machine learning forums and discussions

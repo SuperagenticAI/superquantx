@@ -5,7 +5,6 @@ require external quantum computing libraries, useful for testing and fallback.
 """
 
 import logging
-from collections.abc import Callable
 from typing import Any, Union
 
 import numpy as np
@@ -34,77 +33,30 @@ class QuantumState:
         self.state[0] = 1.0  # |00...0⟩ state
 
     def apply_gate(self, gate_matrix: np.ndarray, qubits: list[int]) -> None:
-        """Apply gate matrix to specified qubits."""
-        if len(qubits) == 1:
-            self._apply_single_qubit_gate(gate_matrix, qubits[0])
-        elif len(qubits) == 2:
-            self._apply_two_qubit_gate(gate_matrix, qubits)
-        else:
-            logger.warning("Gates with more than 2 qubits not implemented")
+        """Apply a k-qubit gate matrix to ``qubits``.
 
-    def _apply_single_qubit_gate(self, gate: np.ndarray, qubit: int) -> None:
-        """Apply single qubit gate."""
-        # Create full gate matrix
-        n = 2**self.n_qubits
-        full_gate = np.eye(n, dtype=complex)
-
-        # Tensor product to create full gate
-        for i in range(n):
-            # Extract qubit states
-            bit_string = format(i, f'0{self.n_qubits}b')
-            qubit_state = int(bit_string[-(qubit+1)])
-
-            for j in range(n):
-                bit_string_j = format(j, f'0{self.n_qubits}b')
-                qubit_state_j = int(bit_string_j[-(qubit+1)])
-
-                # Check if other qubits are the same
-                if self._other_qubits_same(i, j, qubit):
-                    full_gate[i, j] = gate[qubit_state, qubit_state_j]
-                else:
-                    full_gate[i, j] = 0
-
-        # Apply gate
-        self.state = full_gate @ self.state
-
-    def _apply_two_qubit_gate(self, gate: np.ndarray, qubits: list[int]) -> None:
-        """Apply two qubit gate."""
-        # Simplified implementation for CNOT and other 2-qubit gates
-        q1, q2 = qubits
-        n = 2**self.n_qubits
-        new_state = np.zeros_like(self.state)
-
-        for i in range(n):
-            bit_string = format(i, f'0{self.n_qubits}b')
-            q1_bit = int(bit_string[-(q1+1)])
-            q2_bit = int(bit_string[-(q2+1)])
-
-            # Apply gate to these two qubits
-            input_state = q1_bit * 2 + q2_bit  # Convert to gate input basis
-
-            for output_state in range(4):
-                output_q1 = output_state // 2
-                output_q2 = output_state % 2
-
-                # Create output bit string
-                output_bits = list(bit_string)
-                output_bits[-(q1+1)] = str(output_q1)
-                output_bits[-(q2+1)] = str(output_q2)
-                output_idx = int(''.join(output_bits), 2)
-
-                new_state[output_idx] += gate[output_state, input_state] * self.state[i]
-
-        self.state = new_state
-
-    def _other_qubits_same(self, i: int, j: int, exclude_qubit: int) -> bool:
-        """Check if all qubits except exclude_qubit are the same in states i and j."""
-        bit_i = format(i, f'0{self.n_qubits}b')
-        bit_j = format(j, f'0{self.n_qubits}b')
-
-        for q in range(self.n_qubits):
-            if q != exclude_qubit and bit_i[-(q+1)] != bit_j[-(q+1)]:
-                return False
-        return True
+        The gate matrix is written in the basis |q_0 q_1 ...> of the listed
+        qubits (first listed qubit is the most significant), e.g. CNOT with
+        ``qubits=[control, target]``. The state index uses little-endian
+        ordering: qubit q is bit q of the index.
+        """
+        k = len(qubits)
+        if len(set(qubits)) != k:
+            raise ValueError(f"Gate qubits must be distinct, got {qubits}")
+        if gate_matrix.shape != (2 ** k, 2 ** k):
+            raise ValueError(
+                f"Gate of shape {gate_matrix.shape} cannot act on {k} qubit(s)"
+            )
+        n = self.n_qubits
+        for q in qubits:
+            if not 0 <= q < n:
+                raise ValueError(f"Qubit {q} out of range for {n}-qubit circuit")
+        axes = [n - 1 - q for q in qubits]
+        psi = self.state.reshape([2] * n)
+        gate = gate_matrix.reshape([2] * (2 * k))
+        psi = np.tensordot(gate, psi, axes=(list(range(k, 2 * k)), axes))
+        psi = np.moveaxis(psi, list(range(k)), axes)
+        self.state = psi.reshape(-1)
 
     def measure(self, qubit_or_shots=None, classical_bit=None, shots: int = 1024) -> Union[dict[str, int], "QuantumState"]:
         """Measure quantum state or add measurement to circuit."""
@@ -303,83 +255,68 @@ class SimulatorBackend(BaseBackend):
 
         return {
             'I': identity, 'X': X, 'Y': Y, 'Z': Z, 'H': H, 'S': S, 'T': T,
+            'SDG': S.conj().T, 'TDG': T.conj().T,
             'CNOT': CNOT, 'CX': CNOT, 'CZ': CZ, 'SWAP': SWAP,
             'PAULI_X': X, 'PAULI_Y': Y, 'PAULI_Z': Z, 'HADAMARD': H
         }
 
     def _rotation_gate(self, axis: str, angle: float) -> np.ndarray:
         """Create rotation gate matrix."""
-        if axis.upper() == 'X':
-            return np.array([
-                [np.cos(angle/2), -1j*np.sin(angle/2)],
-                [-1j*np.sin(angle/2), np.cos(angle/2)]
-            ], dtype=complex)
-        elif axis.upper() == 'Y':
-            return np.array([
-                [np.cos(angle/2), -np.sin(angle/2)],
-                [np.sin(angle/2), np.cos(angle/2)]
-            ], dtype=complex)
-        elif axis.upper() == 'Z':
-            return np.array([
-                [np.exp(-1j*angle/2), 0],
-                [0, np.exp(1j*angle/2)]
-            ], dtype=complex)
-        else:
-            return np.eye(2, dtype=complex)
+        c, s_ = np.cos(angle / 2), np.sin(angle / 2)
+        if axis == 'X':
+            return np.array([[c, -1j * s_], [-1j * s_, c]], dtype=complex)
+        if axis == 'Y':
+            return np.array([[c, -s_], [s_, c]], dtype=complex)
+        if axis == 'Z':
+            return np.array([[np.exp(-1j * angle / 2), 0],
+                             [0, np.exp(1j * angle / 2)]], dtype=complex)
+        raise ValueError(f"Unknown rotation axis: {axis}")
+
+    @staticmethod
+    def _controlled(u: np.ndarray) -> np.ndarray:
+        d = u.shape[0]
+        m = np.eye(2 * d, dtype=complex)
+        m[d:, d:] = u
+        return m
 
     def create_circuit(self, n_qubits: int) -> QuantumState:
         """Create a quantum circuit with n qubits."""
         if n_qubits > self.max_qubits:
-            logger.warning(f"Requested {n_qubits} qubits, but max is {self.max_qubits}")
-            n_qubits = self.max_qubits
-
+            raise ValueError(
+                f"Requested {n_qubits} qubits, but this simulator is limited to "
+                f"{self.max_qubits} (pass max_qubits=... to raise the limit)"
+            )
         return QuantumState(n_qubits)
 
     def add_gate(self, circuit: QuantumState, gate: str, qubits: int | list[int],
                  params: list[float] | None = None) -> QuantumState:
-        """Add a quantum gate to the circuit."""
+        """Apply a quantum gate to the circuit state.
+
+        Raises:
+            ValueError: for unknown gates or invalid qubits.
+
+        """
         if isinstance(qubits, int):
             qubits = [qubits]
+        qubits = [int(q) for q in qubits]
+        params = list(params) if params is not None else []
+        name = gate.upper()
 
-        params = params or []
+        if name in ('RX', 'RY', 'RZ'):
+            matrix = self._rotation_gate(name[1], float(params[0]))
+        elif name in ('P', 'PHASE', 'U1'):
+            matrix = np.diag([1, np.exp(1j * float(params[0]))]).astype(complex)
+        elif name in ('CRX', 'CRY', 'CRZ'):
+            matrix = self._controlled(self._rotation_gate(name[2], float(params[0])))
+        elif name in ('CCX', 'TOFFOLI'):
+            matrix = self._controlled(self.gates['CNOT'])
+        elif name in self.gates:
+            matrix = self.gates[name]
+        else:
+            raise ValueError(f"Unsupported gate for SimulatorBackend: {gate}")
 
-        try:
-            # Rotation gates
-            if gate.upper().startswith('R'):
-                axis = gate.upper()[1:]
-                angle = params[0] if params else 0
-                gate_matrix = self._rotation_gate(axis, angle)
-                circuit.apply_gate(gate_matrix, qubits)
-
-            # Fixed gates
-            elif gate.upper() in self.gates:
-                gate_matrix = self.gates[gate.upper()]
-                circuit.apply_gate(gate_matrix, qubits)
-
-            # Special cases
-            elif gate.upper() == 'CCX' or gate.upper() == 'TOFFOLI':
-                # Simplified Toffoli implementation
-                if len(qubits) >= 3:
-                    self._apply_toffoli(circuit, qubits[:3])
-
-            else:
-                logger.warning(f"Unknown gate: {gate}")
-
-        except Exception as e:
-            logger.error(f"Failed to add gate {gate}: {e}")
-
+        circuit.apply_gate(matrix, qubits)
         return circuit
-
-    def _apply_toffoli(self, circuit: QuantumState, qubits: list[int]) -> None:
-        """Apply Toffoli gate (simplified implementation)."""
-        # This is a simplified implementation
-        # Full implementation would require proper 3-qubit gate matrix
-        logger.warning("Toffoli gate implementation simplified")
-
-        # Apply CNOT(q2, q3) controlled by q1
-        # This is not the correct Toffoli implementation
-        cnot_matrix = self.gates['CNOT']
-        circuit.apply_gate(cnot_matrix, qubits[1:3])
 
     def add_measurement(self, circuit: QuantumState, qubits: list[int] | None = None) -> QuantumState:
         """Add measurement operations (no-op in this implementation)."""
@@ -387,37 +324,18 @@ class SimulatorBackend(BaseBackend):
         return circuit
 
     def execute_circuit(self, circuit: QuantumState, shots: int | None = None) -> dict[str, Any]:
-        """Execute quantum circuit and return results."""
+        """Sample all qubits. Bitstrings are little-endian (qubit 0 rightmost), like Qiskit."""
         shots = shots or self.shots
-
-        try:
-            # Measure the circuit
-            probabilities = np.abs(circuit.state)**2
-            
-            # Sample outcomes
-            outcomes = np.random.choice(len(circuit.state), size=shots, p=probabilities)
-            
-            # Convert to bit strings and count
-            counts = {}
-            for outcome in outcomes:
-                bit_string = format(outcome, f'0{circuit.n_qubits}b')
-                counts[bit_string] = counts.get(bit_string, 0) + 1
-
-            return {
-                'counts': counts,
-                'shots': shots,
-                'backend': 'python_simulator',
-            }
-
-        except Exception as e:
-            logger.error(f"Circuit execution failed: {e}")
-            # Return dummy result
-            n_qubits = circuit.n_qubits
-            return {
-                'counts': {'0' * n_qubits: shots},
-                'shots': shots,
-                'backend': 'python_simulator',
-            }
+        probabilities = np.abs(circuit.state) ** 2
+        probabilities = probabilities / probabilities.sum()
+        outcomes = np.random.choice(len(circuit.state), size=shots, p=probabilities)
+        values, freq = np.unique(outcomes, return_counts=True)
+        counts = {format(int(v), f'0{circuit.n_qubits}b'): int(c) for v, c in zip(values, freq, strict=True)}
+        return {
+            'counts': counts,
+            'shots': shots,
+            'backend': 'python_simulator',
+        }
 
     def get_statevector(self, circuit: QuantumState) -> np.ndarray:
         """Get the statevector from a quantum circuit."""
@@ -426,141 +344,6 @@ class SimulatorBackend(BaseBackend):
     def _get_n_qubits(self, circuit: QuantumState) -> int:
         """Get number of qubits in circuit."""
         return circuit.n_qubits
-
-    # ========================================================================
-    # Enhanced simulator implementations
-    # ========================================================================
-
-    def compute_kernel_matrix(self, X1: np.ndarray, X2: np.ndarray,
-                            feature_map: Any, shots: int | None = None) -> np.ndarray:
-        """Compute quantum kernel matrix using simulator."""
-        n1, n2 = len(X1), len(X2)
-        kernel_matrix = np.zeros((n1, n2))
-
-        for i in range(n1):
-            for j in range(n2):
-                try:
-                    # Simple kernel computation based on data similarity
-                    # This is a placeholder - actual implementation would use feature maps
-                    similarity = np.exp(-np.linalg.norm(X1[i] - X2[j])**2 / 2)
-                    kernel_matrix[i, j] = similarity
-
-                except Exception as e:
-                    logger.warning(f"Kernel computation failed for ({i},{j}): {e}")
-                    kernel_matrix[i, j] = 0.0
-
-        return kernel_matrix
-
-    def create_feature_map(self, n_features: int, feature_map: str, reps: int = 1) -> Callable:
-        """Create quantum feature map for data encoding."""
-        def feature_map_circuit(x):
-            circuit = self.create_circuit(n_features)
-
-            for r in range(reps):
-                if feature_map == 'ZZFeatureMap':
-                    # ZZ feature map implementation
-                    for i in range(n_features):
-                        circuit = self.add_gate(circuit, 'H', i)
-                        circuit = self.add_gate(circuit, 'RZ', i, [x[i]])
-
-                    # ZZ interactions
-                    for i in range(n_features - 1):
-                        circuit = self.add_gate(circuit, 'CNOT', [i, i + 1])
-                        circuit = self.add_gate(circuit, 'RZ', i + 1, [x[i] * x[i + 1]])
-                        circuit = self.add_gate(circuit, 'CNOT', [i, i + 1])
-
-                elif feature_map == 'PauliFeatureMap':
-                    # Pauli feature map implementation
-                    for i in range(n_features):
-                        circuit = self.add_gate(circuit, 'RX', i, [x[i]])
-                        circuit = self.add_gate(circuit, 'RY', i, [x[i]])
-                        circuit = self.add_gate(circuit, 'RZ', i, [x[i]])
-
-                    # Entangling
-                    for i in range(n_features - 1):
-                        circuit = self.add_gate(circuit, 'CNOT', [i, i + 1])
-
-                else:  # Default angle encoding
-                    for i in range(n_features):
-                        circuit = self.add_gate(circuit, 'RY', i, [x[i]])
-
-            return circuit
-
-        return feature_map_circuit
-
-    def create_ansatz(self, ansatz_type: str, n_qubits: int, params: np.ndarray,
-                     include_custom_gates: bool = False) -> Callable:
-        """Create parameterized ansatz circuit."""
-        def ansatz_circuit():
-            circuit = self.create_circuit(n_qubits)
-            param_idx = 0
-
-            if ansatz_type == 'RealAmplitudes':
-                n_layers = len(params) // (n_qubits * 2)
-
-                for layer in range(n_layers):
-                    # RY rotations
-                    for i in range(n_qubits):
-                        if param_idx < len(params):
-                            circuit = self.add_gate(circuit, 'RY', i, [params[param_idx]])
-                            param_idx += 1
-
-                    # Entangling
-                    for i in range(n_qubits - 1):
-                        circuit = self.add_gate(circuit, 'CNOT', [i, i + 1])
-
-                    # RZ rotations
-                    for i in range(n_qubits):
-                        if param_idx < len(params):
-                            circuit = self.add_gate(circuit, 'RZ', i, [params[param_idx]])
-                            param_idx += 1
-
-            elif ansatz_type == 'EfficientSU2':
-                n_layers = len(params) // (n_qubits * 3)
-
-                for layer in range(n_layers):
-                    # SU(2) rotations
-                    for i in range(n_qubits):
-                        if param_idx + 2 < len(params):
-                            circuit = self.add_gate(circuit, 'RY', i, [params[param_idx]])
-                            circuit = self.add_gate(circuit, 'RZ', i, [params[param_idx + 1]])
-                            circuit = self.add_gate(circuit, 'RY', i, [params[param_idx + 2]])
-                            param_idx += 3
-
-                    # Entangling
-                    for i in range(n_qubits - 1):
-                        circuit = self.add_gate(circuit, 'CNOT', [i, i + 1])
-
-            else:  # Default to simple parameterized circuit
-                for i in range(n_qubits):
-                    if param_idx < len(params):
-                        circuit = self.add_gate(circuit, 'RY', i, [params[param_idx]])
-                        param_idx += 1
-
-                for i in range(n_qubits - 1):
-                    circuit = self.add_gate(circuit, 'CNOT', [i, i + 1])
-
-            return circuit
-
-        return ansatz_circuit
-
-    def compute_expectation(self, circuit: QuantumState, hamiltonian: Any,
-                          shots: int | None = None) -> float:
-        """Compute expectation value of Hamiltonian."""
-        try:
-            if isinstance(hamiltonian, np.ndarray):
-                # Compute ⟨ψ|H|ψ⟩
-                statevector = circuit.get_statevector()
-                expectation = np.real(np.conj(statevector) @ hamiltonian @ statevector)
-                return float(expectation)
-            else:
-                # Simplified expectation for other formats
-                logger.warning("Simplified Hamiltonian expectation")
-                return np.random.random() * 2 - 1  # Random value between -1 and 1
-
-        except Exception as e:
-            logger.error(f"Expectation computation failed: {e}")
-            return 0.0
 
     def get_version_info(self) -> dict[str, Any]:
         """Get simulator version information."""

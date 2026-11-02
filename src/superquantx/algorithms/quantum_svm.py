@@ -35,7 +35,10 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
         feature_map: Type of quantum feature map ('ZZFeatureMap', 'PauliFeatureMap', etc.)
         feature_map_reps: Number of repetitions in the feature map
         C: Regularization parameter for SVM
-        gamma: Kernel coefficient (for RBF-like quantum kernels)
+        gamma: Quantum kernel bandwidth. Features are multiplied by ``gamma``
+            before encoding (after standardisation). Tuning it matters: small
+            bandwidths avoid exponential kernel concentration (Shaydulin and
+            Wild, 2022). ``None`` means 1.0.
         quantum_kernel: Custom quantum kernel function
         shots: Number of measurement shots
         **kwargs: Additional parameters
@@ -83,26 +86,12 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
         logger.info(f"Initialized QuantumSVM with feature_map={feature_map}, reps={feature_map_reps}")
 
     def _create_feature_map(self, n_features: int) -> Any:
-        """Create quantum feature map circuit."""
-        try:
-            if hasattr(self.backend, 'create_feature_map'):
-                return self.backend.create_feature_map(
-                    n_features=n_features,
-                    feature_map=self.feature_map,
-                    reps=self.feature_map_reps
-                )
-            else:
-                # Fallback implementation
-                return self._default_feature_map(n_features)
-        except Exception as e:
-            logger.error(f"Failed to create feature map: {e}")
-            return self._default_feature_map(n_features)
-
-    def _default_feature_map(self, n_features: int) -> Any:
-        """Create default feature map when backend doesn't provide one."""
-        # This would be implemented based on the backend
-        logger.warning("Using default feature map - results may vary")
-        return None
+        """Create the feature-map specification on the backend."""
+        return self.backend.create_feature_map(
+            n_features=n_features,
+            feature_map=self.feature_map,
+            reps=self.feature_map_reps,
+        )
 
     def _compute_quantum_kernel(self, X1: np.ndarray, X2: np.ndarray | None = None) -> np.ndarray:
         """Compute quantum kernel matrix between data points.
@@ -117,6 +106,9 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
         """
         if X2 is None:
             X2 = X1
+        if self.gamma is not None:
+            X1 = np.asarray(X1) * self.gamma
+            X2 = np.asarray(X2) * self.gamma
 
         n1, n2 = len(X1), len(X2)
         kernel_matrix = np.zeros((n1, n2))
@@ -127,20 +119,13 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
                 for j in range(n2):
                     kernel_matrix[i, j] = self.quantum_kernel(X1[i], X2[j])
         else:
-            # Use backend's kernel computation
-            try:
-                kernel_matrix = self.backend.compute_kernel_matrix(
-                    X1, X2,
-                    feature_map=self.feature_map_circuit_,
-                    shots=self.shots
-                )
-            except Exception as e:
-                logger.error(f"Quantum kernel computation failed: {e}")
-                # Fallback to classical RBF kernel
-                from sklearn.metrics.pairwise import rbf_kernel
-                gamma = self.gamma if self.gamma else 1.0 / X1.shape[1]
-                kernel_matrix = rbf_kernel(X1, X2, gamma=gamma)
-                logger.warning("Using classical RBF kernel as fallback")
+            # Fidelity kernel from the backend. Errors propagate: there is
+            # deliberately no silent classical fallback.
+            kernel_matrix = self.backend.compute_kernel_matrix(
+                X1, X2,
+                feature_map=self.feature_map_circuit_,
+                shots=self.shots
+            )
 
         return kernel_matrix
 
@@ -182,8 +167,8 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
         self.svm.fit(self.kernel_matrix_, y)
         self.is_fitted = True
 
-        # Compute training accuracy
-        train_predictions = self.predict(X)
+        # Training accuracy straight from the training kernel (X is already scaled)
+        train_predictions = self.svm.predict(self.kernel_matrix_)
         train_accuracy = accuracy_score(y, train_predictions)
 
         self.training_history.append({
@@ -244,7 +229,7 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
         # Need to recreate SVM with probability=True for probabilities
         if not hasattr(self.svm, 'predict_proba'):
             logger.warning("Probability prediction not available, returning decision scores")
-            return self.decision_function(X)
+            return self.svm.decision_function(test_kernel)
 
         return self.svm.predict_proba(test_kernel)
 

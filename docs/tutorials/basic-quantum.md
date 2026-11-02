@@ -1,5 +1,9 @@
 # Basic Quantum Computing Tutorial
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 2 of 15 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 Welcome to the world of quantum computing! This tutorial will teach you the fundamentals of quantum computing using SuperQuantX. No prior quantum knowledge required - we'll build everything from the ground up.
 
 ## 🎯 What You'll Learn
@@ -807,9 +811,9 @@ Congratulations! You've learned the fundamentals of quantum computing:
 ### Continue Your Quantum Journey
 
 1. **[Quantum Machine Learning Tutorial](quantum-ml.md)** - Apply quantum computing to machine learning
-2. **[Quantum Neural Networks](quantum-nn.md)** - Build deep quantum neural networks  
+2. **[Quantum Neural Networks](quantum-ml.md)** - Build deep quantum neural networks  
 3. **[Advanced Algorithms](../user-guide/algorithms.md)** - Explore more sophisticated quantum algorithms
-4. **[Multi-Backend Usage](multi-backend.md)** - Compare different quantum frameworks
+4. **[Multi-Backend Usage](../user-guide/backends.md)** - Compare different quantum frameworks
 
 ### Additional Resources
 

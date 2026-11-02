@@ -1,5 +1,9 @@
 # Configuration Guide
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 11 of 17 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 This comprehensive guide covers how to configure SuperQuantX for your specific needs, from basic settings to advanced customizations for research and production-like environments.
 
 ## 🎯 Overview

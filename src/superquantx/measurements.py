@@ -3,11 +3,15 @@
 
 import json
 from collections import Counter, defaultdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from .circuits import QuantumCircuit
 
 
 class MeasurementResult(BaseModel):

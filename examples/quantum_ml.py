@@ -9,6 +9,8 @@ This example demonstrates:
 - Performance comparison with classical methods
 """
 
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.datasets import make_classification, make_moons, make_regression
@@ -18,7 +20,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
-from superquantx import SuperQuantXClient, QuantumNN
+from superquantx import QuantumNN, SuperQuantXClient
 from superquantx.ml import (
     AmplitudeEmbeddingFeatureMap,
     AngleEmbeddingFeatureMap,
@@ -575,7 +577,8 @@ def main():
     print("=" * 45)
 
     # Setup
-    api_key = input("Enter your SuperQuantX API key (or press Enter for simulation): ").strip()
+    # Optional: set SUPERQUANTX_API_KEY to also try remote execution.
+    api_key = os.environ.get("SUPERQUANTX_API_KEY", "").strip()
     client = SuperQuantXClient(api_key) if api_key else None
 
     if client:

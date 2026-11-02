@@ -77,9 +77,9 @@ print(f"Current state vector shape: {circuit.state.shape}")
 import superquantx as sqx
 import numpy as np
 
-# Create sample data
-X = np.random.rand(50, 2)
-y = np.random.randint(0, 2, 50)
+# Create sample data (random labels would make any accuracy meaningless)
+from sklearn.datasets import make_moons
+X, y = make_moons(n_samples=50, noise=0.1, random_state=0)
 
 # List of backends to compare
 backends = ['simulator', 'pennylane', 'qiskit']
@@ -91,7 +91,7 @@ for backend_name in backends:
         print(f"\n🔍 Testing with {backend_name}...")
 
         # Create and train model
-        qsvm = sqx.QuantumSVM(backend=backend_name)
+        qsvm = sqx.QuantumSVM(backend=backend_name, gamma=0.5)
         qsvm.fit(X[:40], y[:40])  # Train on first 40 samples
 
         # Test accuracy
@@ -100,8 +100,10 @@ for backend_name in backends:
 
         print(f"✅ {backend_name} accuracy: {accuracy:.3f}")
 
-    except ImportError as e:
+    except Exception as e:
         print(f"❌ {backend_name} not available: {e}")
+
+print("Identical accuracies are expected: every backend computes the same exact kernel.")
 
 print(f"\n📊 Results Summary: {results}")
 

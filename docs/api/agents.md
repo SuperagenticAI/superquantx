@@ -1,5 +1,9 @@
 # Quantum Agents API Reference
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 4 of 23 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 SuperQuantX's quantum agents represent the next evolution of AI - autonomous systems that leverage quantum computing to achieve enhanced performance in specialized domains. This reference documents all quantum agent classes and their capabilities.
 
 ## Overview

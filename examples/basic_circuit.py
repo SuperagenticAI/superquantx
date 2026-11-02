@@ -8,6 +8,8 @@ This example demonstrates:
 - Visualizing the circuit
 """
 
+import os
+
 import numpy as np
 
 from superquantx import QuantumCircuit, SuperQuantXClient
@@ -214,7 +216,8 @@ def main():
     print("=" * 40)
 
     # Get API key (optional)
-    api_key = input("Enter your SuperQuantX API key (or press Enter to skip remote execution): ").strip()
+    # Optional: set SUPERQUANTX_API_KEY to also try remote execution.
+    api_key = os.environ.get("SUPERQUANTX_API_KEY", "").strip()
     if not api_key:
         api_key = None
 
