@@ -67,8 +67,23 @@ uv run superquantx list-backends  # Bell-state check on every backend
 uv run python examples/showcase.py
 ```
 
-The PyPI release (`pip install superquantx`) lags behind `main`; install
-from source for the behaviour described here.
+Install the 0.3.0 release from PyPI (Python 3.11+):
+
+```bash
+pip install "superquantx==0.3.0"                     # built-in simulator
+pip install "superquantx[mcp,qiskit,pennylane]==0.3.0"  # MCP and SDKs
+```
+
+### AI assistants and automatic encodings
+
+The [MCP server](docs/mcp.md) exposes six tools over stdio for circuits,
+backend checks, classification and MaxCut. Start it with `superquantx-mcp`
+or `python -m superquantx.mcp` from your MCP client.
+
+`QuantumSVM(backend="simulator", feature_map="auto")` selects an implemented
+encoding at fit time using a local heuristic. The optional Qmes recommender
+is installed separately; see the [design and limitations](docs/design/qmes-feature-map-auto.md).
+Inspect `selected_feature_map_` and `feature_map_recommendation_` after fitting.
 
 ### A quantum classifier, honestly benchmarked
 

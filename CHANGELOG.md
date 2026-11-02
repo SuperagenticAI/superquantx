@@ -7,10 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned
+- Azure Quantum, Rigetti Forest (pyQuil), NVIDIA cuQuantum and TensorFlow
+  Quantum backends. These are not implemented yet.
+
+## [0.3.0] - 2026-11-02
+
 Demo-readiness release: every result is computed, and every result is
 checked against a classical reference.
 
 ### Added
+- MCP server (`superquantx[mcp]`) with six tools for quantum circuits, backend
+  checks, classification and MaxCut over stdio.
+- Automatic selection skips unimplemented encodings and records the choice.
 - Spike: `QuantumSVM(feature_map="auto")` Qmes-style encoding selection with
   optional runtime Qmes import (installed manually from git, not a
   package extra) and a classical heuristic fallback
@@ -54,10 +63,6 @@ checked against a classical reference.
 - The library no longer configures the root logger on import.
 - CLI `version` crash, `braket.__version__` crash, literal `\n` output and
   help examples that used a nonexistent `sqx` command.
-
-### Planned
-- Azure Quantum, Rigetti Forest (pyQuil), NVIDIA cuQuantum and TensorFlow
-  Quantum backends. These are not implemented yet.
 
 ## [0.2.0] - 2026-09-04
 

@@ -171,6 +171,33 @@ class TestQmesOptionalPath:
 
 
 class TestQuantumSVMAutoWiring:
+    def test_auto_uses_real_backend_fidelity_kernel(self):
+        from sklearn.datasets import make_moons
+
+        from superquantx.algorithms.quantum_svm import QuantumSVM
+
+        X, y = make_moons(n_samples=20, noise=0.1, random_state=7)
+        qsvm = QuantumSVM(backend="simulator", feature_map="auto",
+                          auto_feature_map_mode="heuristic")
+        qsvm.fit(X, y)
+        assert qsvm.feature_map_circuit_.name == qsvm.selected_feature_map_
+        assert np.allclose(np.diag(qsvm.kernel_matrix_), 1.0)
+        assert np.allclose(qsvm.kernel_matrix_, qsvm.kernel_matrix_.T)
+        assert set(qsvm.predict(X)) <= {0, 1}
+
+    def test_auto_skips_unimplemented_amplitude_map(self):
+        from superquantx.algorithms.quantum_svm import QuantumSVM
+        from superquantx.backends.base_backend import FEATURE_MAPS
+
+        rng = np.random.default_rng(12)
+        X = rng.normal(size=(20, 20))
+        y = rng.integers(0, 2, size=20)
+        qsvm = QuantumSVM(backend="simulator", feature_map="auto",
+                          auto_feature_map_mode="heuristic")
+        selected = qsvm._resolve_feature_map_name(X, y)
+        assert selected in FEATURE_MAPS
+        assert qsvm.feature_map_recommendation_["details"]["unavailable_feature_map"] == "AmplitudeMap"
+
     def test_qsvm_auto_sets_selected_feature_map(self):
         from superquantx.algorithms.quantum_svm import QuantumSVM
 

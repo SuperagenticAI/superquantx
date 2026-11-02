@@ -467,7 +467,7 @@ def qsvm_classify(
     produces for a Qiskit-convention feature map, and hands it to
     :class:`superquantx.algorithms.QuantumSVM` as its ``quantum_kernel``.
     ``kernel="backend"`` uses the backend's own ``compute_kernel_matrix``
-    instead; on SuperQuantX 0.2.0 those differ per backend (see docs/mcp.md).
+    instead, using the library's fidelity kernel implementation.
     ``bandwidth`` scales the standardised features before encoding (statevector
     mode); values below 1 reduce exponential kernel concentration.
     """
@@ -625,14 +625,7 @@ def qsvm_classify(
         },
         "backend_warnings": logs[:5],
     }
-    if kernel == "backend" and name == "simulator":
-        kernel_ok = False
-        result["kernel_diagnostics"]["looks_valid"] = False
-        result["warning"] = (
-            "The built-in 'simulator' backend kernel in SuperQuantX 0.2.0 is a classical "
-            "Gaussian placeholder, not a quantum kernel. Use kernel='statevector'."
-        )
-    elif not kernel_ok:
+    if not kernel_ok:
         result["warning"] = (
             "The kernel diagonal is far from 1 or the library fell back to a classical "
             "RBF kernel, so this backend's quantum kernel result is not trustworthy. "

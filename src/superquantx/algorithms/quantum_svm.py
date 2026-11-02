@@ -112,6 +112,20 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
             auto_mode=self.auto_feature_map_mode,  # type: ignore[arg-type]
             task='classification',
         )
+        if recommendation.source in ('auto', 'qmes', 'heuristic', 'default'):
+            from ..backends.base_backend import FEATURE_MAPS
+
+            if recommendation.feature_map not in FEATURE_MAPS:
+                unavailable = recommendation.feature_map
+                recommendation.feature_map = next(
+                    (name for name in recommendation.ranking if name in FEATURE_MAPS),
+                    'ZZFeatureMap',
+                )
+                recommendation.details['unavailable_feature_map'] = unavailable
+                logger.warning(
+                    "Feature map %s is not implemented; selecting %s from the ranking",
+                    unavailable, recommendation.feature_map,
+                )
         self.feature_map_recommendation_ = recommendation.as_dict()
         self.selected_feature_map_ = recommendation.feature_map
         if recommendation.source in ('auto', 'qmes', 'heuristic', 'default'):

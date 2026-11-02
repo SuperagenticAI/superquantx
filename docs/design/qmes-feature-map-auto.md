@@ -1,6 +1,6 @@
 # Design note: QuantumSVM `feature_map="auto"` (Qmes-style spike)
 
-Status: spike on branch `spike/qmes-feature-map-auto`.
+Status: experimental feature included in SuperQuantX 0.3.0.
 Inspired by [Qmes](https://github.com/tungduy1704/Qmes) ([arXiv:2609.04652](https://arxiv.org/abs/2609.04652)).
 
 ## Paper scope and limits (read before demoing)
@@ -79,7 +79,7 @@ path that recommends a name from SuperQuantX's existing feature-map registry.
 
 5. **Backends**
    Simulator / PennyLane / Qiskit / Cirq `create_feature_map` recognize
-   `AngleEncoding` and `ZFeatureMap` (AmplitudeMap already present).
+   `AngleEncoding` and `ZFeatureMap` through the shared feature-map implementation.
 
 ## What we deferred
 
@@ -101,7 +101,9 @@ preprocess. SuperQuantX backends implement a smaller, differently shaped set.
 Closest-name mapping is approximate:
 
 - Exact Qmes unit / HD gate lists are not reproduced.
-- `AmplitudeMap` remains a partial/placeholder on several backends.
+- `AmplitudeMap` is a registry candidate but is not implemented by the shared backends.
+  Automatic selection chooses the next implemented map from the ranking and records
+  `unavailable_feature_map` in the recommendation details. Explicit requests raise an error.
 - Entanglement patterns (linear CX vs ISWAP brickwork) differ.
 - Recommendation quality of the heuristic is unvalidated against Qmes regret.
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 import time
@@ -85,15 +86,23 @@ def calls(backends: list[str]) -> list[tuple[str, dict]]:
 
 
 async def main(args: argparse.Namespace) -> int:
+    # The SDK forwards a minimal environment to subprocesses. Preserve explicit
+    # writable cache/config locations for headless and managed environments.
+    server_env = {
+        name: os.environ[name]
+        for name in ("XDG_CONFIG_HOME", "XDG_CACHE_HOME", "MPLCONFIGDIR", "MPLBACKEND",
+                     "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS")
+        if name in os.environ
+    }
     if args.script:
         exe = shutil.which("superquantx-mcp")
         if exe is None:
             print("superquantx-mcp not found on PATH", file=sys.stderr)
             return 2
-        params = StdioServerParameters(command=exe, args=[])
+        params = StdioServerParameters(command=exe, args=[], env=server_env)
     else:
         params = StdioServerParameters(
-            command=sys.executable, args=["-m", "superquantx.mcp"]
+            command=sys.executable, args=["-m", "superquantx.mcp"], env=server_env
         )
 
     transcript: list[dict] = []

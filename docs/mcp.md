@@ -11,7 +11,7 @@ The server speaks MCP over **stdio**, uses the official
 ## Install
 
 ```bash
-pip install "superquantx[mcp,qiskit,pennylane]"
+pip install "superquantx[mcp,qiskit,pennylane]>=0.3.0"
 # or, from a checkout
 uv pip install ".[mcp,qiskit,pennylane]"
 ```
@@ -87,9 +87,9 @@ backends are normalized to this order (PennyLane results are reversed internally
   statevectors of a Qiskit-convention `ZZFeatureMap` (or `ZFeatureMap`) produced by the selected
   backend SDK, then trains SuperQuantX `QuantumSVM` with it. Simulator, Qiskit, and PennyLane give
   identical kernels for the same data.
-- `kernel="backend"` uses the backend's own `compute_kernel_matrix`. On SuperQuantX 0.2.0 this is a
-  classical placeholder on `simulator` and is not a valid fidelity kernel on `qiskit`, so the tool
-  reports `kernel_diagnostics.looks_valid` and a warning instead of silently returning numbers.
+- `kernel="backend"` uses the backend's own `compute_kernel_matrix`. Since 0.3.0 this is a
+  fidelity kernel built from real quantum states. The tool reports `kernel_diagnostics.looks_valid`
+  and warns if the diagonal deviates from one or a backend reports a fallback.
 - `bandwidth` (default 0.5) scales features before encoding. Smaller bandwidths usually generalize
   better on these toy sets (see Shaydulin and Wild, "Importance of kernel bandwidth in quantum
   machine learning", Phys. Rev. A 106, 042407, 2022).
@@ -172,7 +172,7 @@ Create `.cursor/mcp.json` in your project (or `~/.cursor/mcp.json` for all proje
 
 ### Without a pre-made virtualenv (uvx)
 
-Once this server is in a published release, `uvx` can run it in an isolated environment:
+Since 0.3.0, `uvx` can run the server in an isolated environment:
 
 ```json
 {
@@ -185,8 +185,7 @@ Once this server is in a published release, `uvx` can run it in an isolated envi
 }
 ```
 
-SuperQuantX 0.2.0 on PyPI does not yet include the server, so until the next release use a local
-install as shown above.
+Use SuperQuantX 0.3.0 or newer; 0.2.0 does not include the MCP server.
 
 ### Programmatic client
 
@@ -387,6 +386,7 @@ Input validation, a 64 qubit circuit:
   workflow, not a quantum advantage.
 - Tested backends: built-in simulator, Qiskit Aer, PennyLane `default.qubit`. Cirq, Braket, and TKET
   go through the same unified backend code path but were not installed in the verification run.
-- The QAOA in this server is implemented on top of the unified circuit API because the
-  `superquantx.algorithms.QAOA` class in 0.2.0 has placeholder fallbacks. The `statevector` QSVM kernel
-  is computed here for the same reason (see `kernel="backend"` above).
+- The MCP QAOA tool has its own grid-search and COBYLA parameter search on top of the unified
+  circuit API. The library's `QAOA.solve` also runs real circuits and reports a classical optimum.
+  The MCP `statevector` QSVM mode retains its explicit Qiskit-convention encoding; `backend` mode
+  uses the shared library feature maps, so the two modes can produce different valid kernels.

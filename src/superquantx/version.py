@@ -1,11 +1,11 @@
 """Version information for SuperQuantX."""
 
-__version__ = "0.2.0"
-__version_info__ = (0, 2, 0)
+__version__ = "0.3.0"
+__version_info__ = (0, 3, 0)
 
 # Release information
-__release_date__ = "2026-09-04"
-__release_name__ = "Python 3.11 + backend floors"
+__release_date__ = "2026-11-02"
+__release_name__ = "Quantum workflows, automatic encodings and MCP"
 
 # Build information - will be updated during CI/CD
 __build__ = "dev"

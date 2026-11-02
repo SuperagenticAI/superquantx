@@ -319,13 +319,14 @@ class TestOtherTools:
         assert r["n_train"] + r["n_test"] == 20
         assert "classical_rbf_baseline" not in r
 
-    def test_qsvm_backend_kernel_flagged_on_simulator(self):
+    def test_qsvm_backend_kernel_valid_on_simulator(self):
         r = tools.qsvm_classify(
             "blobs", backend="simulator", n_samples=12, kernel="backend"
         )
         assert r["ok"]
-        assert r["kernel_diagnostics"]["looks_valid"] is False
-        assert "placeholder" in r["warning"]
+        assert r["kernel_diagnostics"]["looks_valid"] is True
+        assert r["kernel_diagnostics"]["quantum_kernel_used"] is True
+        assert "warning" not in r
 
     def test_qsvm_validation(self):
         X = np.zeros((20, 8)).tolist()
