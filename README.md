@@ -1,29 +1,22 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/superquantx)](https://pypi.org/project/superquantx/)
 [![Python Version](https://img.shields.io/pypi/pyversions/superquantx)](https://pypi.org/project/superquantx/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Tests](https://github.com/SuperagenticAI/superquantx/workflows/Tests/badge.svg)](https://github.com/SuperagenticAI/superquantx/actions)
+[![Tests](https://github.com/SuperagenticAI/superquantx/actions/workflows/ci.yml/badge.svg)](https://github.com/SuperagenticAI/superquantx/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://superagenticai.github.io/superquantx)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 # SuperQuantX
-### The foundation for the future of Agentic and Quantum AI
-SuperQuantX unified API for the next wave of Quantum AI. It's a foundation to build powerful Quantum Agentic AI systems with a single interface to Qiskit, Cirq, PennyLane, and more. SuperQuantX is your launchpad into the world of Quantum + Agentic AI.
 
-**Unified Quantum Computing Platform - Building autonomous quantum-enhanced AI systems**
+**One API across quantum SDKs, with a classical baseline for every result.**
 
-> 📖 **[Read the Full Documentation →](https://superagenticai.github.io/superquantx/)**
+SuperQuantX is an experimental, open-source toolkit for quantum machine
+learning and optimisation research by [Superagentic AI](https://super-agentic.ai).
+The same circuits and algorithms run on PennyLane, Qiskit, Cirq, Amazon
+Braket, pytket and a built-in simulator, and every algorithm reports a
+classical reference so you can see whether the quantum part earns its keep.
 
-**Research by [Superagentic AI](https://super-agentic.ai) - Quantum AI Research**
-
-## 🚀 What is SuperQuantX?
-
-SuperQuantX is a **unified quantum computing platform** that makes quantum algorithms and quantum machine learning accessible through a single, consistent API. Whether you're a researcher, developer, or quantum enthusiast, SuperQuantX provides:
-
-- **🎯 Single API** - Works across all major quantum backends (IBM, Google, AWS, Quantinuum, D-Wave)
-- **🤖 Quantum Agents** - Pre-built autonomous agents for trading, research, and optimization
-- **🧠 Quantum ML** - Advanced quantum machine learning algorithms and neural networks
-- **⚡ Easy Setup** - Get started in minutes with comprehensive documentation
+> 📖 **[Documentation](https://superagenticai.github.io/superquantx/)** ·
+> 🎬 **[Showcase with real output](docs/showcase.md)**
 
 <div align="center">
   <a href="https://super-agentic.ai" target="_blank">
@@ -31,228 +24,141 @@ SuperQuantX is a **unified quantum computing platform** that makes quantum algor
   </a>
 </div>
 
-## ✨ Key Features
+> **Research software.** Everything below runs on classically simulated
+> quantum circuits. Nothing here demonstrates quantum advantage, and the
+> library is designed to tell you when a quantum model does not beat a
+> classical one.
 
-### **🔗 Universal Quantum Backend Support**
-```python
-# Same code works on ANY quantum platform
-qsvm = sqx.QuantumSVM(backend='pennylane')  # PennyLane
-qsvm = sqx.QuantumSVM(backend='qiskit')     # IBM Qiskit
-qsvm = sqx.QuantumSVM(backend='cirq')       # Google Cirq
-qsvm = sqx.QuantumSVM(backend='braket')     # AWS Braket
-qsvm = sqx.QuantumSVM(backend='quantinuum') # Quantinuum H-Series
-```
+## What works today
 
-### **🤖 Autonomous Quantum Agents**
-Ready-to-deploy intelligent agents powered by quantum algorithms:
-- **QuantumTradingAgent** - Portfolio optimization and risk analysis
-- **QuantumResearchAgent** - Scientific hypothesis generation and testing
-- **QuantumOptimizationAgent** - Complex combinatorial and continuous optimization
-- **QuantumClassificationAgent** - Advanced ML with quantum advantage
+| Backend | Runs on | Status |
+|---------|---------|--------|
+| `simulator` | built-in NumPy statevector | ✅ tested |
+| `pennylane` | `default.qubit` | ✅ tested |
+| `qiskit` | Qiskit Aer | ✅ tested |
+| `cirq` | Cirq simulator | ✅ tested |
+| `braket` | Amazon Braket `LocalSimulator` | ✅ tested |
+| `tket` | pytket local simulator | ✅ tested |
+| `ocean` | D-Wave Ocean (QUBO/Ising only) | ⚠️ annealing only, hardware needs a Leap token |
+| IBM Quantum, Braket devices (IonQ, Rigetti), Quantinuum H-Series | via `qiskit`, `braket`, `tket` | ⚠️ untested, needs your own credentials |
+| Azure Quantum, Rigetti Forest, cuQuantum, TensorFlow Quantum | | 🚧 planned, not implemented |
 
-### **🧠 Quantum Machine Learning**
-State-of-the-art quantum ML algorithms:
-- **Quantum Support Vector Machines** - Enhanced pattern recognition
-- **Quantum Neural Networks** - Hybrid quantum-classical architectures
-- **QAOA & VQE** - Optimization and molecular simulation
-- **Quantum Clustering** - Advanced data analysis techniques
+"Tested" means the unit tests run a Bell state, a qubit-order check, exact
+expectation values and the fidelity kernel on that backend. Check your own
+install with `superquantx list-backends`.
 
-## 🚀 Quick Start
+| Algorithm | Classical check it reports |
+|-----------|----------------------------|
+| `VQE` (RealAmplitudes, EfficientSU2) | exact ground energy (H2 STO-3G built in) |
+| `QAOA` for MaxCut | brute-force optimum and approximation ratio |
+| `QuantumSVM` (fidelity kernel) | tuned RBF SVM and logistic regression via `compare_to_classical` |
+| `QuantumNN` (parameter-shift gradients) | `compare_to_classical` works with any sklearn-style classifier |
+| `QuantumPortfolioAgent` (CVaR-VQE) | brute-force optimal selection and a Markowitz reference |
+| `QuantumClassificationAgent` | `compare_to_classical` verdict and p-value |
 
-### Installation
+## Quick start
+
 ```bash
-# Install with uv (recommended)
-curl -LsSf https://astral.sh/uv/install.sh | sh
 git clone https://github.com/SuperagenticAI/superquantx.git
 cd superquantx
-uv sync --extra all
+uv sync --extra all-backends      # or: pip install -e ".[all-backends]"
 
-# Or with pip
-pip install superquantx
+uv run superquantx list-backends  # Bell-state check on every backend
+uv run python examples/showcase.py
 ```
 
-### Deploy Your First Quantum Agent
+The PyPI release (`pip install superquantx`) lags behind `main`; install
+from source for the behaviour described here.
+
+### A quantum classifier, honestly benchmarked
+
 ```python
 import superquantx as sqx
+from sklearn.datasets import make_moons
 
-# Deploy quantum trading agent
-agent = sqx.QuantumTradingAgent(
-    strategy="quantum_portfolio",
-    risk_tolerance=0.3
-)
-results = agent.deploy()
-print(f"Performance: {results.result['performance']}")
+X, y = make_moons(n_samples=100, noise=0.2, random_state=0)
+result = sqx.compare_to_classical(X, y, sqx.QuantumSVM(backend="pennylane"), cv=5)
+print(result.table())
 ```
 
-### Quantum Machine Learning
+```text
+model                                      accuracy  wall time  grid  QPU circuits
+----------------------------------------------------------------------------------
+QuantumSVM (PennyLane), tuned       0.930 +/- 0.051      3.43s    25       119,000
+QuantumSVM (PennyLane), untuned     0.670 +/- 0.125      0.58s     1             -
+SVC (RBF), tuned C and gamma        0.950 +/- 0.055      0.85s    25             -
+Logistic regression, tuned C        0.860 +/- 0.097      0.19s     4             -
+----------------------------------------------------------------------------------
+100 samples, 2 features, 5-fold stratified CV (identical folds for every model), seed=0
+quantum minus best classical: -0.020; no significant difference from SVC (RBF), tuned C and gamma (p=0.54)
+```
+
+This follows the protocol of
+[arXiv:2610.42029](https://arxiv.org/abs/2610.42029): equal tuning budgets,
+identical folds, per-fold preprocessing and the Nadeau-Bengio corrected
+t-test. As that paper reports, a tuned quantum kernel is statistically
+indistinguishable from a tuned RBF SVM here, and bandwidth tuning (0.67 to
+0.93) matters more than the circuit. See
+[Benchmarking](docs/user-guide/benchmarking.md).
+
+### VQE and QAOA with exact answers
+
 ```python
-# Quantum SVM with automatic backend selection
 import numpy as np
-qsvm = sqx.QuantumSVM(backend='auto')
-
-# Mock training data for demonstration
-X_train = np.random.rand(20, 4)
-y_train = np.random.choice([0, 1], 20)
-X_test = np.random.rand(10, 4)
-y_test = np.random.choice([0, 1], 10)
-
-qsvm.fit(X_train, y_train)
-accuracy = qsvm.score(X_test, y_test)
-print(f"Quantum SVM accuracy: {accuracy}")
-```
-
-### Advanced Quantum Algorithms
-```python
-# Molecular simulation with VQE
-import numpy as np
-from sklearn.datasets import make_classification
-
-# Create sample Hamiltonian for VQE
-hamiltonian = np.array([[1, 0], [0, -1]])  # Simple Pauli-Z
-vqe = sqx.VQE(hamiltonian=hamiltonian, backend="pennylane")
-ground_state = vqe.find_ground_state()
-print(f"Ground state energy: {ground_state}")
-
-# Optimization with QAOA
-X, y = make_classification(n_samples=10, n_features=4, n_classes=2, random_state=42)
-qaoa = sqx.QAOA(backend="pennylane")
-qaoa.fit(X, y)
-print("✅ QAOA successfully fitted for optimization tasks")
-```
-
-## 📖 Documentation
-
-**Complete documentation is available at [superagenticai.github.io/superquantx](https://superagenticai.github.io/superquantx/)**
-
-The documentation includes comprehensive guides for getting started, detailed API references, tutorials, and examples for all supported quantum backends. Visit the documentation site for:
-
-- **Getting Started** - Installation, configuration, and your first quantum program
-- **User Guides** - Platform overview, backends, and algorithms
-- **Tutorials** - Hands-on quantum computing and machine learning examples
-- **API Reference** - Complete API documentation with examples
-- **Development** - Contributing guidelines, architecture, and testing
-
-## 🎯 Supported Platforms
-
-SuperQuantX provides unified access to **all major quantum computing platforms**:
-
-| Backend | Provider | Hardware | Simulator |
-|---------|----------|----------|-----------|
-| **PennyLane** | Multi-vendor | ✅ Various | ✅ |
-| **Qiskit** | IBM | ✅ IBM Quantum | ✅ |
-| **Cirq** | Google | ✅ Google Quantum AI | ✅ |
-| **AWS Braket** | Amazon | ✅ IonQ, Rigetti | ✅ |
-| **TKET** | Quantinuum | ✅ H-Series | ✅ |
-| **Ocean** | D-Wave | ✅ Advantage | ✅ |
-
-> **Python**: SuperQuantX requires **Python 3.11+**. See [backend compatibility](docs/BACKENDS.md#backend-version-compatibility) for optional-extra version floors.
-
-## 🤖 Quantum Agents
-
-Pre-built autonomous agents for complex problem solving:
-
-- **🏦 QuantumTradingAgent** - Portfolio optimization and risk analysis
-- **🔬 QuantumResearchAgent** - Scientific hypothesis generation and testing
-- **⚡ QuantumOptimizationAgent** - Combinatorial and continuous optimization
-- **🧠 QuantumClassificationAgent** - Advanced ML with quantum advantage
-
-## 🧮 Quantum Algorithms
-
-Comprehensive library of quantum algorithms and techniques:
-
-### **🔍 Quantum Machine Learning**
-- **Quantum Support Vector Machines (QSVM)** - Enhanced pattern recognition with quantum kernels
-- **Quantum Neural Networks (QNN)** - Hybrid quantum-classical neural architectures
-- **Quantum Principal Component Analysis (QPCA)** - Quantum dimensionality reduction
-- **Quantum K-Means** - Clustering with quantum distance calculations
-
-### **⚡ Optimization Algorithms**
-- **Quantum Approximate Optimization Algorithm (QAOA)** - Combinatorial optimization
-- **Variational Quantum Eigensolver (VQE)** - Molecular simulation and optimization
-- **Quantum Annealing** - Large-scale optimization with D-Wave systems
-
-### **🧠 Advanced Quantum AI**
-- **Quantum Reinforcement Learning** - RL with quantum advantage
-- **Quantum Natural Language Processing** - Quantum-enhanced text analysis
-- **Quantum Computer Vision** - Image processing with quantum circuits
-
-## 💡 Why SuperQuantX?
-
-| Traditional Approach | SuperQuantX Advantage |
-|--------------------|---------------------|
-| ❌ Multiple complex SDKs | ✅ Single unified API |
-| ❌ Months to learn quantum | ✅ Minutes to first algorithm |
-| ❌ Backend-specific code | ✅ Write once, run anywhere |
-| ❌ Manual optimization | ✅ Automatic backend selection |
-| ❌ Limited algorithms | ✅ Comprehensive algorithm library |
-
-## 🤝 Contributing
-
-We welcome contributions to SuperQuantX! Here's how to get involved:
-
-### **🔧 Development Setup**
-```bash
-# Fork and clone the repository
-git clone https://github.com/your-username/superquantx.git
-cd superquantx
-
-# Install development dependencies
-uv sync --extra dev
-
-# Run tests to verify setup
-uv run pytest
-```
-
-### **🐛 Bug Reports & Feature Requests**
-- **[Open an issue](https://github.com/SuperagenticAI/superquantx/issues)** - Report bugs or request features
-- **[Read contributing guide](docs/development/contributing.md)** - Detailed contribution guidelines
-
-### **📝 Documentation**
-Help improve our documentation:
-- Fix typos and clarify explanations
-- Add examples and tutorials
-- Improve API documentation
-- Translate documentation
-
-## 🔗 Resources & Community
-
-### **📚 Learn More**
-- **[Official Documentation](docs/)** - Complete guides and API reference
-- **[Tutorial Notebooks](examples/)** - Jupyter notebooks with examples
-
-
-## 📄 License
-
-SuperQuantX is released under the [Apache License 2.0](LICENSE). Feel free to use it in your projects, research, and commercial applications.
-
----
-
-## 🚀 Get Started Now
-
-```bash
-# Install SuperQuantX
-pip install superquantx
-
-# Deploy your first quantum agent
-python -c "
 import superquantx as sqx
-agent = sqx.QuantumOptimizationAgent()
-print('✅ SuperQuantX is ready!')
-"
+
+vqe = sqx.create_vqe_for_molecule("H2", backend="qiskit")
+print(vqe.find_ground_state(), vqe.exact_ground_energy())   # both -1.857275 Ha
+
+W = np.array([[0, 1, 1, 0, 1], [1, 0, 1, 1, 0], [1, 1, 0, 1, 0],
+              [0, 1, 1, 0, 1], [1, 0, 0, 1, 0]], dtype=float)
+r = sqx.QAOA(backend="cirq", p=2, seed=7).solve(W)
+print(r["cut_value"], r["classical_optimum"], r["approximation_ratio"])
 ```
 
-**Ready to explore quantum computing?**
+### Agents that show their work
 
-👉 **[Start with the Quick Start Guide →](https://superagenticai.github.io/superquantx/)**
+```python
+import numpy as np
+import superquantx as sqx
 
----
+returns = np.random.default_rng(0).normal(0.01, 0.02, size=(250, 6))
+res = sqx.QuantumPortfolioAgent(backend="simulator", n_select=3, seed=0).solve(returns)
+print(res.result["selected_assets"], res.result["classical_selected_assets"],
+      res.result["matches_classical_optimum"])
+```
+
+`examples/quantum_agents_demo.py` runs the portfolio and classification
+agents end to end.
+
+## Command line
+
+```bash
+superquantx -v version        # versions of installed backend SDKs
+superquantx list-backends     # real Bell-state check per backend
+superquantx benchmark -d moons -b pennylane   # quantum kernel vs tuned classical
+superquantx run qsvm --data iris -b simulator
+```
+
+## Development
+
+```bash
+uv sync --extra all-backends --extra dev
+uv run pytest tests/unit tests/integration
+uv run ruff check src tests
+```
+
+Contributions are welcome: [open an issue](https://github.com/SuperagenticAI/superquantx/issues)
+or read the [contributing guide](docs/development/contributing.md).
+Python 3.11+ is required; see [backend compatibility](docs/BACKENDS.md#backend-version-compatibility)
+for version floors.
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE).
 
 <div align="center">
 
-**SuperQuantX: Making Quantum Computing Accessible to all**
-
-*Built with ❤️ by [Superagentic AI](https://super-agentic.ai)*
-
-⭐ **Star this repo** if SuperQuantX helps your quantum journey!
+*Built by [Superagentic AI](https://super-agentic.ai)*
 
 </div>
