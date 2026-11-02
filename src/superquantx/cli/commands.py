@@ -25,7 +25,7 @@ def info():
     click.echo(f"Installation path: {sqx.__file__}")
 
     # Backend information
-    click.echo("\\nAvailable Backends:")
+    click.echo("\nInstalled backend SDKs (run list-backends to test them):")
     backend_info = sqx.get_backend_info()
 
     for backend_name, version in backend_info.items():
@@ -35,7 +35,7 @@ def info():
 
     # Configuration
     config = sqx.config
-    click.echo("\\nCurrent Configuration:")
+    click.echo("\nCurrent Configuration:")
     click.echo(f"  Default backend: {config.get('default_backend', 'auto')}")
     click.echo(f"  Random seed: {config.get('random_seed', 42)}")
     click.echo(f"  Shots: {config.get('shots', 1024)}")
@@ -43,7 +43,7 @@ def info():
     # Hardware info
     try:
         import psutil
-        click.echo("\\nSystem Resources:")
+        click.echo("\nSystem Resources:")
         click.echo(f"  CPU cores: {psutil.cpu_count()}")
         click.echo(f"  RAM: {psutil.virtual_memory().total / (1024**3):.1f} GB")
     except ImportError:
@@ -90,7 +90,7 @@ def list_algorithms(category: str, verbose: bool):
 
     for cat in categories_to_show:
         if cat in algorithms:
-            click.echo(f"\\n{cat.title()}:")
+            click.echo(f"\n{cat.title()}:")
 
             for alg_name, description in algorithms[cat]:
                 if verbose:
@@ -110,51 +110,83 @@ def list_algorithms(category: str, verbose: bool):
                     click.echo(f"  • {alg_name}: {description}")
 
 
+# (registry name, SDK key in get_backend_info, description)
+_GATE_MODEL_BACKENDS = [
+    ('simulator', None, 'Built-in NumPy statevector simulator'),
+    ('pennylane', 'pennylane', 'PennyLane default.qubit (local)'),
+    ('qiskit', 'qiskit', 'Qiskit Aer simulator (local)'),
+    ('cirq', 'cirq', 'Cirq simulator (local)'),
+    ('braket', 'braket', 'Amazon Braket LocalSimulator'),
+    ('tket', 'pytket', 'pytket with its local simulator'),
+]
+_PLANNED_BACKENDS = [
+    ('azure_quantum', 'Azure Quantum'),
+    ('rigetti_forest', 'Rigetti Forest / pyQuil'),
+    ('cuquantum', 'NVIDIA cuQuantum'),
+    ('tensorflow_quantum', 'TensorFlow Quantum'),
+]
+
+
+def check_backend(name: str) -> tuple[bool, str]:
+    """Instantiate a backend and run a 2-qubit Bell circuit on it.
+
+    Returns ``(ok, detail)``. A backend only counts as working if the Bell
+    circuit returns only 00 and 11.
+    """
+    try:
+        kwargs = {'device': 'local:braket_sv'} if name == 'braket' else {}
+        backend = sqx.get_backend(name, **kwargs)
+        circuit = backend.create_circuit(2)
+        circuit = backend.add_gate(circuit, 'H', 0)
+        circuit = backend.add_gate(circuit, 'CNOT', [0, 1])
+        circuit = backend.add_measurement(circuit)
+        result = backend.execute_circuit(circuit, shots=200)
+        counts = backend.counts_big_endian(result['counts'])
+        bad = {k for k, v in counts.items() if v and k not in ('00', '11')}
+        if not counts or bad:
+            return False, f"Bell test gave unexpected outcomes {sorted(bad) or counts}"
+        return True, "Bell test passed"
+    except Exception as e:  # noqa: BLE001 - report any failure to the user
+        return False, f"{type(e).__name__}: {e}".splitlines()[0][:100]
+
+
 @click.command('list-backends')
 @click.option(
     '--available-only', '-a',
     is_flag=True,
-    help='Show only installed backends'
+    help='Show only backends that pass the Bell test'
 )
 def list_backends(available_only: bool):
-    """List quantum computing backends."""
-    backends = {
-        'Local Simulators': [
-            ('simulator', 'SuperQuantX built-in simulator'),
-            ('pennylane_local', 'PennyLane local simulators'),
-            ('qiskit_aer', 'Qiskit Aer simulator')
-        ],
-        'Cloud Simulators': [
-            ('pennylane_cloud', 'PennyLane cloud devices'),
-            ('qiskit_ibm', 'IBM Quantum simulators'),
-            ('braket_sv1', 'AWS Braket SV1 simulator'),
-            ('cirq_cloud', 'Google Cirq cloud simulators')
-        ],
-        'Quantum Hardware': [
-            ('ibm_quantum', 'IBM Quantum hardware'),
-            ('braket_hardware', 'AWS Braket hardware access'),
-            ('azure_quantum', 'Azure Quantum hardware'),
-            ('rigetti_qcs', 'Rigetti Quantum Cloud Services')
-        ]
-    }
-
-    backend_info = sqx.get_backend_info()
+    """List backends, running a real Bell-state check on each one."""
+    versions = sqx.get_backend_info()
 
     click.echo("Quantum Computing Backends")
     click.echo("=" * 40)
+    click.echo("\nGate-model backends (checked with a Bell circuit):")
+    for name, sdk, description in _GATE_MODEL_BACKENDS:
+        ok, detail = check_backend(name)
+        if available_only and not ok:
+            continue
+        version = f" [{sdk} {versions.get(sdk)}]" if sdk and versions.get(sdk) else ""
+        mark = "OK  " if ok else "FAIL"
+        click.echo(f"  {mark} {name}: {description}{version}")
+        if not ok:
+            click.echo(f"         {detail}")
 
-    for category, backend_list in backends.items():
-        click.echo(f"\\n{category}:")
+    if not available_only:
+        click.echo("\nAnnealing:")
+        dwave = versions.get('dwave')
+        state = f"SDK installed ({dwave}); needs a D-Wave Leap token" if dwave \
+            else "not installed (pip install 'superquantx[ocean]')"
+        click.echo(f"  ---- ocean: D-Wave Ocean, QUBO/Ising only, {state}")
 
-        for backend_name, description in backend_list:
-            # Check if backend is available (simplified logic)
-            is_available = any(info for info in backend_info.values())
+        click.echo("\nCloud hardware (reachable through the backends above, untested by CI):")
+        click.echo("  ---- IBM Quantum via qiskit, Amazon Braket devices via braket,")
+        click.echo("       Quantinuum via tket. Needs your own credentials.")
 
-            if available_only and not is_available:
-                continue
-
-            status = "✓" if is_available else "✗"
-            click.echo(f"  {status} {backend_name}: {description}")
+        click.echo("\nPlanned, not implemented:")
+        for _, description in _PLANNED_BACKENDS:
+            click.echo(f"  ---- {description}")
 
 
 @click.command('run')
@@ -272,7 +304,7 @@ def run_algorithm(
         }
 
         # Output results
-        click.echo("\\nResults:")
+        click.echo("\nResults:")
         click.echo(f"Accuracy: {accuracy:.4f}")
         click.echo(f"Training time: {training_time:.2f}s")
 
@@ -294,92 +326,50 @@ def run_algorithm(
 
 @click.command()
 @click.option(
-    '--algorithms', '-a',
-    default='qsvm,qnn',
-    help='Comma-separated list of algorithms to benchmark'
+    '--dataset', '-d',
+    type=click.Choice(['moons', 'circles', 'iris']),
+    default='moons',
+    help='Dataset (iris is reduced to its first two classes)'
 )
-@click.option(
-    '--datasets', '-d',
-    default='iris,wine',
-    help='Comma-separated list of datasets'
-)
-@click.option(
-    '--backends', '-b',
-    default='simulator',
-    help='Comma-separated list of backends'
-)
-@click.option(
-    '--output', '-o',
-    type=click.Path(),
-    default='benchmark_results.json',
-    help='Output file for benchmark results'
-)
-@click.option(
-    '--runs', '-r',
-    default=3,
-    help='Number of runs for averaging'
-)
-def benchmark(
-    algorithms: str,
-    datasets: str,
-    backends: str,
-    output: str,
-    runs: int
-):
-    """Benchmark algorithms across datasets and backends."""
-    alg_list = algorithms.split(',')
-    dataset_list = datasets.split(',')
-    backend_list = backends.split(',')
+@click.option('--samples', '-n', default=100, help='Number of samples (moons/circles)')
+@click.option('--backend', '-b', default='pennylane', help='Backend for the quantum kernel')
+@click.option('--cv', default=5, help='Number of cross-validation folds')
+@click.option('--seed', default=0, help='Random seed for data and folds')
+@click.option('--output', '-o', type=click.Path(), help='Write the full result as JSON')
+def benchmark(dataset: str, samples: int, backend: str, cv: int, seed: int, output: str | None):
+    """Compare a quantum kernel SVM with tuned classical baselines.
 
-    click.echo("SuperQuantX Benchmark")
-    click.echo("=" * 30)
-    click.echo(f"Algorithms: {alg_list}")
-    click.echo(f"Datasets: {dataset_list}")
-    click.echo(f"Backends: {backend_list}")
-    click.echo(f"Runs per combination: {runs}")
-    click.echo()
+    Follows the protocol of arXiv:2610.42029: the quantum kernel bandwidth is
+    tuned on the same grid budget as the RBF gamma, every model sees the same
+    folds, and the p-value uses the Nadeau-Bengio corrected t-test.
+    """
+    from sklearn import datasets as skd
 
-    results = []
-    total_combinations = len(alg_list) * len(dataset_list) * len(backend_list)
-    current = 0
+    if dataset == 'moons':
+        X, y = skd.make_moons(samples, noise=0.2, random_state=seed)
+    elif dataset == 'circles':
+        X, y = skd.make_circles(samples, noise=0.1, factor=0.5, random_state=seed)
+    else:
+        X, y = skd.load_iris(return_X_y=True)
+        mask = y < 2
+        X, y = X[mask], y[mask]
 
-    for algorithm in alg_list:
-        for dataset in dataset_list:
-            for backend in backend_list:
-                current += 1
-                click.echo(f"[{current}/{total_combinations}] {algorithm} on {dataset} with {backend}")
+    click.echo(f"Benchmark: QuantumSVM ({backend}) vs classical on {dataset}, "
+               f"{len(X)} samples, {cv}-fold CV")
+    try:
+        result = sqx.compare_to_classical(
+            X, y, sqx.QuantumSVM(backend=backend), cv=cv, seed=seed)
+    except Exception as e:  # noqa: BLE001
+        click.echo(f"Benchmark failed: {e}", err=True)
+        sys.exit(1)
 
-                try:
-                    # This would call the actual benchmark function
-                    # For now, simulate results
-                    result = {
-                        'algorithm': algorithm,
-                        'dataset': dataset,
-                        'backend': backend,
-                        'accuracy': np.random.uniform(0.7, 0.95),
-                        'execution_time': np.random.uniform(1.0, 10.0),
-                        'success': True
-                    }
-                    results.append(result)
+    click.echo(result.table())
+    click.echo(f"\nVerdict: {result.verdict}")
 
-                    click.echo(f"  Accuracy: {result['accuracy']:.4f}")
-                    click.echo(f"  Time: {result['execution_time']:.2f}s")
-
-                except Exception as e:
-                    click.echo(f"  Failed: {e}")
-                    results.append({
-                        'algorithm': algorithm,
-                        'dataset': dataset,
-                        'backend': backend,
-                        'success': False,
-                        'error': str(e)
-                    })
-
-    # Save results
-    with open(output, 'w') as f:
-        json.dump(results, f, indent=2)
-
-    click.echo(f"\\nBenchmark complete. Results saved to {output}")
+    if output:
+        with open(output, 'w') as f:
+            json.dump(result.to_dict(), f, indent=2, default=float)
+        click.echo(f"Results saved to {output}")
 
 
 @click.command()

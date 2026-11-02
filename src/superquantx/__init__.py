@@ -197,71 +197,39 @@ def get_version() -> str:
     """Get SuperQuantX version."""
     return __version__
 
-def get_backend_info() -> dict[str, Any]:
-    """Get information about available backends."""
-    info = {}
+# Distribution names used to read installed versions without importing the
+# (sometimes slow or side-effecting) backend packages themselves.
+_BACKEND_DISTRIBUTIONS = {
+    'pennylane': ('pennylane',),
+    'qiskit': ('qiskit',),
+    'cirq': ('cirq-core', 'cirq'),
+    'braket': ('amazon-braket-sdk',),
+    'azure_quantum': ('azure-quantum',),
+    'pytket': ('pytket',),
+    'dwave': ('dwave-ocean-sdk', 'dwave-system'),
+    'pyquil': ('pyquil',),
+    'tensorflow_quantum': ('tensorflow-quantum',),
+    'cuquantum': ('cuquantum-python', 'cuquantum'),
+}
 
-    # Check which backends are available
-    try:
-        import pennylane
-        info['pennylane'] = pennylane.__version__
-    except ImportError:
-        info['pennylane'] = None
 
-    try:
-        import qiskit
-        info['qiskit'] = qiskit.__version__
-    except ImportError:
-        info['qiskit'] = None
+def get_backend_info() -> dict[str, str | None]:
+    """Return the installed version of each backend SDK, or None if absent.
 
-    try:
-        import cirq
-        info['cirq'] = cirq.__version__
-    except ImportError:
-        info['cirq'] = None
+    Versions come from :mod:`importlib.metadata`, so a package that does not
+    define ``__version__`` (for example ``braket``) is still reported.
+    """
+    from importlib.metadata import PackageNotFoundError, version
 
-    try:
-        import braket
-        info['braket'] = braket.__version__
-    except ImportError:
-        info['braket'] = None
-
-    try:
-        import azure.quantum
-        info['azure_quantum'] = azure.quantum.__version__
-    except (ImportError, AttributeError):
-        info['azure_quantum'] = None
-
-    try:
-        import pytket
-        info['pytket'] = pytket.__version__
-    except ImportError:
-        info['pytket'] = None
-
-    try:
-        import dwave
-        info['dwave'] = dwave.ocean.__version__
-    except (ImportError, AttributeError):
-        info['dwave'] = None
-
-    try:
-        import pyquil
-        info['pyquil'] = pyquil.__version__
-    except ImportError:
-        info['pyquil'] = None
-
-    try:
-        import tensorflow_quantum
-        info['tensorflow_quantum'] = tensorflow_quantum.__version__
-    except ImportError:
-        info['tensorflow_quantum'] = None
-
-    try:
-        import cuquantum
-        info['cuquantum'] = cuquantum.__version__
-    except (ImportError, AttributeError):
-        info['cuquantum'] = None
-
+    info: dict[str, str | None] = {}
+    for key, dists in _BACKEND_DISTRIBUTIONS.items():
+        info[key] = None
+        for dist in dists:
+            try:
+                info[key] = version(dist)
+                break
+            except PackageNotFoundError:
+                continue
     return info
 
 def print_system_info() -> None:

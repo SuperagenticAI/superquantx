@@ -9,7 +9,7 @@ from pathlib import Path
 
 import click
 
-# Import version directly to avoid circular import
+import superquantx as sqx
 from superquantx.version import __version__
 
 from .commands import (
@@ -38,18 +38,17 @@ from .commands import (
 )
 @click.pass_context
 def cli(ctx: click.Context, config: str | None, verbose: bool):
-    """SuperQuantX: Building the Foundation for Quantum Agentic AI
+    """SuperQuantX: experimental quantum machine learning toolkit.
 
-    Deploy quantum-enhanced autonomous agents and AI systems in minutes.
-    From quantum circuits to intelligent agents across all quantum platforms.
+    One API over PennyLane, Qiskit, Cirq, Braket, tket and a built-in
+    simulator, with classical baselines for every quantum result.
 
+    \b
     Examples:
-        sqx create-agent trading               # Deploy quantum trading agent
-        sqx run automl --data portfolio        # Quantum AutoML optimization
-        sqx run qsvm --data iris               # Traditional quantum algorithm
-        sqx benchmark quantum-vs-classical     # Performance comparison
-        sqx benchmark --backend all # Benchmark all backends
-
+        superquantx -v version                  # versions of installed SDKs
+        superquantx list-backends               # Bell-state check per backend
+        superquantx benchmark -d moons          # quantum kernel vs tuned classical
+        superquantx run qsvm --data iris        # train and score one algorithm
     """
     # Ensure context object exists
     ctx.ensure_object(dict)
@@ -114,7 +113,7 @@ def shell():
         - numpy as np
         - matplotlib.pyplot as plt
 
-        Try: sqx.algorithms.QuantumSVM()
+        Try: sqx.QuantumSVM(backend='simulator')
         """
 
         embed(banner1=banner, exit_msg="Goodbye!")
@@ -138,82 +137,33 @@ def examples(output: str):
 
     # Basic example
     basic_example = '''#!/usr/bin/env python3
-"""
-Basic SuperQuantX Example: Quantum SVM Classification
-"""
+"""Quantum SVM on two Iris classes, checked against tuned classical baselines."""
 
 import numpy as np
+from sklearn.datasets import load_iris
+
 import superquantx as sqx
 
-# Load quantum-adapted Iris dataset
-X_train, X_test, y_train, y_test, metadata = sqx.datasets.load_iris_quantum(
-    n_features=4, encoding='amplitude'
-)
+X, y = load_iris(return_X_y=True)
+X, y = X[y < 2], y[y < 2]
 
-print(f"Dataset: {metadata['dataset_name']}")
-print(f"Training samples: {len(X_train)}")
-print(f"Test samples: {len(X_test)}")
-print(f"Features: {metadata['n_features']}")
-print(f"Classes: {metadata['n_classes']}")
-
-# Create quantum SVM with automatic backend selection
-qsvm = sqx.QuantumSVM(
-    backend='auto',
-    feature_map='ZZFeatureMap',
-    quantum_kernel=True
-)
-
-# Train the model
-print("\\nTraining Quantum SVM...")
-qsvm.fit(X_train, y_train)
-
-# Make predictions
-y_pred = qsvm.predict(X_test)
-
-# Calculate accuracy
-accuracy = np.mean(y_pred == y_test)
-print(f"Test Accuracy: {accuracy:.4f}")
-
-# Visualize results
-sqx.visualize_results({
-    'y_true': y_test,
-    'y_pred': y_pred,
-    'algorithm': 'QuantumSVM'
-}, plot_type='classification')
+result = sqx.compare_to_classical(X, y, sqx.QuantumSVM(backend="simulator"), cv=5)
+print(result.table())
+print("Verdict:", result.verdict)
 '''
 
     # VQE example
     vqe_example = '''#!/usr/bin/env python3
-"""
-SuperQuantX VQE Example: H2 Molecule Ground State
-"""
+"""VQE for the H2 ground state (STO-3G, 0.735 Angstrom), checked against exact."""
 
-import superquantx as sqx
+from superquantx.algorithms import create_vqe_for_molecule
 
-# Load H2 molecule
-molecule, metadata = sqx.datasets.load_h2_molecule(bond_length=0.735)
-
-print(f"Molecule: {molecule.name}")
-print(f"Bond length: {metadata['bond_length']} Å")
-print(f"Expected ground state energy: {metadata['ground_state_energy']} Ha")
-
-# Create VQE algorithm
-vqe = sqx.VQE(
-    backend='auto',
-    ansatz='UCCSD',
-    optimizer='Adam'
-)
-
-# Run VQE optimization
-print("\\nRunning VQE optimization...")
-result = vqe.compute_minimum_eigenvalue(molecule)
-
-print(f"VQE ground state energy: {result['eigenvalue']:.6f} Ha")
-print(f"Number of iterations: {result['n_iterations']}")
-print(f"Optimization time: {result['optimization_time']:.2f} s")
-
-# Plot optimization history
-sqx.plot_optimization_history(result)
+vqe = create_vqe_for_molecule("H2", backend="simulator", seed=0)
+energy = vqe.find_ground_state()
+exact = vqe.exact_ground_energy()
+print(f"VQE energy:   {energy:.6f} Ha")
+print(f"Exact energy: {exact:.6f} Ha")
+print(f"Error:        {abs(energy - exact):.2e} Ha")
 '''
 
     # Write examples
@@ -228,7 +178,7 @@ sqx.plot_optimization_history(result)
             f.write(content)
         click.echo(f"Created: {example_path}")
 
-    click.echo(f"\\nExamples created in: {output_path}")
+    click.echo(f"\nExamples created in: {output_path}")
     click.echo("Run with: python basic_qsvm.py")
 
 
@@ -242,7 +192,7 @@ def main():
     try:
         cli()
     except KeyboardInterrupt:
-        click.echo("\\nInterrupted by user")
+        click.echo("\nInterrupted by user")
         sys.exit(130)
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
