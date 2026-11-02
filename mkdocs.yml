@@ -63,6 +63,9 @@ plugins:
           paths: ["src"]
           options:
             docstring_style: google
+            docstring_options:
+              warn_missing_types: false
+              warn_unknown_params: false
             show_source: true
             show_bases: true
             show_inheritance_diagram: false
@@ -142,10 +145,9 @@ extra_javascript:
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 nav:
-  - Home: 
+  - Home:
     - Overview: index.md
-    - Quick Start: getting-started/quickstart.md
-    - Installation: getting-started/installation.md
+    - Showcase: showcase.md
   - Getting Started:
     - Installation Guide: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
@@ -155,6 +157,7 @@ nav:
     - Overview: user-guide/overview.md
     - Quantum Backends: user-guide/backends.md
     - Algorithms: user-guide/algorithms.md
+    - Benchmarking: user-guide/benchmarking.md
   - Tutorials:
     - Basic Quantum Computing: tutorials/basic-quantum.md
     - Quantum Machine Learning: tutorials/quantum-ml.md
@@ -174,6 +177,9 @@ nav:
     - Circuits: api/circuits.md
     - Agents: api/agents.md
     - Utilities: api/utilities.md
+  - Help:
+    - FAQ: help/faq.md
+    - Troubleshooting: help/troubleshooting.md
   - Development:
     - Contributing: development/contributing.md
     - Architecture: development/architecture.md

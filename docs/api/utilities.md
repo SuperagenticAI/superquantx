@@ -683,7 +683,5 @@ print(f"Entanglement (Bell state): {entanglement:.4f}")
 ---
 
 For additional examples and advanced usage patterns, see:
-- [Optimization Tutorial](../tutorials/optimization.md)
-- [Visualization Guide](../user-guide/visualization.md)
+- [Optimization Tutorial](../user-guide/algorithms.md)
 - [Benchmarking Best Practices](../user-guide/benchmarking.md)
-- [Data Preprocessing Guide](../user-guide/data-preprocessing.md)

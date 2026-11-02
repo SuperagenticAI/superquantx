@@ -1194,7 +1194,7 @@ You've now mastered the fundamentals of quantum machine learning! Here's what yo
 
 ### Advanced QML Topics
 
-1. **[Quantum Neural Networks Tutorial](quantum-nn.md)** - Deep dive into advanced QNN architectures
+1. **[Quantum Neural Networks Tutorial](../user-guide/algorithms.md)** - Deep dive into advanced QNN architectures
 2. **Quantum Generative Models** - QGANs, QVAEs, and quantum generative modeling
 3. **Quantum Reinforcement Learning** - QL algorithms and quantum environments
 4. **Quantum Natural Language Processing** - Applying QML to text and language tasks
@@ -1215,7 +1215,7 @@ You've now mastered the fundamentals of quantum machine learning! Here's what yo
 
 ## 🤝 Need Help?
 
-- **[Advanced Examples](advanced-examples.md)** - More complex QML implementations
+- **[Advanced Examples](../showcase.md)** - More complex QML implementations
 - **[API Reference](../api/algorithms.md)** - Detailed documentation  
 - **[GitHub Issues](https://github.com/SuperagenticAI/superquantx/issues)** - Ask questions
 - **QML Community** - Join quantum machine learning forums and discussions

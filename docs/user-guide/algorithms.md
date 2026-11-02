@@ -992,7 +992,7 @@ For algorithm-specific help:
 
 - **[Tutorials](../tutorials/quantum-ml.md)**: Step-by-step algorithm tutorials
 - **[API Reference](../api/algorithms.md)**: Detailed function documentation
-- **[Examples](../tutorials/advanced-examples.md)**: Real-world algorithm applications
+- **[Examples](../showcase.md)**: Real-world algorithm applications
 - **[GitHub Issues](https://github.com/SuperagenticAI/superquantx/issues)**: Report algorithm bugs
 
 ---

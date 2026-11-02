@@ -34,8 +34,8 @@ SuperQuantX requires Python 3.11 or higher. Install it using pip:
     git clone https://github.com/SuperagenticAI/superquantx.git
     cd superquantx
 
-    # Install with development dependencies
-    pip install -e .[dev]
+    # Install every working backend plus development tools
+    uv sync --extra all-backends --extra dev
     ```
 
 ## 🔍 Verify Installation
@@ -51,10 +51,11 @@ backends = sqx.list_available_backends()
 print(f"Available backends: {backends}")
 ```
 
-You should see something like:
-```
-SuperQuantX version: 0.1.1
-Available backends: {'simulator': {'available': True, 'class': 'SimulatorBackend', 'description': 'Pure Python quantum simulator backend.', 'capabilities': {...}}, 'pennylane': {'available': False, 'class': 'PennyLaneBackend', 'reason': 'Missing dependencies'}, ...}
+You should see the version and a dictionary describing each backend. To
+actually test every installed backend with a Bell circuit, run:
+
+```bash
+superquantx list-backends
 ```
 
 ## 🎯 Your First Quantum Program
@@ -157,9 +158,9 @@ One of SuperQuantX's superpowers is easy backend switching. Let's compare the sa
 import superquantx as sqx
 import numpy as np
 
-# Create sample data
-X = np.random.rand(50, 2)
-y = np.random.randint(0, 2, 50)
+# Create sample data (random labels would make any accuracy meaningless)
+from sklearn.datasets import make_moons
+X, y = make_moons(n_samples=50, noise=0.1, random_state=0)
 
 # List of backends to compare
 backends = ['simulator', 'pennylane', 'qiskit']
@@ -171,7 +172,7 @@ for backend_name in backends:
         print(f"\n🔍 Testing with {backend_name}...")
         
         # Create and train model
-        qsvm = sqx.QuantumSVM(backend=backend_name)
+        qsvm = sqx.QuantumSVM(backend=backend_name, gamma=0.5)
         qsvm.fit(X[:40], y[:40])  # Train on first 40 samples
         
         # Test accuracy
@@ -180,11 +181,22 @@ for backend_name in backends:
         
         print(f"✅ {backend_name} accuracy: {accuracy:.3f}")
         
-    except ImportError as e:
+    except Exception as e:
         print(f"❌ {backend_name} not available: {e}")
 
 print(f"\n📊 Results Summary: {results}")
 ```
+
+Every backend computes the same exact fidelity kernel, so the accuracies
+should be identical. That is a correctness check, not a benchmark. To ask
+whether the quantum model is any good, compare it with tuned classical models:
+
+```python
+result = sqx.compare_to_classical(X, y, sqx.QuantumSVM(backend="simulator"), cv=5)
+print(result.table())
+```
+
+See [Benchmarking against classical baselines](../user-guide/benchmarking.md).
 
 ## 📊 Built-in Quantum Algorithms
 
@@ -217,10 +229,10 @@ SuperQuantX comes with several quantum algorithms ready to use:
     # Create a simple Hamiltonian (matrix)
     hamiltonian = np.array([[1, 0], [0, -1]])
 
-    # Find ground state energy
+    # Find ground state energy (exact answer: -1)
     vqe = sqx.VQE(backend='simulator', hamiltonian=hamiltonian)
     ground_energy = vqe.find_ground_state()
-    
+
     print(f"Ground state energy: {ground_energy:.6f}")
     ```
 
@@ -230,9 +242,10 @@ SuperQuantX comes with several quantum algorithms ready to use:
     import superquantx as sqx
     import numpy as np
 
+    from sklearn.datasets import make_moons
+
     # Create training data
-    X = np.random.rand(20, 2)
-    y = np.random.randint(0, 2, 20)
+    X, y = make_moons(n_samples=40, noise=0.1, random_state=0)
 
     # Build Quantum Neural Network
     qnn = sqx.QuantumNN(
@@ -256,7 +269,7 @@ Great job! You've successfully:
 ✅ Installed SuperQuantX  
 ✅ Created your first quantum circuit  
 ✅ Ran a quantum machine learning algorithm  
-✅ Visualized quantum circuits  
+✅ Inspected a circuit  
 ✅ Compared multiple backends  
 
 ### Continue Your Journey:
@@ -264,7 +277,7 @@ Great job! You've successfully:
 1. **Learn the Fundamentals**: [Basic Quantum Computing Tutorial](../tutorials/basic-quantum.md)
 2. **Explore More Algorithms**: [Quantum Algorithms Guide](../user-guide/algorithms.md)
 3. **Deep Dive into Backends**: [Backend Integration Guide](../user-guide/backends.md)
-4. **Try Advanced Examples**: [Advanced Tutorials](../tutorials/advanced-examples.md)
+4. **Try Advanced Examples**: [Advanced Tutorials](../showcase.md)
 
 ### Need Help?
 

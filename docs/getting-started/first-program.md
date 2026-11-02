@@ -460,8 +460,8 @@ Congratulations! You've built your first quantum programs. Here's what to explor
 ### Intermediate Topics
 
 4. **[Quantum Machine Learning](../tutorials/quantum-ml.md)**: Apply QML algorithms
-5. **[Multi-Backend Usage](../tutorials/multi-backend.md)**: Compare frameworks
-6. **[Circuit Optimization](../user-guide/circuits.md)**: Efficient circuit design
+5. **[Multi-Backend Usage](../user-guide/backends.md)**: Compare frameworks
+6. **[Circuit Optimization](../api/circuits.md)**: Efficient circuit design
 
 ### Advanced Projects
 

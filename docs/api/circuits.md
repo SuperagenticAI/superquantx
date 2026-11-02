@@ -539,6 +539,5 @@ print(f"Average execution time: {avg_execution_time:.3f}s")
 ---
 
 For more detailed examples and tutorials, see:
-- [Circuit Construction Tutorial](../tutorials/circuits.md)
-- [Noise Modeling Guide](../user-guide/noise.md)
+- [Circuit Construction Tutorial](../tutorials/basic-quantum.md)
 - [Backend Integration](../backends/)

@@ -2,38 +2,50 @@
 
 <div class="hero-banner">
   <h1 class="superquant-gradient">SuperQuantX</h1>
-  <h2 class="superquant-gradient">Unified Quantum Computing Platform</h2>
-  <p><strong>Building autonomous quantum-enhanced AI systems</strong></p>
-  <p>A cutting-edge quantum computing research platform that provides a unified API for quantum agentic AI systems.</p>
+  <h2 class="superquant-gradient">Experimental Quantum ML Toolkit</h2>
+  <p><strong>No hype. Checked results.</strong></p>
+  <p>One API across quantum SDKs, with a classical baseline for every result.</p>
 </div>
 
 ## Welcome to SuperQuantX
 
-SuperQuantX bridges the gap between quantum computing and artificial intelligence, enabling researchers and developers to build sophisticated quantum-enhanced AI agents with a single, unified API.
+SuperQuantX is an experimental, open-source toolkit for quantum machine
+learning and optimisation research. One API runs the same circuits and
+algorithms on PennyLane, Qiskit, Cirq, Amazon Braket, pytket and a built-in
+simulator, and every result comes with a classical reference so you can see
+whether the quantum part earns its keep.
 
-### 🚀 Key Features
+### Key features
 
-- **🔗 Unified API**: Single interface for multiple quantum computing backends
-- **🎯 Agentic AI Focus**: Specialized tools for quantum agent development
-- **🚀 Multi-Backend Support**: PennyLane, Qiskit, Cirq, Amazon Braket, TKET, D-Wave Ocean
-- **📊 Advanced Algorithms**: Pre-built quantum machine learning and optimization algorithms
-- **🛠️ Developer Friendly**: Comprehensive documentation and examples
-- **⚡ High Performance**: Optimized for research and production workloads
+- **One API, six gate-model backends**: identical circuits, bit order
+  normalised across SDKs.
+- **Algorithms with built-in checks**: VQE reports the exact ground energy,
+  QAOA reports the brute-force optimum, classifiers can be benchmarked with
+  [`compare_to_classical`](user-guide/benchmarking.md).
+- **Research-grade benchmarking**: equal tuning budgets, identical folds and
+  a corrected t-test, following [arXiv:2610.42029](https://arxiv.org/abs/2610.42029).
+- **Agents that show their work**: portfolio and classification agents
+  return the classical optimum or baseline alongside the quantum answer.
 
 <div align="center">
   <img src="assets/logo.png" alt="SuperQuantX Logo" width="400" style="margin-bottom: 2rem;"/>
 </div>
 
-### 🎯 Supported Backends
+### What works today
 
-| Backend | Provider | Features |
-|---------|----------|----------|
-| **PennyLane** | Multi-vendor | Differentiable programming, ML integration |
-| **Qiskit** | IBM | IBM hardware, advanced transpilation |
-| **Cirq** | Google | Google hardware, NISQ algorithms |
-| **Amazon Braket** | AWS | AWS cloud quantum computing |
-| **TKET** | Cambridge Quantum Computing | Advanced optimization |
-| **D-Wave Ocean** | D-Wave | Quantum annealing |
+| Backend | Status |
+|---------|--------|
+| Built-in simulator | tested |
+| PennyLane (`default.qubit`) | tested |
+| Qiskit (Aer) | tested |
+| Cirq simulator | tested |
+| Amazon Braket `LocalSimulator` | tested |
+| pytket local simulator | tested |
+| D-Wave Ocean | QUBO/Ising only |
+| IBM Quantum, Braket devices, Quantinuum hardware | untested, needs your own credentials |
+| Azure Quantum, Rigetti Forest, cuQuantum, TensorFlow Quantum | planned, not implemented |
+
+See the [Showcase](showcase.md) for real output from every tested backend.
 
 ## Quick Start
 
@@ -98,6 +110,14 @@ Complete API documentation.
 - [Agents](api/agents.md)
 </div>
 
+<div markdown>
+### 📏 Results
+Real output, checked against classical baselines.
+
+- [Showcase](showcase.md)
+- [Benchmarking against classical baselines](user-guide/benchmarking.md)
+</div>
+
 </div>
 
 ## Research Areas
@@ -105,10 +125,9 @@ Complete API documentation.
 SuperQuantX accelerates research in:
 
 - **Quantum Machine Learning**: QSVM, QNN, quantum feature maps
-- **Quantum Optimization**: QAOA, VQE, quantum annealing
-- **Quantum Agents**: Decision-making quantum systems
-- **Hybrid Algorithms**: Classical-quantum hybrid approaches
-- **NISQ Applications**: Near-term quantum device algorithms
+- **Quantum Optimization**: QAOA, VQE (including CVaR-VQE), quantum annealing via D-Wave Ocean
+- **Quantum Agents**: Portfolio and classification agents with classical checks
+- **Honest evaluation**: Tuned classical baselines and significance tests for every quantum model
 
 ## Community & Support
 

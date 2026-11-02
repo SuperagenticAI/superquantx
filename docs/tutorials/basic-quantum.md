@@ -807,9 +807,9 @@ Congratulations! You've learned the fundamentals of quantum computing:
 ### Continue Your Quantum Journey
 
 1. **[Quantum Machine Learning Tutorial](quantum-ml.md)** - Apply quantum computing to machine learning
-2. **[Quantum Neural Networks](quantum-nn.md)** - Build deep quantum neural networks  
+2. **[Quantum Neural Networks](quantum-ml.md)** - Build deep quantum neural networks  
 3. **[Advanced Algorithms](../user-guide/algorithms.md)** - Explore more sophisticated quantum algorithms
-4. **[Multi-Backend Usage](multi-backend.md)** - Compare different quantum frameworks
+4. **[Multi-Backend Usage](../user-guide/backends.md)** - Compare different quantum frameworks
 
 ### Additional Resources
 
