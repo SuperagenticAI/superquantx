@@ -1,245 +1,123 @@
-"""
-Integration tests for quantum algorithms
-"""
+"""End-to-end checks of the public algorithms against exact classical answers.
 
+Every assertion compares a quantum result with something computed classically
+(exact diagonalisation, brute force, or a known label set), so a silent
+fallback to fake numbers would fail these tests.
+"""
 
 import numpy as np
 import pytest
 
-from superquantx.algorithms import (
-    QAOA,
-    VQE,
-    QuantumNeuralNetwork,
-    create_vqe_for_molecule,
+import superquantx as sqx
+from superquantx.algorithms.qaoa import brute_force_maxcut, cut_value
+from superquantx.algorithms import create_vqe_for_molecule
+from superquantx.algorithms.vqe import H2_STO3G_0735
+from superquantx.backends.base_backend import hamiltonian_to_matrix
+
+
+def _backend_available(name: str) -> bool:
+    try:
+        sqx.get_backend(name)
+        return True
+    except Exception:
+        return False
+
+
+BACKENDS = [b for b in ("simulator", "pennylane", "qiskit", "cirq") if _backend_available(b)]
+
+# 5-node graph whose maximum cut is 6.
+GRAPH = np.array(
+    [[0, 1, 1, 0, 1],
+     [1, 0, 1, 1, 0],
+     [1, 1, 0, 1, 0],
+     [0, 1, 1, 0, 1],
+     [1, 0, 0, 1, 0]],
+    dtype=float,
 )
-from superquantx.circuits import QuantumCircuit
-from superquantx.gates import Hamiltonian
 
 
 class TestVQEIntegration:
-    """Integration tests for VQE algorithm"""
+    @pytest.mark.parametrize("backend", BACKENDS)
+    def test_vqe_single_qubit_z(self, backend):
+        vqe = sqx.VQE(hamiltonian={"Z": 1.0}, backend=backend, seed=0)
+        assert vqe.find_ground_state() == pytest.approx(-1.0, abs=1e-3)
 
-    def test_vqe_h2_molecule(self, mock_client):
-        """Test VQE for H2 molecule"""
-        # Create simple H2 Hamiltonian
-        hamiltonian = Hamiltonian.from_dict({
-            "ZZ": -1.0523732,
-            "ZI": -0.39793742,
-            "IZ": -0.39793742,
-            "XX": -0.01128010,
-            "YY": 0.01128010
-        })
+    def test_vqe_h2_molecule_matches_exact(self):
+        vqe = create_vqe_for_molecule("H2", backend="simulator", seed=0)
+        energy = vqe.find_ground_state()
+        exact = vqe.exact_ground_energy()
+        assert exact == pytest.approx(-1.857275, abs=1e-5)
+        assert energy == pytest.approx(exact, abs=1.6e-3)  # chemical accuracy
 
-        def simple_ansatz(params):
-            circuit = QuantumCircuit(2)
-            circuit.ry(params[0], 0)
-            circuit.ry(params[1], 1)
-            circuit.cnot(0, 1)
-            return circuit
+    def test_vqe_molecule_factory_rejects_unknown(self):
+        with pytest.raises(NotImplementedError):
+            create_vqe_for_molecule("LiH")
+        with pytest.raises(NotImplementedError):
+            create_vqe_for_molecule("H2", bond_distance=1.5)
 
-        # Test without client (simulation mode)
-        vqe = VQE(hamiltonian, simple_ansatz, client=None)
-
-        initial_params = np.array([0.1, 0.1])
-        results = vqe.run(initial_params)
-
-        assert "optimal_energy" in results
-        assert "optimal_parameters" in results
-        assert "optimization_history" in results
-        assert "converged" in results
-        assert isinstance(results["optimal_energy"], float)
-        assert isinstance(results["optimal_parameters"], np.ndarray)
-
-    def test_vqe_with_mock_client(self, mock_client):
-        """Test VQE with mock client"""
-        hamiltonian = Hamiltonian.from_dict({"ZZ": -1.0})
-
-        def simple_ansatz(params):
-            circuit = QuantumCircuit(2)
-            circuit.ry(params[0], 0)
-            return circuit
-
-        vqe = VQE(hamiltonian, simple_ansatz, client=mock_client)
-
-        # Mock client should return consistent results
-        results = vqe.run(np.array([0.1]))
-
-        assert isinstance(results, dict)
-        assert mock_client.submit_job_sync.called
-        assert mock_client.wait_for_job_sync.called
-
-    def test_vqe_molecule_factory(self):
-        """Test VQE molecule factory function"""
-        vqe = create_vqe_for_molecule("H2", client=None)
-
-        assert isinstance(vqe, VQE)
-        assert vqe.hamiltonian.num_qubits == 2
-
-        # Test unsupported molecule
-        with pytest.raises(ValueError):
-            create_vqe_for_molecule("unknown_molecule")
+    def test_h2_hamiltonian_spectrum(self):
+        H = hamiltonian_to_matrix(dict(H2_STO3G_0735), 2)
+        assert np.allclose(H, H.conj().T)
+        assert np.linalg.eigvalsh(H)[0] == pytest.approx(-1.857275, abs=1e-5)
 
 
 class TestQAOAIntegration:
-    """Integration tests for QAOA algorithm"""
+    def test_brute_force_reference(self):
+        bits, best = brute_force_maxcut(GRAPH)
+        assert best == 6
+        assert cut_value(GRAPH, bits) == 6
 
-    def test_qaoa_max_cut(self):
-        """Test QAOA for Max-Cut problem"""
-        # Simple triangle graph: edges (0,1), (1,2), (0,2)
-        from superquantx.algorithms import create_qaoa_for_max_cut
+    @pytest.mark.parametrize("backend", BACKENDS)
+    def test_qaoa_max_cut_finds_optimum(self, backend):
+        result = sqx.QAOA(backend=backend, p=2, seed=7, maxiter=200).solve(GRAPH)
+        assert result["classical_optimum"] == 6
+        assert result["cut_value"] == 6
+        assert cut_value(GRAPH, np.array([int(b) for b in result["bitstring"]])) == 6
+        # Expected cut of the QAOA state is below the optimum and well above random (3.5).
+        assert 3.5 < result["expected_cut"] <= 6 + 1e-9
+        assert 0.0 < result["approximation_ratio"] <= 1.0
 
-        graph_edges = [(0, 1), (1, 2), (0, 2)]
-        qaoa = create_qaoa_for_max_cut(graph_edges, num_nodes=3, p=1, client=None)
-
-        assert isinstance(qaoa, QAOA)
-        assert qaoa.cost_hamiltonian.num_qubits == 3
-        assert qaoa.p == 1
-
-    def test_qaoa_circuit_creation(self):
-        """Test QAOA circuit creation"""
-        cost_hamiltonian = Hamiltonian.from_dict({"ZZ": 0.5, "ZI": -0.5})
-        qaoa = QAOA(cost_hamiltonian, p=2, client=None)
-
-        # Parameters for 2 layers: [gamma1, beta1, gamma2, beta2]
-        parameters = np.array([0.1, 0.2, 0.3, 0.4])
-        circuit = qaoa.create_qaoa_circuit(parameters)
-
-        assert isinstance(circuit, QuantumCircuit)
-        assert circuit.num_qubits == 2  # From Hamiltonian
-        assert len(circuit.gates) > 0  # Should have gates
-
-        # Should start with Hadamards for equal superposition
-        h_gates = [g for g in circuit.gates if g.name == "H"]
-        assert len(h_gates) == 2  # One H per qubit
-
-    def test_qaoa_optimization(self):
-        """Test QAOA optimization"""
-        cost_hamiltonian = Hamiltonian.from_dict({"Z": 1.0})
-        qaoa = QAOA(cost_hamiltonian, p=1, client=None)
-
-        results = qaoa.run(initial_parameters=np.array([0.1, 0.2]))
-
-        assert "optimal_energy" in results
-        assert "optimal_parameters" in results
-        assert "optimal_circuit" in results
-        assert "converged" in results
-
-        optimal_circuit = results["optimal_circuit"]
-        assert isinstance(optimal_circuit, QuantumCircuit)
+    def test_qaoa_rejects_non_square(self):
+        with pytest.raises(Exception):
+            sqx.QAOA(backend="simulator", p=1).solve(np.ones((2, 3)))
 
 
-class TestQuantumNeuralNetworkIntegration:
-    """Integration tests for Quantum Neural Network"""
+class TestClassifiersIntegration:
+    @pytest.fixture(scope="class")
+    def moons(self):
+        from sklearn.datasets import make_moons
+        return make_moons(40, noise=0.1, random_state=0)
 
-    def test_qnn_binary_classification(self, mock_client, quantum_feature_data):
-        """Test QNN for binary classification"""
-        X, y = quantum_feature_data
+    def test_quantum_svm_fits_and_predicts(self, moons):
+        X, y = moons
+        model = sqx.QuantumSVM(backend="simulator", feature_map="ZZFeatureMap", gamma=0.5)
+        model.fit(X, y)
+        preds = model.predict(X)
+        assert set(np.unique(preds)) <= set(np.unique(y))
+        assert np.mean(preds == y) > 0.6  # untuned bandwidth; see compare_to_classical
+        K = model.backend.compute_kernel_matrix(X[:5], X[:5], feature_map="ZZFeatureMap")
+        assert np.allclose(np.diag(K), 1.0, atol=1e-6)
 
-        qnn = QuantumNeuralNetwork(
-            num_qubits=3,
-            num_layers=2,
-            client=None  # Use simulation mode
+    def test_quantum_nn_learns(self, moons):
+        X, y = moons
+        model = sqx.QuantumNN(backend="simulator", n_layers=2, max_epochs=15,
+                              batch_size=40, learning_rate=0.1, seed=1)
+        model.fit(X, y)
+        assert model.loss_history[-1] < model.loss_history[0]
+        assert model.score(X, y) > 0.6
+
+
+class TestBenchmarkIntegration:
+    def test_compare_to_classical_reports_baselines(self):
+        from sklearn.datasets import make_moons
+        X, y = make_moons(30, noise=0.1, random_state=0)
+        result = sqx.compare_to_classical(
+            X, y, sqx.QuantumSVM(backend="simulator"), cv=3,
+            bandwidth_grid=(0.5,), C_grid=(1.0,), include_untuned=False,
         )
-
-        # Fit the model
-        qnn.fit(X, y)
-
-        assert qnn.is_fitted_
-        assert qnn.parameters is not None
-        assert len(qnn.parameters) == qnn.num_parameters
-
-        # Make predictions
-        predictions = qnn.predict(X)
-        assert len(predictions) == len(y)
-        assert all(pred in [-1, 1] for pred in predictions)
-
-    def test_qnn_circuit_creation(self):
-        """Test QNN circuit creation"""
-        qnn = QuantumNeuralNetwork(num_qubits=2, num_layers=1, client=None)
-
-        parameters = np.random.uniform(0, 2*np.pi, qnn.num_parameters)
-        x = np.array([0.5, 1.5])  # Input data
-
-        circuit = qnn.create_ansatz(parameters, x)
-
-        assert isinstance(circuit, QuantumCircuit)
-        assert circuit.num_qubits == 2
-        assert len(circuit.gates) > 0
-
-    def test_qnn_with_mock_client(self, mock_client, quantum_feature_data):
-        """Test QNN with mock client"""
-        X, y = quantum_feature_data
-
-        qnn = QuantumNeuralNetwork(
-            num_qubits=2,
-            num_layers=1,
-            client=mock_client
-        )
-
-        # Should work with mock client
-        qnn.fit(X, y)
-        predictions = qnn.predict(X)
-
-        assert len(predictions) == len(y)
-        assert mock_client.submit_job_sync.called
-
-
-class TestAlgorithmComposition:
-    """Test composition of multiple algorithms"""
-
-    def test_vqe_then_qaoa(self):
-        """Test using VQE result to initialize QAOA"""
-        # Use same Hamiltonian for both
-        hamiltonian = Hamiltonian.from_dict({"ZZ": 1.0, "XX": -0.5})
-
-        # Run VQE first
-        def vqe_ansatz(params):
-            circuit = QuantumCircuit(2)
-            circuit.ry(params[0], 0)
-            circuit.ry(params[1], 1)
-            return circuit
-
-        vqe = VQE(hamiltonian, vqe_ansatz, client=None)
-        vqe_results = vqe.run(np.array([0.1, 0.2]))
-
-        # Use VQE energy as reference for QAOA
-        qaoa = QAOA(hamiltonian, p=1, client=None)
-        qaoa_results = qaoa.run(np.array([0.1, 0.2]))
-
-        # Both should provide energy estimates
-        assert "optimal_energy" in vqe_results
-        assert "optimal_energy" in qaoa_results
-
-        # QAOA might find better or similar solution
-        vqe_energy = vqe_results["optimal_energy"]
-        qaoa_energy = qaoa_results["optimal_energy"]
-
-        # Both should be reasonable energy values
-        assert isinstance(vqe_energy, float)
-        assert isinstance(qaoa_energy, float)
-
-    def test_algorithm_parameter_estimation(self):
-        """Test parameter counting for different algorithms"""
-        hamiltonian = Hamiltonian.from_dict({"ZZ": 1.0})
-
-        # VQE parameter estimation
-        def ansatz(params):
-            circuit = QuantumCircuit(2)
-            for i in range(len(params)):
-                circuit.ry(params[i], i % 2)
-            return circuit
-
-        vqe = VQE(hamiltonian, ansatz, client=None)
-        estimated_params = vqe._estimate_parameter_count()
-
-        # Should estimate based on number of qubits
-        assert estimated_params == 4  # 2 qubits * 2
-
-        # QAOA parameter count is deterministic
-        qaoa = QAOA(hamiltonian, p=3, client=None)
-        # QAOA has 2*p parameters
-        assert qaoa.p == 3
-
-        # QNN parameter count
-        qnn = QuantumNeuralNetwork(num_qubits=3, num_layers=2, client=None)
-        assert qnn.num_parameters == 3 * 2 * 3  # num_qubits * num_layers * 3
+        assert result.quantum.is_quantum is True
+        assert result.best_classical.is_quantum is False
+        assert 0.0 <= result.quantum.accuracy_mean <= 1.0
+        assert len(result.quantum.fold_accuracies) == 3
+        assert result.p_value_vs_best_classical is not None
+        assert "2610.42029" in result.reference
