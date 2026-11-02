@@ -22,6 +22,19 @@ from .feature_mapping import (
     pauli_feature_map,
     zz_feature_map,
 )
+from .feature_map_registry import (
+    FEATURE_MAP_REGISTRY,
+    QMES_TO_SUPERQUANTX,
+    list_feature_maps,
+    map_qmes_circuit,
+    normalize_feature_map_name,
+)
+from .feature_map_auto import (
+    FeatureMapRecommendation,
+    qmes_available,
+    recommend_feature_map,
+    resolve_feature_map,
+)
 from .optimization import (
     adam_optimizer,
     gradient_descent,
@@ -68,6 +81,15 @@ __all__ = [
     "create_feature_map",
     "pauli_feature_map",
     "zz_feature_map",
+    "FEATURE_MAP_REGISTRY",
+    "QMES_TO_SUPERQUANTX",
+    "list_feature_maps",
+    "map_qmes_circuit",
+    "normalize_feature_map_name",
+    "FeatureMapRecommendation",
+    "qmes_available",
+    "recommend_feature_map",
+    "resolve_feature_map",
 
     # Quantum utilities
     "fidelity",

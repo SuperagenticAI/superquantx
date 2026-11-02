@@ -96,6 +96,11 @@ ocean = [
     "dimod>=0.12.22",
 ]
 
+# Note: Qmes (https://github.com/tungduy1704/Qmes, arXiv:2609.04652) is an
+# optional runtime import for QuantumSVM(feature_map="auto"). It is not on
+# PyPI, and PyPI rejects direct git references in extras, so it is installed
+# manually: pip install git+https://github.com/tungduy1704/Qmes.git
+
 # Development dependencies - latest versions
 dev = [
     "pytest>=8.0.0",
@@ -266,6 +271,8 @@ module = [
     "optuna.*",
     "hyperopt.*",
     "cvxpy.*",
+    "Qmes.*",
+    "problexity.*",
 ]
 ignore_missing_imports = true
 

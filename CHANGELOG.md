@@ -11,6 +11,10 @@ Demo-readiness release: every result is computed, and every result is
 checked against a classical reference.
 
 ### Added
+- Spike: `QuantumSVM(feature_map="auto")` Qmes-style encoding selection with
+  optional runtime Qmes import (installed manually from git, not a
+  package extra) and a classical heuristic fallback
+  (`docs/design/qmes-feature-map-auto.md`).
 - `compare_to_classical` and `ComparisonResult`: benchmark any quantum
   classifier against a tuned RBF SVM and logistic regression on identical
   folds, with equal tuning budgets, per-fold preprocessing, hardware circuit

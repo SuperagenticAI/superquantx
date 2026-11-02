@@ -32,7 +32,9 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
 
     Args:
         backend: Quantum backend for circuit execution
-        feature_map: Type of quantum feature map ('ZZFeatureMap', 'PauliFeatureMap', etc.)
+        feature_map: Feature map name ('ZZFeatureMap', 'PauliFeatureMap',
+            'AmplitudeMap', 'AngleEncoding', 'ZFeatureMap'), a custom object,
+            or ``"auto"`` / ``None`` to select via the Qmes-inspired recommender.
         feature_map_reps: Number of repetitions in the feature map
         C: Regularization parameter for SVM
         gamma: Quantum kernel bandwidth. Features are multiplied by ``gamma``
@@ -41,6 +43,8 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
             Wild, 2022). ``None`` means 1.0.
         quantum_kernel: Custom quantum kernel function
         shots: Number of measurement shots
+        auto_feature_map_mode: When feature_map is auto/None, selection mode
+            (``auto``, ``qmes``, or ``heuristic``).
         **kwargs: Additional parameters
 
     Example:
@@ -48,19 +52,23 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
         >>> qsvm.fit(X_train, y_train)
         >>> predictions = qsvm.predict(X_test)
         >>> accuracy = qsvm.score(X_test, y_test)
+        >>> # Spike: automatic encoding selection (Qmes if installed, else heuristic)
+        >>> qsvm_auto = QuantumSVM(backend='simulator', feature_map='auto')
+        >>> qsvm_auto.fit(X_train, y_train)
 
     """
 
     def __init__(
         self,
         backend: str | Any,
-        feature_map: str = 'ZZFeatureMap',
+        feature_map: str | Any | None = 'ZZFeatureMap',
         feature_map_reps: int = 2,
         C: float = 1.0,
         gamma: float | None = None,
         quantum_kernel: Callable | None = None,
         shots: int = 1024,
         normalize_data: bool = True,
+        auto_feature_map_mode: str = 'auto',
         **kwargs
     ) -> None:
         super().__init__(backend=backend, shots=shots, **kwargs)
@@ -71,6 +79,7 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
         self.gamma = gamma
         self.quantum_kernel = quantum_kernel
         self.normalize_data = normalize_data
+        self.auto_feature_map_mode = auto_feature_map_mode
 
         # Classical components
         self.svm = None
@@ -79,17 +88,50 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
         # Quantum components
         self.kernel_matrix_ = None
         self.feature_map_circuit_ = None
+        self.selected_feature_map_: str | Any | None = None
+        self.feature_map_recommendation_: dict[str, Any] | None = None
 
         # Training data storage (needed for kernel computation)
         self.X_train_ = None
 
-        logger.info(f"Initialized QuantumSVM with feature_map={feature_map}, reps={feature_map_reps}")
+        logger.info(
+            f"Initialized QuantumSVM with feature_map={feature_map}, "
+            f"reps={feature_map_reps}"
+        )
 
-    def _create_feature_map(self, n_features: int) -> Any:
-        """Create the feature-map specification on the backend."""
+    def _resolve_feature_map_name(
+        self, X: np.ndarray, y: np.ndarray | None = None
+    ) -> str | Any:
+        """Resolve feature_map='auto'/None or normalize a manual string."""
+        from ..utils.feature_map_auto import resolve_feature_map
+
+        recommendation = resolve_feature_map(
+            self.feature_map,
+            X=X,
+            y=y,
+            auto_mode=self.auto_feature_map_mode,  # type: ignore[arg-type]
+            task='classification',
+        )
+        self.feature_map_recommendation_ = recommendation.as_dict()
+        self.selected_feature_map_ = recommendation.feature_map
+        if recommendation.source in ('auto', 'qmes', 'heuristic', 'default'):
+            logger.info(
+                "Auto-selected feature_map=%s via %s",
+                recommendation.feature_map,
+                recommendation.source,
+            )
+        return recommendation.feature_map
+
+    def _create_feature_map(self, n_features: int, feature_map: Any = None) -> Any:
+        """Create the selected feature map; backend errors remain visible."""
+        fm = feature_map if feature_map is not None else self.selected_feature_map_
+        if fm is None:
+            fm = self.feature_map
+        if not isinstance(fm, str):
+            return fm
         return self.backend.create_feature_map(
             n_features=n_features,
-            feature_map=self.feature_map,
+            feature_map=fm,
             reps=self.feature_map_reps,
         )
 
@@ -151,8 +193,9 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
 
         self.X_train_ = X.copy()
 
-        # Create quantum feature map
-        self.feature_map_circuit_ = self._create_feature_map(X.shape[1])
+        # Resolve auto/manual feature map, then build the circuit
+        resolved = self._resolve_feature_map_name(X, y)
+        self.feature_map_circuit_ = self._create_feature_map(X.shape[1], resolved)
 
         # Compute quantum kernel matrix
         logger.info("Computing quantum kernel matrix...")
@@ -175,6 +218,8 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
             'train_accuracy': train_accuracy,
             'n_support_vectors': self.svm.n_support_,
             'kernel_matrix_shape': self.kernel_matrix_.shape,
+            'selected_feature_map': self.selected_feature_map_,
+            'feature_map_recommendation': self.feature_map_recommendation_,
         })
 
         logger.info(f"Training completed. Accuracy: {train_accuracy:.3f}, "
@@ -319,6 +364,7 @@ class QuantumSVM(SupervisedQuantumAlgorithm):
             'C': self.C,
             'gamma': self.gamma,
             'normalize_data': self.normalize_data,
+            'auto_feature_map_mode': self.auto_feature_map_mode,
         })
         return params
 
