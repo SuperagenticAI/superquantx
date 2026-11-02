@@ -1,31 +1,24 @@
-"""SuperQuantX: Experimental Quantum AI Research Platform.
+"""SuperQuantX: experimental quantum machine learning research toolkit.
 
-⚠️ RESEARCH SOFTWARE WARNING: This is experimental research software developed by
-SuperXLab (Superagentic AI Research Division). NOT intended for production use.
-For research and educational purposes only.
+Research software, not intended for production use. One API runs circuits
+and algorithms on PennyLane, Qiskit, Cirq, Amazon Braket, pytket and a
+built-in simulator, and every algorithm reports a classical reference.
 
-Part of SuperXLab's comprehensive quantum research program - the practical implementation
-platform for validating theoretical research in:
-    🔬 Quantum-Inspired Agentic Systems: Superposition, interference, entanglement in agents
-    🔬 Quantum Neural Networks (QNNs): Hardware-validated quantum neural architectures
-    🔬 QuantumML for AI Training: Quantum-accelerated machine learning techniques
-    🔬 Quantinuum Integration: Real hardware validation on H-Series quantum computers
+Examples:
+    Classifier against tuned classical baselines (arXiv:2610.42029 protocol):
+        >>> import superquantx as sqx
+        >>> from sklearn.datasets import make_moons
+        >>> X, y = make_moons(100, noise=0.2, random_state=0)
+        >>> result = sqx.compare_to_classical(X, y, sqx.QuantumSVM(backend="simulator"))
+        >>> print(result.table())
 
-Research Examples:
-    Experimental quantum agent research:
-        >>> import superquantx as sqx  # EXPERIMENTAL
-        >>> agent = sqx.QuantumTradingAgent(strategy="quantum_portfolio", backend="simulator")
-        >>> results = agent.solve(research_data)  # Research use only
-        >>> print(f"Research findings: {results.metadata}")
+    H2 ground state, checked against exact diagonalisation:
+        >>> vqe = sqx.create_vqe_for_molecule("H2", backend="simulator")
+        >>> vqe.find_ground_state(), vqe.exact_ground_energy()
 
-    Quantum neural network experiments:
-        >>> qnn = sqx.QuantumNN(architecture='hybrid', backend='pennylane')  # EXPERIMENTAL
-        >>> qnn.fit(X_research, y_research)  # Research data only
-        >>> analysis = qnn.analyze_expressivity()  # Research analysis
-
-    Quantum algorithm benchmarking:
-        >>> qsvm = sqx.QuantumSVM(backend='simulator')  # EXPERIMENTAL
-        >>> benchmark = sqx.benchmark_algorithm(qsvm, classical_baseline)
+    Portfolio selection, checked against brute force:
+        >>> agent = sqx.QuantumPortfolioAgent(backend="simulator", n_select=3)
+        >>> agent.solve(returns).result["matches_classical_optimum"]
 """
 
 import logging
@@ -88,11 +81,14 @@ except (ImportError, AttributeError, NameError):
 from .algorithms import (
     QAOA,
     VQE,
+    BaseQuantumAlgorithm,
     HybridClassifier,
     QuantumKMeans,
+    QuantumNeuralNetwork,
     QuantumNN,
     QuantumPCA,
     QuantumSVM,
+    create_vqe_for_molecule,
 )
 from .backends import (
     BaseBackend,
@@ -332,6 +328,9 @@ __all__ = [
     "cli",
 
     # Common algorithms
+    "BaseQuantumAlgorithm",
+    "QuantumNeuralNetwork",
+    "create_vqe_for_molecule",
     "QuantumSVM",
     "QAOA",
     "VQE",
