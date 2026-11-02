@@ -1,5 +1,9 @@
 # SuperQuantX Architecture
 
+!!! warning "Unverified examples"
+    Code on this page is illustrative and partly written as fragments. Only 5 of 16 snippets run as-is against the current release. The test suite in `tests/` is the source of truth.
+
+
 This document provides a comprehensive overview of SuperQuantX's architecture, design principles, and implementation details.
 
 ## 🏗️ High-Level Architecture

@@ -1,5 +1,9 @@
 # TKET Integration
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 8 of 23 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 TKET (Quantum Toolkit) is a quantum SDK developed by Cambridge Quantum Computing (now part of Quantinuum) that provides powerful quantum circuit compilation, optimization, and execution capabilities. SuperQuantX provides comprehensive integration with TKET, enabling access to advanced quantum compilation techniques and Quantinuum's quantum hardware.
 
 ## Overview

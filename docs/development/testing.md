@@ -1,5 +1,9 @@
 # Testing Guide
 
+!!! warning "Unverified examples"
+    Code on this page is illustrative and partly written as fragments. Only 7 of 9 snippets run as-is against the current release. The test suite in `tests/` is the source of truth.
+
+
 Comprehensive testing strategy for SuperQuantX to ensure reliability, correctness, and performance of quantum algorithms and backend integrations.
 
 ## 🧪 Testing Philosophy

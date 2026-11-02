@@ -1,5 +1,9 @@
 # PennyLane Backend Integration
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 3 of 13 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 PennyLane is a cross-platform quantum machine learning library that focuses on variational quantum circuits and quantum machine learning. SuperQuantX provides seamless integration with PennyLane for quantum ML applications.
 
 ## 📋 Overview

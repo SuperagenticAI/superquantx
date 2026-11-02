@@ -1,5 +1,9 @@
 # Utilities API Reference
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 0 of 7 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 SuperQuantX provides comprehensive utility modules for optimization, visualization, benchmarking, data handling, and command-line operations. This API reference covers all utility functions and classes.
 
 ## Optimization Utilities

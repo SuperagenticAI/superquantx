@@ -1,5 +1,9 @@
 # D-Wave Ocean Integration
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 7 of 27 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 D-Wave Ocean is a suite of tools for solving optimization problems on D-Wave quantum annealing systems. Unlike gate-model quantum computers, D-Wave systems are quantum annealers designed specifically for solving optimization problems formulated as Quadratic Unconstrained Binary Optimization (QUBO) or Ising models.
 
 ## Overview

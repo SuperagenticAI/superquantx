@@ -1,5 +1,9 @@
 # Cirq Backend Integration
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 3 of 15 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 Cirq is Google's open-source quantum computing framework that focuses on near-term quantum devices and NISQ algorithms. SuperQuantX integrates with Cirq to provide access to Google's quantum ecosystem and advanced circuit optimization features.
 
 ## Overview

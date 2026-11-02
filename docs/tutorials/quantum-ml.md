@@ -1,5 +1,9 @@
 # Quantum Machine Learning Tutorial
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 1 of 8 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 Learn how to apply quantum computing to machine learning problems using SuperQuantX. This tutorial covers the fundamentals of quantum machine learning (QML) and provides hands-on examples you can run today.
 
 ## 🎯 Learning Objectives

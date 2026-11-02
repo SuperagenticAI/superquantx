@@ -1,5 +1,9 @@
 # Qiskit Backend Integration
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 5 of 18 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 Qiskit is IBM's open-source quantum computing framework that provides access to quantum simulators and real IBM quantum hardware. SuperQuantX integrates seamlessly with Qiskit to provide access to IBM's quantum ecosystem.
 
 ## Overview

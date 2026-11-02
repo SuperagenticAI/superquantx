@@ -1,5 +1,9 @@
 # Python Simulator Backend
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 3 of 26 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 The Python Simulator backend provides a pure Python implementation of quantum circuit simulation that doesn't require external quantum computing libraries. This backend is ideal for testing, educational purposes, and as a fallback when other quantum backends are unavailable.
 
 ## Overview

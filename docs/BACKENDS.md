@@ -1,5 +1,9 @@
 # SuperQuantX Backend Documentation
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 2 of 13 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](getting-started/quickstart.md), the [Showcase](showcase.md) and the [Backends guide](user-guide/backends.md).
+
+
 ## Overview
 
 SuperQuantX provides a unified API that works across all major quantum computing platforms. This documentation covers all supported backends and their specific features.

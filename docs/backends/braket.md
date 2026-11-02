@@ -1,5 +1,9 @@
 # Amazon Braket Backend Integration
 
+!!! warning "Unverified examples"
+    This page predates the current release and parts of it describe planned or older API. Only 7 of 14 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+
+
 Amazon Braket is AWS's fully managed quantum computing service that provides access to quantum computers from multiple hardware providers. SuperQuantX integrates with Braket to enable cloud-based quantum computing with enterprise-grade security and scalability.
 
 ## Overview
