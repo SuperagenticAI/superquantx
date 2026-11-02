@@ -15,7 +15,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-FEATURE_MAPS = ('ZZFeatureMap', 'PauliFeatureMap', 'AngleEncoding')
+FEATURE_MAPS = ('ZZFeatureMap', 'ZFeatureMap', 'PauliFeatureMap', 'AngleEncoding')
 
 _PAULI = {
     'I': np.eye(2, dtype=complex),
@@ -261,7 +261,8 @@ class BaseBackend(ABC):
         """Return a feature-map specification used by :meth:`compute_kernel_matrix`.
 
         Supported maps: ``ZZFeatureMap`` (Havlicek et al. 2019, linear
-        entanglement), ``PauliFeatureMap`` (RX/RY/RZ plus CNOT chain) and
+        entanglement), ``ZFeatureMap`` (the same without entanglement),
+        ``PauliFeatureMap`` (RX/RY/RZ plus CNOT chain) and
         ``AngleEncoding`` (one RY per feature).
         """
         if feature_map not in FEATURE_MAPS:
@@ -287,6 +288,10 @@ class BaseBackend(ABC):
                     circuit = self.add_gate(circuit, 'CNOT', [i, i + 1])
                     circuit = self.add_gate(circuit, 'RZ', i + 1, [phi])
                     circuit = self.add_gate(circuit, 'CNOT', [i, i + 1])
+            elif spec.name == 'ZFeatureMap':
+                for i in range(n):
+                    circuit = self.add_gate(circuit, 'H', i)
+                    circuit = self.add_gate(circuit, 'RZ', i, [2.0 * x[i]])
             elif spec.name == 'PauliFeatureMap':
                 for i in range(n):
                     circuit = self.add_gate(circuit, 'RX', i, [x[i]])

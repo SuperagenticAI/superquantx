@@ -147,11 +147,11 @@ class TestGateModelBackends:
         backend = _backend_or_skip(name, **kwargs)
         X = np.array([[0.1, 0.2, 0.3], [0.7, -0.4, 1.1]])
         off_diag = {}
-        for fm in ('ZZFeatureMap', 'PauliFeatureMap', 'AngleEncoding'):
+        for fm in ('ZZFeatureMap', 'ZFeatureMap', 'PauliFeatureMap', 'AngleEncoding'):
             K = backend.compute_kernel_matrix(X, X, feature_map=fm)
             np.testing.assert_allclose(np.diag(K), 1.0, atol=1e-6)
             off_diag[fm] = K[0, 1]
-        assert len({round(v, 6) for v in off_diag.values()}) == 3
+        assert len({round(float(v), 6) for v in off_diag.values()}) == 4
         # Same map through QuantumSVM's spec path
         spec = backend.create_feature_map(3, 'AngleEncoding', reps=2)
         assert backend.compute_kernel_matrix(X, X, feature_map=spec)[0, 1] == pytest.approx(
