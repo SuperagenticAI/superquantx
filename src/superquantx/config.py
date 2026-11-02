@@ -296,19 +296,29 @@ def configure(
         setup_logging()
 
 def setup_logging() -> None:
-    """Setup logging configuration."""
-    level = getattr(logging, config.get("logging.level", "INFO").upper())
-    format_str = config.get("logging.format")
+    """Configure the ``superquantx`` package logger from the current config.
+
+    Only the library's own logger is touched; the root logger and other
+    libraries' loggers (Qiskit, PennyLane, ...) are left alone. This is not
+    called on import: applications opt in via :func:`configure_logging` or
+    :func:`configure`.
+    """
+    level = getattr(logging, str(config.get("logging.level", "WARNING")).upper())
+    format_str = config.get("logging.format") or "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     log_file = config.get("logging.file")
 
-    # Configure root logger
-    logging.basicConfig(
-        level=level,
-        format=format_str,
-        filename=log_file,
-        filemode="a" if log_file else None,
-        force=True,
-    )
+    pkg_logger = logging.getLogger("superquantx")
+    for handler in list(pkg_logger.handlers):
+        if getattr(handler, "_superquantx_handler", False):
+            pkg_logger.removeHandler(handler)
+
+    handler: logging.Handler
+    handler = logging.FileHandler(log_file, mode="a") if log_file else logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(format_str))
+    handler._superquantx_handler = True  # type: ignore[attr-defined]
+    pkg_logger.addHandler(handler)
+    pkg_logger.setLevel(level)
+
 
 def get_platform_config(platform: str) -> dict[str, Any]:
     """Get configuration for a specific platform.
@@ -735,5 +745,6 @@ def profile(name: str):
     """
     return ProfileContext(name)
 
-# Initialize logging on import
-setup_logging()
+# A library must not configure logging for the application: only attach a
+# NullHandler so that "No handler found" warnings are avoided.
+logging.getLogger("superquantx").addHandler(logging.NullHandler())
