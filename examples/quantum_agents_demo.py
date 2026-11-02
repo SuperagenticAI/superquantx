@@ -1,183 +1,91 @@
-#!/usr/bin/env python3
-"""
-SuperQuantX Quantum Agentic AI Demo
+"""Quantum agents demo: every quantum answer next to an exact classical check.
 
-This example demonstrates the new quantum agents capabilities,
-showcasing autonomous quantum-enhanced AI systems that can
-make decisions and solve complex problems independently.
+Run:
+    uv run python examples/quantum_agents_demo.py
+
+What it does (all circuits are classically simulated):
+1. QuantumPortfolioAgent picks 3 of 6 assets with CVaR-VQE and is checked
+   against brute force over all selections and a classical Markowitz solution.
+2. QuantumClassificationAgent trains a quantum-kernel SVM and benchmarks it
+   against a tuned RBF SVM and logistic regression on identical CV folds.
+
+Set SQX_BACKEND to choose the backend (default: pennylane, falls back to the
+built-in simulator if PennyLane is not installed). The script exits non-zero
+if any step fails.
 """
+
+import os
+import sys
+import time
+import warnings
 
 import numpy as np
+from sklearn.datasets import make_moons
 
 import superquantx as sqx
 
+warnings.filterwarnings("ignore")
 
-def demo_quantum_trading_agent():
-    """Demonstrate quantum trading agent capabilities."""
-    print("🤖 Quantum Trading Agent Demo")
-    print("=" * 50)
 
-    # Create a quantum trading agent
-    trader = sqx.QuantumTradingAgent(
-        backend='simulator',
-        strategy='quantum_portfolio',
-        risk_tolerance=0.3,
-        markets=['crypto', 'stocks']
-    )
-
-    # Deploy the agent
-    print("Deploying quantum trading agent...")
-    result = trader.deploy()
-
-    if result.result:
-        performance = result.result['performance']
-        quantum_advantage = result.result['quantum_advantage']
-
-        print("✅ Agent deployed successfully!")
-        print(f"Expected Return: {performance['expected_return']:.2%}")
-        print(f"Risk Level: {performance['risk']:.2%}")
-        print(f"Sharpe Ratio: {performance['sharpe_ratio']:.2f}")
-        print(f"Quantum Advantage: {quantum_advantage:.2%}")
-        print(f"Execution Time: {result.execution_time:.2f}s")
-    else:
-        print(f"❌ Deployment failed: {result.error}")
-
-    print()
-
-def demo_quantum_research_agent():
-    """Demonstrate quantum research agent capabilities."""
-    print("🔬 Quantum Research Agent Demo")
-    print("=" * 50)
-
-    # Create a quantum research agent for materials science
-    researcher = sqx.QuantumResearchAgent(
-        backend='simulator',
-        domain='materials_science',
-        hypothesis_generation=True,
-        experiment_design=True
-    )
-
-    # Investigate a research question
-    print("Investigating superconductor research question...")
-    result = researcher.investigate(
-        research_question="Novel room-temperature superconductor discovery",
-        constraints={"budget": 500000, "timeline": "18_months"}
-    )
-
-    if result.result:
-        research_plan = result.result['research_plan']
-        hypothesis = result.result['hypothesis']
-        experiments = result.result['experiments']
-
-        print("✅ Research investigation completed!")
-        print(f"Research Domain: {result.result['domain']}")
-        print(f"Timeline: {research_plan['timeline']}")
-        print(f"Budget Estimate: ${research_plan['budget_estimate']:,}")
-        print(f"Quantum Simulations: {research_plan['quantum_simulations_required']}")
-        print(f"Primary Hypothesis: {hypothesis['primary_hypothesis'][:100]}...")
-        print(f"Experiments Designed: {len(experiments)}")
-        print(f"Execution Time: {result.execution_time:.2f}s")
-    else:
-        print(f"❌ Investigation failed: {result.error}")
-
-    print()
-
-def demo_quantum_optimization_agent():
-    """Demonstrate quantum optimization agent capabilities."""
-    print("⚡ Quantum Optimization Agent Demo")
-    print("=" * 50)
-
-    # Create a quantum optimization agent
-    optimizer = sqx.QuantumOptimizationAgent(
-        backend='simulator',
-        problem_type='combinatorial'
-    )
-
-    # Create a simple optimization problem (traveling salesman)
-    problem_data = {
-        'num_cities': 4,
-        'distances': np.random.rand(4, 4)
-    }
-
-    print("Solving traveling salesman problem...")
-    result = optimizer.solve(problem_data)
-
-    if result.result:
-        print("✅ Optimization completed!")
-        print("Problem Type: combinatorial")
-        print(f"Algorithm Used: {result.metadata.get('algorithm_used', 'Unknown')}")
-        print(f"Execution Time: {result.execution_time:.2f}s")
-    else:
-        print(f"❌ Optimization failed: {result.error}")
-
-    print()
-
-def demo_traditional_quantum_ml():
-    """Demonstrate traditional quantum ML algorithms for comparison."""
-    print("📊 Traditional Quantum ML Demo (For Comparison)")
-    print("=" * 50)
-
-    # Generate sample data
-    np.random.seed(42)
-    X = np.random.rand(100, 4)
-    y = np.random.randint(0, 2, 100)
-
-    # Train a quantum SVM
-    print("Training Quantum SVM...")
-    qsvm = sqx.QuantumSVM(backend='simulator')
-    qsvm.fit(X, y)
-
-    # Get predictions
-    predictions = qsvm.predict(X[:10])
-    accuracy = qsvm.score(X, y)
-
-    print("✅ Quantum SVM trained!")
-    print(f"Accuracy: {accuracy:.2%}")
-    print(f"Sample predictions: {predictions[:5]}")
-
-    print()
-
-def main():
-    """Run all quantum agent demos."""
-    print("🚀 SuperQuantX: Quantum Agentic AI Platform Demo")
-    print("Building the Foundation for Quantum Agentic AI")
-    print("=" * 60)
-    print()
-
-    print("This demo showcases autonomous quantum agents that combine")
-    print("quantum computing with AI to solve complex real-world problems.")
-    print()
-
+def pick_backend() -> str:
+    name = os.environ.get("SQX_BACKEND", "pennylane")
     try:
-        # Demo quantum agents (the new hotness!)
-        demo_quantum_trading_agent()
-        demo_quantum_research_agent()
-        demo_quantum_optimization_agent()
+        sqx.get_backend(name)
+        return name
+    except Exception as exc:  # backend extra not installed
+        print(f"Backend '{name}' unavailable ({exc}); using 'simulator'")
+        return "simulator"
 
-        # Demo traditional quantum ML (still supported)
-        demo_traditional_quantum_ml()
 
-        print("🎯 Summary")
-        print("=" * 50)
-        print("✅ Quantum Trading Agent: Autonomous financial optimization")
-        print("✅ Quantum Research Agent: Scientific discovery acceleration")
-        print("✅ Quantum Optimization Agent: General problem solving")
-        print("✅ Traditional Quantum ML: Core algorithm support")
-        print()
-        print("SuperQuantX bridges quantum computing and agentic AI,")
-        print("enabling developers to deploy quantum-enhanced intelligent")
-        print("systems in minutes, not months.")
-        print()
-        print("🌟 Ready to build quantum agents? Try:")
-        print("   pip install superquantx")
-        print("   import superquantx as sqx")
-        print("   agent = sqx.QuantumTradingAgent()")
+def portfolio_demo(backend: str) -> bool:
+    print("\n1. QuantumPortfolioAgent: choose 3 of 6 assets")
+    print("-" * 60)
+    rng = np.random.default_rng(3)
+    mu = np.array([0.010, 0.008, 0.012, 0.006, 0.009, 0.011])
+    A = rng.normal(size=(6, 6)) * 0.01
+    returns = rng.multivariate_normal(mu, A @ A.T + np.eye(6) * 1e-4, size=250)
 
-    except Exception as e:
-        print(f"❌ Demo failed: {e}")
-        print("This is expected if quantum backends are not fully configured.")
-        print("The agents are designed to work with actual quantum hardware")
-        print("and simulators when properly set up.")
+    agent = sqx.QuantumPortfolioAgent(backend=backend, n_select=3, seed=0)
+    res = agent.solve(returns)
+    if res.error:
+        print(f"FAILED: {res.error}")
+        return False
+    r = res.result
+    mk = r["markowitz_reference"]
+    print(f"   quantum (CVaR-VQE) selection : {r['selected_assets']}  objective {r['objective']:.6f}")
+    print(f"   brute-force optimum          : {r['classical_selected_assets']}  objective {r['classical_objective']:.6f}")
+    print(f"   matches exact optimum        : {r['matches_classical_optimum']}"
+          f"  (P(optimum) in final state = {r['probability_of_optimum']:.2f})")
+    print(f"   quantum portfolio            : return {r['expected_return']:.4f}, risk {r['risk']:.4f}")
+    print(f"   classical Markowitz weights  : return {mk['expected_return']:.4f}, risk {mk['risk']:.4f}"
+          f"  {np.round(mk['weights'], 2)}")
+    print(f"   time {res.execution_time:.1f}s on {backend}")
+    return True
+
+
+def classification_demo(backend: str) -> bool:
+    print("\n2. QuantumClassificationAgent: make_moons, 5-fold CV")
+    print("-" * 60)
+    X, y = make_moons(n_samples=100, noise=0.2, random_state=0)
+    agent = sqx.QuantumClassificationAgent(backend=backend, seed=0)
+    res = agent.solve((X, y))
+    if res.error:
+        print(f"FAILED: {res.error}")
+        return False
+    print(res.result["benchmark"].table())
+    print(f"   time {res.execution_time:.1f}s on {backend}")
+    return True
+
+
+def main() -> int:
+    print(f"SuperQuantX {sqx.__version__}: quantum agents with classical baselines")
+    backend = pick_backend()
+    start = time.time()
+    ok = portfolio_demo(backend) and classification_demo(backend)
+    print("\n" + ("All agent demos completed" if ok else "Agent demo FAILED")
+          + f" in {time.time() - start:.1f}s")
+    return 0 if ok else 1
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
