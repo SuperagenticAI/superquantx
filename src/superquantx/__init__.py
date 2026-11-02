@@ -179,6 +179,8 @@ except ImportError:
     benchmark_algorithm = None
     QuantumFeatureMap = None
 
+from .benchmarks import ComparisonResult, compare_to_classical
+
 # Set up logging
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
@@ -401,5 +403,7 @@ __all__ = [
     "optimize_circuit",
     "visualize_results",
     "benchmark_algorithm",
+    "compare_to_classical",
+    "ComparisonResult",
     "QuantumFeatureMap",
 ]
