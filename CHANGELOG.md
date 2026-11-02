@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Spike: `QuantumSVM(feature_map="auto")` Qmes-style encoding selection with
-  optional Qmes extra and a classical heuristic fallback
+  optional runtime Qmes import (installed manually from git, not a
+  package extra) and a classical heuristic fallback
   (`docs/design/qmes-feature-map-auto.md`).
 
 ### Planned

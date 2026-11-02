@@ -287,9 +287,9 @@ def recommend_feature_map(
                 )
         elif mode == "qmes":
             raise ImportError(
-                "Qmes is not installed. Install the optional extra: "
-                'pip install "superquantx[qmes]" '
-                "(or pip install git+https://github.com/tungduy1704/Qmes.git)"
+                "Qmes is not installed. It is an optional runtime import "
+                "(not on PyPI). Install it manually with: "
+                "pip install git+https://github.com/tungduy1704/Qmes.git"
             )
 
     return recommend_feature_map_heuristic(X, y)

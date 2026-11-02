@@ -3,6 +3,42 @@
 Status: spike on branch `spike/qmes-feature-map-auto`.
 Inspired by [Qmes](https://github.com/tungduy1704/Qmes) ([arXiv:2609.04652](https://arxiv.org/abs/2609.04652)).
 
+## Paper scope and limits (read before demoing)
+
+The Qmes results in arXiv:2609.04652 hold only within this scope:
+
+- **7 circuits**: a fixed pool (unit, SRx, RY, HERx, RY_CX, ZFM, HD),
+  implemented in the bundled Qsun simulator, not in SuperQuantX backends.
+- **4 qubits**: every dataset is reduced by PCA to at most 4 components and
+  rescaled before kernel evaluation, so rankings describe 4-qubit circuits.
+- **Noiseless simulation**: all circuit scores come from noiseless
+  state-vector simulation. Hardware noise and noise models are not modelled,
+  so a recommendation says nothing about performance on real QPUs.
+- Supervised tabular data only (labels required), meta-features computed on
+  at most 600 subsampled points, fixed non-trainable kernels.
+- Reported gains (2.2x lower mean regret for classification, 4.2x for
+  regression versus a non-adaptive baseline) are leave-one-out results on the
+  authors' 105 classification and 86 regression benchmark datasets.
+
+SuperQuantX maps the Qmes circuit names onto its own, differently shaped
+feature maps (see below), so the paper's regret numbers do not transfer
+directly to SuperQuantX kernels. Treat `feature_map="auto"` as a heuristic
+starting point, not a validated optimum.
+
+## Installing Qmes (optional)
+
+Qmes is an optional runtime import, not a package extra. It is not published
+on PyPI, and PyPI (and hatchling) reject direct git references in extras, so
+SuperQuantX does not declare it as a dependency. Install it manually if you
+want the pre-trained recommender:
+
+```bash
+pip install git+https://github.com/tungduy1704/Qmes
+```
+
+Without Qmes, `feature_map="auto"` (mode `auto`) uses the built-in classical
+heuristic. Tests run without Qmes installed.
+
 ## Why
 
 QuantumSVM performance depends strongly on the encoding circuit. Exhaustive
@@ -31,7 +67,7 @@ path that recommends a name from SuperQuantX's existing feature-map registry.
 
 3. **Selector** (`utils/feature_map_auto.py`)
    - `mode="auto"`: try Qmes if installed, else heuristic.
-   - `mode="qmes"`: require optional `[qmes]` extra.
+   - `mode="qmes"`: require the optional Qmes package (runtime import only).
    - `mode="heuristic"`: local meta-features only (no problexity, no quantum).
    - Heuristic uses sample/feature ratio, mean |correlation|, class imbalance,
      and a cheap logistic-regression separability proxy.
@@ -85,8 +121,7 @@ print(qsvm.feature_map_recommendation_)
 Optional Qmes path:
 
 ```bash
-pip install "superquantx[qmes]"
-# or: pip install "git+https://github.com/tungduy1704/Qmes.git"
+pip install git+https://github.com/tungduy1704/Qmes
 ```
 
 ```python
