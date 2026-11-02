@@ -100,6 +100,10 @@ ocean = [
 # optional runtime import for QuantumSVM(feature_map="auto"). It is not on
 # PyPI, and PyPI rejects direct git references in extras, so it is installed
 # manually: pip install git+https://github.com/tungduy1704/Qmes.git
+# MCP server for AI assistants (superquantx-mcp, python -m superquantx.mcp)
+mcp = [
+    "mcp>=2.3,<3",
+]
 
 # Development dependencies - latest versions
 dev = [
@@ -147,6 +151,7 @@ Changelog = "https://github.com/SuperagenticAI/superquantx/blob/main/CHANGELOG.m
 
 [project.scripts]
 superquantx = "superquantx.cli:main"
+superquantx-mcp = "superquantx.mcp.server:main"
 
 [tool.hatch.version]
 path = "src/superquantx/version.py"

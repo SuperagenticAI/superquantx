@@ -158,6 +158,7 @@ nav:
     - Quantum Backends: user-guide/backends.md
     - Algorithms: user-guide/algorithms.md
     - Benchmarking: user-guide/benchmarking.md
+    - MCP Server for AI Assistants: mcp.md
   - Tutorials:
     - Basic Quantum Computing: tutorials/basic-quantum.md
     - Quantum Machine Learning: tutorials/quantum-ml.md
