@@ -96,6 +96,11 @@ ocean = [
     "dimod>=0.12.22",
 ]
 
+# MCP server for AI assistants (superquantx-mcp, python -m superquantx.mcp)
+mcp = [
+    "mcp>=2.3,<3",
+]
+
 # Development dependencies - latest versions
 dev = [
     "pytest>=8.0.0",
@@ -141,6 +146,7 @@ Changelog = "https://github.com/SuperagenticAI/superquantx/blob/main/CHANGELOG.m
 
 [project.scripts]
 superquantx = "superquantx.cli:main"
+superquantx-mcp = "superquantx.mcp.server:main"
 
 [tool.hatch.version]
 path = "src/superquantx/version.py"
