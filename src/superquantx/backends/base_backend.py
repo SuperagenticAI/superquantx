@@ -502,8 +502,8 @@ class BaseBackend(ABC):
                    quantum_layers: list[dict], classical_layers: list[dict],
                    encoding: str, measurement: str, shots: int) -> np.ndarray:
         """Execute quantum neural network."""
-        input_data.shape[0]
-        n_qubits = len(weights) // len(quantum_layers) if quantum_layers else 1
+        # Each variational layer holds an RY and an RZ angle per qubit.
+        n_qubits = len(weights) // (2 * len(quantum_layers)) if quantum_layers else input_data.shape[1]
 
         # Get expected output size from classical layers
         expected_output_size = None
@@ -516,10 +516,7 @@ class BaseBackend(ABC):
 
         outputs = []
         for sample in input_data:
-            # Create circuit
-            circuit = self.create_circuit(n_qubits)
-
-            # Encode input data
+            # Encode input data into a fresh circuit
             circuit = self.encode_data_point(sample, encoding, n_qubits)
 
             # Add variational layers
@@ -539,7 +536,6 @@ class BaseBackend(ABC):
                 result = self._result_to_probabilities(result)
 
             # Apply classical layers if present
-            len(result)
             if classical_layers and expected_output_size:
                 # Simple linear transformation to get desired output size
                 if len(result) != expected_output_size:

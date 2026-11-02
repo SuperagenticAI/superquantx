@@ -369,11 +369,14 @@ class OptimizationQuantumAlgorithm(BaseQuantumAlgorithm):
         self.optimal_value_ = None
         self.optimization_history_ = []
 
-    def optimize(self, objective_function, initial_params: np.ndarray | None = None, **kwargs) -> QuantumResult:
+    def optimize(self, objective_function=None, initial_params: np.ndarray | None = None, **kwargs) -> QuantumResult:
         """Optimize objective function.
 
+        Failures are reported in ``QuantumResult.error`` (and ``result`` is None);
+        callers should check it.
+
         Args:
-            objective_function: Function to optimize
+            objective_function: Function to optimize (None uses the algorithm's own)
             initial_params: Initial parameter values
             **kwargs: Additional optimization parameters
 
@@ -389,7 +392,7 @@ class OptimizationQuantumAlgorithm(BaseQuantumAlgorithm):
             return QuantumResult(
                 result=result,
                 metadata={
-                    'converged': True,
+                    'converged': bool(result.get('success', True)) if isinstance(result, dict) else True,
                     'n_iterations': len(self.optimization_history_),
                     'final_cost': self.optimal_value_,
                 },

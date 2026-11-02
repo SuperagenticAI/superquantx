@@ -106,66 +106,6 @@ class QuantumNN(SupervisedQuantumAlgorithm):
         else:
             return n_features
 
-    def _create_encoding_layer(self, x: np.ndarray) -> Any:
-        """Create data encoding quantum layer."""
-        try:
-            if hasattr(self.backend, 'create_encoding_layer'):
-                return self.backend.create_encoding_layer(
-                    data=x,
-                    encoding=self.encoding,
-                    n_qubits=self.n_qubits
-                )
-            else:
-                return self._fallback_encoding(x)
-        except Exception as e:
-            logger.error(f"Failed to create encoding layer: {e}")
-            return self._fallback_encoding(x)
-
-    def _fallback_encoding(self, x: np.ndarray) -> Any:
-        """Fallback data encoding implementation."""
-        logger.warning("Using fallback data encoding")
-        return None
-
-    def _create_variational_layer(self, params: np.ndarray, layer_idx: int) -> Any:
-        """Create parameterized variational quantum layer."""
-        try:
-            if hasattr(self.backend, 'create_variational_layer'):
-                return self.backend.create_variational_layer(
-                    params=params,
-                    layer_idx=layer_idx,
-                    entanglement=self.entanglement,
-                    n_qubits=self.n_qubits
-                )
-            else:
-                return self._fallback_variational_layer(params, layer_idx)
-        except Exception as e:
-            logger.error(f"Failed to create variational layer {layer_idx}: {e}")
-            return self._fallback_variational_layer(params, layer_idx)
-
-    def _fallback_variational_layer(self, params: np.ndarray, layer_idx: int) -> Any:
-        """Fallback variational layer implementation."""
-        logger.warning(f"Using fallback variational layer {layer_idx}")
-        return None
-
-    def _create_measurement_layer(self) -> Any:
-        """Create measurement layer."""
-        try:
-            if hasattr(self.backend, 'create_measurement_layer'):
-                return self.backend.create_measurement_layer(
-                    measurement=self.measurement,
-                    n_qubits=self.n_qubits
-                )
-            else:
-                return self._fallback_measurement()
-        except Exception as e:
-            logger.error(f"Failed to create measurement layer: {e}")
-            return self._fallback_measurement()
-
-    def _fallback_measurement(self) -> Any:
-        """Fallback measurement implementation."""
-        logger.warning("Using fallback measurement layer")
-        return None
-
     def _build_network(self) -> None:
         """Build the complete quantum neural network."""
         logger.info(f"Building {self.architecture} quantum neural network")
@@ -175,7 +115,8 @@ class QuantumNN(SupervisedQuantumAlgorithm):
         self.n_params = self.n_layers * params_per_layer
 
         # Initialize weights
-        self.weights = np.random.uniform(-np.pi, np.pi, self.n_params)
+        rng = np.random.default_rng(getattr(self, 'seed', None))
+        self.weights = rng.uniform(-np.pi, np.pi, self.n_params)
 
         # Build network layers based on architecture
         if self.architecture == 'pure':
@@ -223,78 +164,81 @@ class QuantumNN(SupervisedQuantumAlgorithm):
         """Build variational quantum circuit network."""
         self._build_pure_quantum_network()
 
-    def _forward_pass(self, x: np.ndarray, weights: np.ndarray) -> np.ndarray:
-        """Perform forward pass through the quantum neural network.
+    _READOUT_SCALE = 3.0
 
-        Args:
-            x: Input data
-            weights: Network weights
+    def _circuit_outputs(self, x: np.ndarray, weights: np.ndarray) -> np.ndarray:
+        """Raw circuit outputs: per-qubit <Z> (or probabilities) for each sample."""
+        return np.asarray(self.backend.execute_qnn(
+            input_data=x,
+            weights=weights,
+            quantum_layers=self.quantum_layers,
+            classical_layers=[],
+            encoding=self.encoding,
+            measurement=self.measurement,
+            shots=self.shots,
+        ), dtype=float)
 
-        Returns:
-            Network output
+    def _readout(self, z: np.ndarray) -> np.ndarray:
+        """Map circuit outputs to model outputs.
 
+        Classification: softmax over the first ``n_classes`` outputs (scaled).
+        Regression: the first output.
         """
-        try:
-            if hasattr(self.backend, 'execute_qnn'):
-                result = self.backend.execute_qnn(
-                    input_data=x,
-                    weights=weights,
-                    quantum_layers=self.quantum_layers,
-                    classical_layers=self.classical_layers,
-                    encoding=self.encoding,
-                    measurement=self.measurement,
-                    shots=self.shots
-                )
-                return result
-            else:
-                return self._fallback_forward_pass(x, weights)
-        except Exception as e:
-            logger.error(f"Forward pass failed: {e}")
-            return self._fallback_forward_pass(x, weights)
+        if self.task_type == 'classification':
+            k = self.n_classes_
+            if z.shape[1] < k:
+                z = np.pad(z, ((0, 0), (0, k - z.shape[1])))
+            logits = self._READOUT_SCALE * z[:, :k]
+            logits -= logits.max(axis=1, keepdims=True)
+            e = np.exp(logits)
+            return e / e.sum(axis=1, keepdims=True)
+        return z[:, :1]
 
-    def _fallback_forward_pass(self, x: np.ndarray, weights: np.ndarray) -> np.ndarray:
-        """Fallback forward pass implementation."""
-        logger.warning("Using fallback forward pass")
-        batch_size = x.shape[0]
-        output_size = self.n_classes_ if self.task_type == 'classification' else 1
-        return np.random.random((batch_size, output_size))
+    def _forward_pass(self, x: np.ndarray, weights: np.ndarray) -> np.ndarray:
+        """Forward pass. Backend errors propagate; there is no random fallback."""
+        return self._readout(self._circuit_outputs(x, weights))
 
     def _compute_loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
         """Compute loss function."""
         if self.task_type == 'classification':
-            # Cross-entropy loss
-            y_pred = np.clip(y_pred, 1e-15, 1 - 1e-15)  # Avoid log(0)
-            if len(y_true.shape) == 1:
-                # Convert to one-hot if needed
-                y_true_oh = np.zeros((len(y_true), self.n_classes_))
-                y_true_oh[np.arange(len(y_true)), y_true.astype(int)] = 1
-                y_true = y_true_oh
-            return -np.mean(np.sum(y_true * np.log(y_pred), axis=1))
-        else:
-            # Mean squared error for regression
-            return np.mean((y_true - y_pred.flatten()) ** 2)
+            y_pred = np.clip(y_pred, 1e-15, 1 - 1e-15)
+            y_true_oh = self._one_hot(y_true)
+            return float(-np.mean(np.sum(y_true_oh * np.log(y_pred), axis=1)))
+        return float(np.mean((y_true - y_pred.flatten()) ** 2))
+
+    def _one_hot(self, y: np.ndarray) -> np.ndarray:
+        y = np.asarray(y)
+        if y.ndim == 2:
+            return y
+        oh = np.zeros((len(y), self.n_classes_))
+        oh[np.arange(len(y)), y.astype(int)] = 1
+        return oh
 
     def _compute_gradients(self, x: np.ndarray, y_true: np.ndarray, weights: np.ndarray) -> np.ndarray:
-        """Compute gradients using parameter-shift rule."""
+        """Exact loss gradient: parameter-shift on circuit outputs, chain rule through the readout.
+
+        Each weight drives one RY or RZ gate, so d<O>/dθ = (<O>(θ+π/2) - <O>(θ-π/2)) / 2.
+        """
+        z = self._circuit_outputs(x, weights)
+        n = len(x)
+        if self.task_type == 'classification':
+            p = self._readout(z)
+            dL_dz = np.zeros_like(z)
+            k = min(self.n_classes_, z.shape[1])
+            dL_dz[:, :k] = (self._READOUT_SCALE * (p - self._one_hot(y_true)) / n)[:, :k]
+        else:
+            dL_dz = np.zeros_like(z)
+            dL_dz[:, 0] = 2.0 * (z[:, 0] - np.asarray(y_true, dtype=float)) / n
+
         gradients = np.zeros_like(weights)
         shift = np.pi / 2
-
         for i in range(len(weights)):
-            # Forward shift
-            weights_plus = weights.copy()
-            weights_plus[i] += shift
-            y_pred_plus = self._forward_pass(x, weights_plus)
-            loss_plus = self._compute_loss(y_true, y_pred_plus)
-
-            # Backward shift
-            weights_minus = weights.copy()
-            weights_minus[i] -= shift
-            y_pred_minus = self._forward_pass(x, weights_minus)
-            loss_minus = self._compute_loss(y_true, y_pred_minus)
-
-            # Gradient via parameter-shift rule
-            gradients[i] = 0.5 * (loss_plus - loss_minus)
-
+            w_plus = weights.copy()
+            w_plus[i] += shift
+            w_minus = weights.copy()
+            w_minus[i] -= shift
+            dz = 0.5 * (self._circuit_outputs(x, w_plus) - self._circuit_outputs(x, w_minus))
+            gradients[i] = float(np.sum(dL_dz * dz))
         return gradients
 
     def _update_weights(self, gradients: np.ndarray) -> None:

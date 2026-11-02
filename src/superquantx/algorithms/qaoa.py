@@ -11,10 +11,34 @@ from typing import Any
 import numpy as np
 from scipy.optimize import minimize
 
+from ..backends.base_backend import maxcut_values
 from .base_algorithm import OptimizationQuantumAlgorithm
 
 
 logger = logging.getLogger(__name__)
+
+
+def brute_force_maxcut(adjacency: np.ndarray) -> tuple[np.ndarray, float]:
+    """Classical exact MaxCut by enumerating all 2^n partitions.
+
+    Returns the best bitstring (entry i is the side of node i) and its cut value.
+    Practical up to roughly 20 nodes.
+    """
+    W = np.asarray(adjacency, dtype=float)
+    n = W.shape[0]
+    values = maxcut_values(W)
+    best = int(np.argmax(values))
+    bits = np.array([(best >> (n - 1 - i)) & 1 for i in range(n)])
+    return bits, float(values[best])
+
+
+def cut_value(adjacency: np.ndarray, bits: np.ndarray) -> float:
+    """Cut value of a partition given as a 0/1 array."""
+    W = np.asarray(adjacency, dtype=float)
+    bits = np.asarray(bits).astype(int)
+    diff = bits[:, None] != bits[None, :]
+    return float(np.sum(np.triu(W, 1) * diff))
+
 
 class QAOA(OptimizationQuantumAlgorithm):
     """Quantum Approximate Optimization Algorithm for combinatorial optimization.
@@ -59,11 +83,13 @@ class QAOA(OptimizationQuantumAlgorithm):
         optimizer: str = 'COBYLA',
         shots: int = 1024,
         maxiter: int = 1000,
+        n_restarts: int = 3,
         **kwargs
     ) -> None:
         super().__init__(backend=backend, shots=shots, **kwargs)
 
         self.p = p
+        self.n_restarts = n_restarts
         self.problem_hamiltonian = problem_hamiltonian
         self.mixer_hamiltonian = mixer_hamiltonian or self._default_mixer
         self.initial_state = initial_state
@@ -82,112 +108,36 @@ class QAOA(OptimizationQuantumAlgorithm):
         logger.info(f"Initialized QAOA with p={p}, optimizer={optimizer}")
 
     def _default_mixer(self, beta: float) -> Any:
-        """Default X-mixer Hamiltonian."""
-        if hasattr(self.backend, 'create_mixer_hamiltonian'):
-            return self.backend.create_mixer_hamiltonian(beta, self.n_qubits)
-        else:
-            return self._fallback_mixer(beta)
-
-    def _fallback_mixer(self, beta: float) -> Any:
-        """Fallback mixer implementation."""
-        logger.warning("Using fallback mixer implementation")
-        return None
-
-    def _create_initial_state(self) -> Any:
-        """Create initial quantum state."""
-        if self.initial_state == 'uniform_superposition':
-            if hasattr(self.backend, 'create_uniform_superposition'):
-                return self.backend.create_uniform_superposition(self.n_qubits)
-            else:
-                return self._fallback_initial_state()
-        else:
-            return self.initial_state
-
-    def _fallback_initial_state(self) -> Any:
-        """Fallback initial state preparation."""
-        logger.warning("Using fallback initial state")
-        return None
+        """Marker for the standard transverse-field (RX) mixer built by the backend."""
+        return 'x_mixer'
 
     def _create_qaoa_circuit(self, params: np.ndarray) -> Any:
-        """Create QAOA circuit with given parameters.
-
-        Args:
-            params: Array of [gamma_1, beta_1, ..., gamma_p, beta_p]
-
-        Returns:
-            Quantum circuit
-
-        """
+        """Create the QAOA circuit for params ``[gamma_1..gamma_p, beta_1..beta_p]``."""
+        params = np.asarray(params, dtype=float)
         if len(params) != 2 * self.p:
             raise ValueError(f"Expected {2*self.p} parameters, got {len(params)}")
-
-        gammas = params[:self.p]
-        betas = params[self.p:]
-
-        try:
-            if hasattr(self.backend, 'create_qaoa_circuit'):
-                return self.backend.create_qaoa_circuit(
-                    n_qubits=self.n_qubits,
-                    gammas=gammas,
-                    betas=betas,
-                    problem_hamiltonian=self.problem_hamiltonian,
-                    mixer_hamiltonian=self.mixer_hamiltonian,
-                    initial_state=self._create_initial_state(),
-                    problem_instance=self.problem_instance
-                )
-            else:
-                return self._fallback_circuit(gammas, betas)
-        except Exception as e:
-            logger.error(f"Failed to create QAOA circuit: {e}")
-            return self._fallback_circuit(gammas, betas)
-
-    def _fallback_circuit(self, gammas: np.ndarray, betas: np.ndarray) -> Any:
-        """Fallback circuit implementation."""
-        logger.warning("Using fallback QAOA circuit")
-        return None
+        return self.backend.create_qaoa_circuit(
+            n_qubits=self.n_qubits,
+            gammas=params[:self.p],
+            betas=params[self.p:],
+            problem_hamiltonian=self.problem_hamiltonian,
+            mixer_hamiltonian=self.mixer_hamiltonian,
+            initial_state=self.initial_state,
+            problem_instance=self.problem_instance,
+        )
 
     def _objective_function(self, params: np.ndarray) -> float:
-        """QAOA objective function to minimize.
-
-        Args:
-            params: Circuit parameters
-
-        Returns:
-            Negative expectation value (for minimization)
-
-        """
-        try:
-            # Create circuit with current parameters
-            circuit = self._create_qaoa_circuit(params)
-
-            # Execute circuit and get measurement results
-            if hasattr(self.backend, 'execute_qaoa'):
-                expectation = self.backend.execute_qaoa(
-                    circuit,
-                    self.problem_hamiltonian,
-                    self.problem_instance,
-                    shots=self.shots
-                )
-            else:
-                expectation = self._fallback_execution(circuit)
-
-            # Store optimization history
-            self.optimization_history_.append({
-                'params': params.copy(),
-                'cost': expectation,
-                'iteration': len(self.optimization_history_)
-            })
-
-            return -expectation  # Negative for minimization
-
-        except Exception as e:
-            logger.error(f"Error in objective function: {e}")
-            return float('inf')
-
-    def _fallback_execution(self, circuit: Any) -> float:
-        """Fallback circuit execution."""
-        logger.warning("Using fallback circuit execution")
-        return np.random.random()  # Placeholder
+        """Negative expected cut value of the QAOA state (minimised by scipy)."""
+        circuit = self._create_qaoa_circuit(params)
+        expectation = float(self.backend.execute_qaoa(
+            circuit, self.problem_hamiltonian, self.problem_instance, shots=self.shots
+        ))
+        self.optimization_history_.append({
+            'params': np.array(params, copy=True),
+            'cost': expectation,
+            'iteration': len(self.optimization_history_),
+        })
+        return -expectation
 
     def fit(self, X: np.ndarray, y: np.ndarray | None = None, **kwargs) -> 'QAOA':
         """Fit QAOA to problem instance.
@@ -213,44 +163,49 @@ class QAOA(OptimizationQuantumAlgorithm):
         return self
 
     def _infer_qubits(self, problem_instance: np.ndarray) -> int:
-        """Infer number of qubits from problem instance."""
-        if len(problem_instance.shape) == 2:
-            # Assume square matrix (e.g., graph adjacency matrix)
-            return problem_instance.shape[0]
-        else:
-            # Assume 1D problem encoding
-            return int(np.ceil(np.log2(len(problem_instance))))
+        """One qubit per node of the (square) adjacency matrix."""
+        problem_instance = np.asarray(problem_instance)
+        if problem_instance.ndim != 2 or problem_instance.shape[0] != problem_instance.shape[1]:
+            raise ValueError(
+                "QAOA currently solves weighted MaxCut: pass a square adjacency matrix"
+            )
+        return problem_instance.shape[0]
 
-    def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
-        """Get optimal solution from QAOA results.
+    def predict(self, X: np.ndarray | None = None, **kwargs) -> np.ndarray:
+        """Sample the optimised circuit and return the best sampled partition.
 
-        Args:
-            X: Problem instance (not used if same as training)
-            **kwargs: Additional parameters
-
-        Returns:
-            Optimal bit string solution
-
+        Entry i of the returned 0/1 array is the side of node i.
         """
-        if not self.is_fitted or not self.optimal_params_:
+        if not self.is_fitted or self.optimal_params_ is None:
             raise ValueError("QAOA must be fitted and optimized before prediction")
-
-        # Create circuit with optimal parameters
         circuit = self._create_qaoa_circuit(self.optimal_params_)
+        samples = self.backend.sample_circuit(circuit, shots=self.shots)
+        unique = np.unique(samples, axis=0)
+        values = [cut_value(self.problem_instance, row) for row in unique]
+        return unique[int(np.argmax(values))]
 
-        # Sample from the optimized quantum state
-        if hasattr(self.backend, 'sample_circuit'):
-            samples = self.backend.sample_circuit(circuit, shots=self.shots)
-            # Return most frequent bit string
-            unique, counts = np.unique(samples, axis=0, return_counts=True)
-            best_solution = unique[np.argmax(counts)]
-        else:
-            # Fallback: return random solution
-            best_solution = np.random.randint(0, 2, self.n_qubits)
+    def solve(self, adjacency: np.ndarray) -> dict[str, Any]:
+        """Fit, optimise and sample in one call, with an exact classical check.
 
-        return best_solution
+        Returns the QAOA partition and cut, the brute-force optimum, and the
+        approximation ratio of the expected QAOA cut.
+        """
+        self.fit(np.asarray(adjacency, dtype=float))
+        result = self._run_optimization(None)
+        bits = self.predict()
+        best_bits, best_cut = brute_force_maxcut(self.problem_instance)
+        return {
+            'bitstring': ''.join(str(int(b)) for b in bits),
+            'cut_value': cut_value(self.problem_instance, bits),
+            'expected_cut': self.optimal_value_,
+            'classical_bitstring': ''.join(str(int(b)) for b in best_bits),
+            'classical_optimum': best_cut,
+            'approximation_ratio': self.optimal_value_ / best_cut if best_cut else float('nan'),
+            'optimal_params': self.optimal_params_,
+            'n_evaluations': result['n_iterations'],
+        }
 
-    def _run_optimization(self, objective_function, initial_params: np.ndarray | None = None, **kwargs):
+    def _run_optimization(self, objective_function=None, initial_params: np.ndarray | None = None, **kwargs):
         """Run QAOA optimization.
 
         Args:
@@ -265,53 +220,42 @@ class QAOA(OptimizationQuantumAlgorithm):
         if not self.is_fitted:
             raise ValueError("QAOA must be fitted before optimization")
 
-        # Use provided initial parameters or generate random ones
-        if initial_params is None:
-            initial_params = self._generate_initial_params()
+        bounds = [self.gamma_bounds] * self.p + [self.beta_bounds] * self.p
+        rng = np.random.default_rng(self.seed)
+        starts = [np.asarray(initial_params, dtype=float)] if initial_params is not None else []
+        while len(starts) < max(1, self.n_restarts):
+            starts.append(self._generate_initial_params(rng))
 
-        logger.info(f"Starting QAOA optimization with {len(initial_params)} parameters")
-
-        # Set up parameter bounds
-        bounds = []
-        for i in range(self.p):
-            bounds.append(self.gamma_bounds)  # gamma bounds
-        for i in range(self.p):
-            bounds.append(self.beta_bounds)   # beta bounds
-
-        # Run classical optimization
-        try:
+        best = None
+        total_evals = 0
+        for x0 in starts:
             result = minimize(
                 fun=self._objective_function,
-                x0=initial_params,
+                x0=x0,
                 method=self.optimizer,
                 bounds=bounds,
-                options={
-                    'maxiter': self.maxiter,
-                    'disp': True
-                }
+                options={'maxiter': self.maxiter, 'disp': False},
             )
+            total_evals += result.nfev
+            if best is None or result.fun < best.fun:
+                best = result
 
-            self.optimal_params_ = result.x
-            self.optimal_value_ = -result.fun  # Convert back from minimization
+        self.optimal_params_ = best.x
+        self.optimal_value_ = -float(best.fun)
+        logger.info("QAOA optimization completed. Expected cut: %.6f", self.optimal_value_)
+        return {
+            'optimal_params': self.optimal_params_,
+            'optimal_value': self.optimal_value_,
+            'success': bool(best.success),
+            'message': best.message,
+            'n_iterations': total_evals,
+        }
 
-            logger.info(f"QAOA optimization completed. Best value: {self.optimal_value_:.6f}")
-
-            return {
-                'optimal_params': self.optimal_params_,
-                'optimal_value': self.optimal_value_,
-                'success': result.success,
-                'message': result.message,
-                'n_iterations': result.nfev,
-            }
-
-        except Exception as e:
-            logger.error(f"QAOA optimization failed: {e}")
-            raise
-
-    def _generate_initial_params(self) -> np.ndarray:
+    def _generate_initial_params(self, rng: np.random.Generator | None = None) -> np.ndarray:
         """Generate random initial parameters."""
-        gammas = np.random.uniform(*self.gamma_bounds, self.p)
-        betas = np.random.uniform(*self.beta_bounds, self.p)
+        rng = rng or np.random.default_rng(self.seed)
+        gammas = rng.uniform(*self.gamma_bounds, self.p)
+        betas = rng.uniform(*self.beta_bounds, self.p)
         return np.concatenate([gammas, betas])
 
     def get_optimization_landscape(self, param_range: tuple[float, float], resolution: int = 50) -> dict[str, Any]:
@@ -356,7 +300,7 @@ class QAOA(OptimizationQuantumAlgorithm):
             Analysis results
 
         """
-        if not self.optimal_value_:
+        if self.optimal_value_ is None:
             raise ValueError("No optimal solution available")
 
         analysis = {
