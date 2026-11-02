@@ -9,6 +9,7 @@ This example demonstrates:
 - Analyzing results and convergence
 """
 
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -346,7 +347,8 @@ def main():
     print("=" * 50)
 
     # Get API key (optional)
-    api_key = input("Enter your SuperQuantX API key (or press Enter for simulation only): ").strip()
+    # Optional: set SUPERQUANTX_API_KEY to also try remote execution.
+    api_key = os.environ.get("SUPERQUANTX_API_KEY", "").strip()
     client = SuperQuantXClient(api_key) if api_key else None
 
     # Example 1: Basic H2 VQE
@@ -406,7 +408,7 @@ def main():
     exact_energy = h2_hamiltonian.ground_state_energy()
 
     print(f"H2 Ground State (Exact): {exact_energy:.6f} Hartree")
-    print(f"Factory VQE Result: {h2_results['optimal_energy']:.6f} Hartree")
+    print(f"Factory VQE Result: {h2_ground_energy:.6f} Hartree")
 
     print("\nBest ansatz results:")
     for name, results in ansatz_results.items():
