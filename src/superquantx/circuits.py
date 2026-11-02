@@ -39,6 +39,8 @@ class QuantumGate(BaseModel):
         qubits_str = f"q{', q'.join(map(str, self.qubits))}"
         return f"{self.name}{params_str} {qubits_str}"
 
+    __str__ = __repr__
+
 
 class ClassicalRegister(BaseModel):
     """Represents a classical register for measurements"""
@@ -46,8 +48,17 @@ class ClassicalRegister(BaseModel):
     name: str = Field(..., description="Register name")
     size: int = Field(..., description="Number of classical bits")
 
+    def __init__(self, name: str | None = None, size: int | None = None, **data: Any) -> None:
+        if name is not None:
+            data["name"] = name
+        if size is not None:
+            data["size"] = size
+        super().__init__(**data)
+
     def __repr__(self) -> str:
         return f"ClassicalRegister('{self.name}', {self.size})"
+
+    __str__ = __repr__
 
 
 class QuantumRegister(BaseModel):
@@ -56,8 +67,17 @@ class QuantumRegister(BaseModel):
     name: str = Field(..., description="Register name")
     size: int = Field(..., description="Number of qubits")
 
+    def __init__(self, name: str | None = None, size: int | None = None, **data: Any) -> None:
+        if name is not None:
+            data["name"] = name
+        if size is not None:
+            data["size"] = size
+        super().__init__(**data)
+
     def __repr__(self) -> str:
         return f"QuantumRegister('{self.name}', {self.size})"
+
+    __str__ = __repr__
 
 
 class QuantumCircuit:
