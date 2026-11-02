@@ -180,6 +180,7 @@ def list_available_backends() -> dict[str, dict[str, Any]]:
                 'class': backend_class.__name__,
                 'description': getattr(backend_class, '__doc__', '').split('\n')[0] if backend_class.__doc__ else '',
                 'capabilities': getattr(test_instance, 'capabilities', {}),
+                'gate_model': getattr(test_instance, 'gate_model', True),
             }
         except ImportError:
             backend_info[name] = {

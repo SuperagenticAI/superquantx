@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 # Try to import AWS Braket
 try:
     from braket.circuits import Circuit as BraketCircuit
-    from braket.circuits import Gate, Instruction
-    from braket.circuits.gates import *
+    from braket.circuits import Instruction, Measure
+    from braket.circuits import gates as bg
     from braket.devices import LocalSimulator
     try:
         from braket.aws import AwsDevice
@@ -83,7 +83,10 @@ class BraketBackend(BaseBackend):
         try:
             if self.device_name.startswith('local:'):
                 # Local simulator
-                simulator_name = self.device_name.split('local:')[1]
+                # Accept 'local:braket_sv' and the documented 'local:braket/braket_sv'
+                simulator_name = self.device_name.split('local:', 1)[1]
+                if simulator_name.startswith('braket/'):
+                    simulator_name = simulator_name[len('braket/'):]
                 self._device = LocalSimulator(simulator_name)
                 logger.info(f"Initialized Braket local simulator: {simulator_name}")
 
@@ -149,133 +152,86 @@ class BraketBackend(BaseBackend):
     # ========================================================================
 
     def create_circuit(self, n_qubits: int) -> BraketCircuit:
-        """Create a Braket quantum circuit."""
-        if n_qubits > self._get_max_qubits():
-            logger.warning(f"Requested {n_qubits} qubits exceeds device limit")
+        """Create a Braket circuit on ``n_qubits`` qubits.
 
-        return BraketCircuit()
+        Braket circuits only know about qubits that carry an instruction, so an
+        identity is placed on every qubit to fix the register size.
+        """
+        if n_qubits > self._get_max_qubits():
+            raise ValueError(
+                f"Requested {n_qubits} qubits exceeds the device limit of {self._get_max_qubits()}"
+            )
+        circuit = BraketCircuit()
+        for q in range(n_qubits):
+            circuit.add_instruction(Instruction(bg.I(), q))
+        return circuit
+
+    _GATES = {
+        'i': 'I', 'x': 'X', 'y': 'Y', 'z': 'Z', 'h': 'H', 'hadamard': 'H',
+        's': 'S', 'sdg': 'Si', 't': 'T', 'tdg': 'Ti',
+        'rx': 'Rx', 'ry': 'Ry', 'rz': 'Rz', 'p': 'PhaseShift', 'phase': 'PhaseShift',
+        'phaseshift': 'PhaseShift', 'cphaseshift': 'CPhaseShift',
+        'cnot': 'CNot', 'cx': 'CNot', 'cz': 'CZ', 'cy': 'CY',
+        'swap': 'Swap', 'iswap': 'ISwap',
+        'ccnot': 'CCNot', 'ccx': 'CCNot', 'toffoli': 'CCNot',
+        'cswap': 'CSwap', 'fredkin': 'CSwap',
+    }
+    _PARAMETRIC = {'Rx', 'Ry', 'Rz', 'PhaseShift', 'CPhaseShift'}
 
     def add_gate(self, circuit: BraketCircuit, gate: str, qubits: int | list[int],
                  params: list[float] | None = None) -> BraketCircuit:
         """Add a quantum gate to the circuit."""
         if isinstance(qubits, int):
             qubits = [qubits]
-
-        params = params or []
-
-        # Map gate names to Braket gates
-        gate_mapping = {
-            'i': I, 'x': X, 'y': Y, 'z': Z, 'h': H,
-            's': S, 'sdg': Si, 't': T, 'tdg': Ti,
-            'rx': RX, 'ry': RY, 'rz': RZ,
-            'cnot': CNot, 'cx': CNot, 'cz': CZ, 'cy': CY,
-            'swap': Swap, 'iswap': ISwap,
-            'ccnot': CCNot, 'toffoli': CCNot,
-            'cswap': CSwap, 'fredkin': CSwap
-        }
-
-        gate_lower = gate.lower()
-        if gate_lower not in gate_mapping:
+        name = self._GATES.get(gate.lower())
+        if name is None:
             raise ValueError(f"Gate '{gate}' not supported in Braket backend")
-
-        gate_class = gate_mapping[gate_lower]
-
-        try:
-            if len(params) == 0:
-                # Parameter-less gates
-                if len(qubits) == 1:
-                    circuit.add_instruction(Instruction(gate_class(), qubits[0]))
-                elif len(qubits) == 2:
-                    circuit.add_instruction(Instruction(gate_class(), qubits))
-                elif len(qubits) == 3:
-                    circuit.add_instruction(Instruction(gate_class(), qubits))
-                else:
-                    raise ValueError(f"Too many qubits for gate {gate}")
-
-            else:
-                # Parameterized gates
-                if gate_lower in ['rx', 'ry', 'rz']:
-                    circuit.add_instruction(Instruction(gate_class(params[0]), qubits[0]))
-                elif gate_lower == 'phaseshift':
-                    circuit.add_instruction(Instruction(PhaseShift(params[0]), qubits[0]))
-                elif gate_lower == 'cphaseshift':
-                    circuit.add_instruction(Instruction(CPhaseShift(params[0]), qubits))
-                else:
-                    raise ValueError(f"Parameters not supported for gate {gate}")
-
-        except Exception as e:
-            logger.error(f"Failed to add gate {gate} to circuit: {e}")
-            raise
-
+        gate_class = getattr(bg, name)
+        if name in self._PARAMETRIC:
+            if not params:
+                raise ValueError(f"Gate '{gate}' needs a rotation angle")
+            op = gate_class(float(params[0]))
+        else:
+            op = gate_class()
+        target = qubits[0] if len(qubits) == 1 else list(qubits)
+        circuit.add_instruction(Instruction(op, target))
         return circuit
 
-    def add_measurement(self, circuit: BraketCircuit, qubits: int | list[int]) -> BraketCircuit:
-        """Add measurement instructions to specified qubits."""
-        if isinstance(qubits, int):
+    def add_measurement(self, circuit: BraketCircuit, qubits: int | list[int] | None = None) -> BraketCircuit:
+        """Record which qubits to measure (all qubits when ``qubits`` is None)."""
+        if qubits is None:
+            qubits = list(range(circuit.qubit_count))
+        elif isinstance(qubits, int):
             qubits = [qubits]
-
-        # Braket doesn't use explicit measurement instructions in circuits
-        # Measurements are handled during task submission
-        # Store measurement info for later use
         if not hasattr(circuit, '_measurement_qubits'):
             circuit._measurement_qubits = set()
         circuit._measurement_qubits.update(qubits)
-
         return circuit
 
     def execute_circuit(self, circuit: BraketCircuit, shots: int | None = None) -> dict[str, Any]:
-        """Execute quantum circuit and return results."""
+        """Sample the circuit. Counts are big-endian (qubit 0 is the leftmost bit)."""
         shots = shots or self.shots
+        measure_qubits = sorted(getattr(circuit, '_measurement_qubits', range(circuit.qubit_count)))
 
-        try:
-            # Get measurement qubits (all qubits if not specified)
-            if hasattr(circuit, '_measurement_qubits'):
-                measure_qubits = sorted(circuit._measurement_qubits)
-            else:
-                # Measure all qubits that have gates applied
-                measure_qubits = list(range(circuit.qubit_count))
+        measured_circuit = circuit.copy()
+        if measure_qubits != list(range(circuit.qubit_count)):
+            measured_circuit.measure(measure_qubits)
 
-            # Add measurement to circuit copy
-            measured_circuit = circuit.copy()
-            for qubit in measure_qubits:
-                measured_circuit.add_instruction(Instruction(Measure(), qubit))
+        if self.s3_folder and not self.device_name.startswith('local:'):
+            task = self._device.run(measured_circuit, shots=shots, s3_destination_folder=self.s3_folder)
+        else:
+            task = self._device.run(measured_circuit, shots=shots)
+        result = task.result()
+        counts = {str(k): int(v) for k, v in result.measurement_counts.items()}
 
-            # Execute task
-            if self.s3_folder and hasattr(self._device, 'run'):
-                # AWS device with S3 storage
-                task = self._device.run(measured_circuit, shots=shots, s3_destination_folder=self.s3_folder)
-                result = task.result()
-            else:
-                # Local simulator
-                task = self._device.run(measured_circuit, shots=shots)
-                result = task.result()
-
-            # Process measurement results
-            measurement_counts = result.measurement_counts
-
-            # Convert to standard format
-            counts = {}
-            for bitstring, count in measurement_counts.items():
-                counts[bitstring] = count
-
-            return {
-                'counts': counts,
-                'shots': shots,
-                'success': True,
-                'measurement_qubits': measure_qubits,
-                'task_arn': getattr(task, 'id', 'local'),
-                'device': self.device_name,
-            }
-
-        except Exception as e:
-            logger.error(f"Circuit execution failed: {e}")
-            return {
-                'counts': {},
-                'shots': shots,
-                'success': False,
-                'error': str(e),
-                'device': self.device_name,
-            }
+        return {
+            'counts': counts,
+            'shots': shots,
+            'success': True,
+            'measurement_qubits': measure_qubits,
+            'task_arn': getattr(task, 'id', 'local'),
+            'device': self.device_name,
+        }
 
     # ========================================================================
     # Algorithm-Specific Operations
@@ -293,55 +249,6 @@ class BraketBackend(BaseBackend):
         circuit._n_params = n_params
 
         return circuit, param_names
-
-    def bind_parameters(self, circuit: BraketCircuit, param_values: dict[str, float]) -> BraketCircuit:
-        """Bind parameter values to parameterized circuit."""
-        # Braket handles parameterization differently - would need custom implementation
-        # For now, create a new circuit with bound parameters
-        bound_circuit = circuit.copy()
-
-        # This is a simplified implementation
-        # In practice, you'd need to track parameterized gates and substitute values
-        logger.warning("Parameter binding in Braket backend is simplified")
-
-        return bound_circuit
-
-    def expectation_value(self, circuit: BraketCircuit, observable: str | np.ndarray,
-                         shots: int | None = None) -> float:
-        """Calculate expectation value of observable."""
-        shots = shots or self.shots
-
-        try:
-            # Simple implementation for Pauli observables
-            if isinstance(observable, str):
-                if observable.upper() == 'Z':
-                    # Measure in Z basis
-                    result = self.execute_circuit(circuit, shots)
-                    counts = result['counts']
-
-                    # Calculate <Z> expectation
-                    expectation = 0.0
-                    total_counts = sum(counts.values())
-
-                    for bitstring, count in counts.items():
-                        # Z expectation: +1 for |0>, -1 for |1>
-                        prob = count / total_counts
-                        if bitstring == '0' or (len(bitstring) > 0 and bitstring[0] == '0'):
-                            expectation += prob
-                        else:
-                            expectation -= prob
-
-                    return expectation
-                else:
-                    logger.warning(f"Observable {observable} not fully implemented")
-                    return 0.0
-            else:
-                logger.warning("Matrix observables not implemented")
-                return 0.0
-
-        except Exception as e:
-            logger.error(f"Expectation value calculation failed: {e}")
-            return 0.0
 
     # ========================================================================
     # Backend Information
@@ -373,11 +280,12 @@ class BraketBackend(BaseBackend):
 
     def get_version_info(self) -> dict[str, str]:
         """Get version information for Braket dependencies."""
-        import braket
-        return {
-            'braket_sdk': getattr(braket, '__version__', 'unknown'),
-            'backend_version': '1.0.0',
-        }
+        from importlib.metadata import PackageNotFoundError, version
+        try:
+            sdk = version('amazon-braket-sdk')
+        except PackageNotFoundError:
+            sdk = 'unknown'
+        return {'braket_sdk': sdk, 'backend_version': '1.0.0'}
 
     def is_available(self) -> bool:
         """Check if the backend is available and properly configured."""
@@ -398,23 +306,11 @@ class BraketBackend(BaseBackend):
         return circuit.qubit_count
 
     def get_statevector(self, circuit: BraketCircuit) -> np.ndarray:
-        """Get statevector from Braket circuit."""
-        try:
-            # Use local simulator for statevector
-            from braket.devices import LocalSimulator
-            sv_device = LocalSimulator("braket_sv")
-
-            # Execute without measurements for statevector
-            task = sv_device.run(circuit, shots=0)
-            result = task.result()
-
-            if hasattr(result, 'get_value_by_result_type'):
-                from braket.circuits.result_types import StateVector
-                return result.get_value_by_result_type(StateVector())
-            else:
-                logger.warning("Statevector not available")
-                return np.zeros(2**circuit.qubit_count, dtype=complex)
-
-        except Exception as e:
-            logger.error(f"Failed to get statevector: {e}")
-            return np.zeros(2**circuit.qubit_count, dtype=complex)
+        """Exact statevector (big-endian) from Braket's local state-vector simulator."""
+        sv_circuit = BraketCircuit()
+        for instr in circuit.instructions:
+            if not isinstance(instr.operator, Measure):
+                sv_circuit.add_instruction(instr)
+        sv_circuit.state_vector()
+        result = LocalSimulator('braket_sv').run(sv_circuit, shots=0).result()
+        return np.asarray(result.values[0], dtype=complex)

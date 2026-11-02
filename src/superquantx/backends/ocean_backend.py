@@ -83,6 +83,7 @@ class OceanBackend(BaseBackend):
         self.num_reads = shots
         self._sampler = None
         self._is_quantum_annealing = True  # This backend is for annealing, not gates
+        self.gate_model = False
 
         super().__init__(device=device, shots=shots, **kwargs)
 
@@ -168,7 +169,7 @@ class OceanBackend(BaseBackend):
 
         """
         try:
-            num_reads = kwargs.get('num_reads', self.num_reads)
+            num_reads = kwargs.pop('num_reads', self.num_reads)
 
             # Create BQM from QUBO
             bqm = dimod.BinaryQuadraticModel.from_qubo(Q)
@@ -217,7 +218,7 @@ class OceanBackend(BaseBackend):
 
         """
         try:
-            num_reads = kwargs.get('num_reads', self.num_reads)
+            num_reads = kwargs.pop('num_reads', self.num_reads)
 
             # Create BQM from Ising model
             bqm = dimod.BinaryQuadraticModel.from_ising(h, J)
@@ -319,41 +320,29 @@ class OceanBackend(BaseBackend):
     # Gate Model Compatibility (Limited Support)
     # ========================================================================
 
-    def create_circuit(self, n_qubits: int) -> dict[str, Any]:
-        """Limited circuit support for compatibility.
+    _NOT_GATE_MODEL = (
+        "OceanBackend targets D-Wave quantum annealers (and the classical simulated "
+        "annealer), not gate-model circuits. Use solve_qubo(), solve_ising() or "
+        "solve_max_cut() instead, or pick a gate-model backend such as 'simulator', "
+        "'qiskit', 'pennylane', 'cirq', 'braket' or 'tket'."
+    )
 
-        Note: D-Wave is not a gate-model quantum computer.
-        This returns a placeholder for optimization problems.
-        """
-        logger.warning("D-Wave Ocean backend does not support gate-model circuits")
-        return {
-            'type': 'optimization_placeholder',
-            'n_variables': n_qubits,
-            'backend': 'ocean',
-            'problem': None
-        }
+    def create_circuit(self, n_qubits: int) -> dict[str, Any]:
+        """Not supported: annealers do not run gate-model circuits."""
+        raise NotImplementedError(self._NOT_GATE_MODEL)
 
     def add_gate(self, circuit: dict, gate: str, qubits: int | list[int],
                  params: list[float] | None = None) -> dict:
-        """Limited gate support - not applicable for annealing."""
-        logger.warning("Gate operations not supported on D-Wave annealing backend")
-        return circuit
+        """Not supported: annealers do not run gate-model circuits."""
+        raise NotImplementedError(self._NOT_GATE_MODEL)
 
-    def add_measurement(self, circuit: dict, qubits: int | list[int]) -> dict:
-        """Limited measurement support - not applicable for annealing."""
-        logger.warning("Measurements not applicable for D-Wave annealing backend")
-        return circuit
+    def add_measurement(self, circuit: dict, qubits: int | list[int] | None = None) -> dict:
+        """Not supported: annealers do not run gate-model circuits."""
+        raise NotImplementedError(self._NOT_GATE_MODEL)
 
     def execute_circuit(self, circuit: dict, shots: int | None = None) -> dict[str, Any]:
-        """Limited circuit execution - redirects to optimization solving."""
-        logger.warning("Circuit execution not supported - use solve_qubo() or solve_ising() instead")
-        return {
-            'counts': {},
-            'shots': shots or self.shots,
-            'success': False,
-            'error': 'Use optimization problem methods instead of circuit execution',
-            'backend': 'ocean'
-        }
+        """Not supported: annealers do not run gate-model circuits."""
+        raise NotImplementedError(self._NOT_GATE_MODEL)
 
     # ========================================================================
     # Backend Information
@@ -431,9 +420,8 @@ class OceanBackend(BaseBackend):
         return 0
 
     def get_statevector(self, circuit: dict) -> np.ndarray:
-        """Get statevector (not applicable for annealing backend)."""
-        logger.warning("Statevector not applicable for quantum annealing backend")
-        return np.array([1.0 + 0j])  # Dummy statevector
+        """Not supported: annealers have no gate-model statevector."""
+        raise NotImplementedError(self._NOT_GATE_MODEL)
 
     # ========================================================================
     # Convenience Methods for Common Optimization Problems
@@ -452,40 +440,29 @@ class OceanBackend(BaseBackend):
             else:
                 G = graph
 
-            # Convert to QUBO formulation
+            # cut(x) = sum_ij w_ij (x_i + x_j - 2 x_i x_j); samplers minimise energy,
+            # so the QUBO is -cut(x) and the lowest energy is the maximum cut.
             Q = {}
-            for i, j in G.edges():
-                Q[(i, i)] = Q.get((i, i), 0) + 1
-                Q[(j, j)] = Q.get((j, j), 0) + 1
-                Q[(i, j)] = Q.get((i, j), 0) - 2
+            for i, j, data in G.edges(data=True):
+                w = data.get('weight', 1.0)
+                Q[(i, i)] = Q.get((i, i), 0) - w
+                Q[(j, j)] = Q.get((j, j), 0) - w
+                Q[(i, j)] = Q.get((i, j), 0) + 2 * w
 
-            return self.solve_qubo(Q, **kwargs)
+            result = self.solve_qubo(Q, **kwargs)
+            if result.get('success') and result['energies']:
+                best = int(np.argmin(result['energies']))
+                result['best_sample'] = result['samples'][best]
+                result['best_cut_value'] = -float(result['energies'][best])
+            return result
 
         except Exception as e:
             logger.error(f"Max Cut solving failed: {e}")
             return {'success': False, 'error': str(e)}
 
     def solve_tsp(self, distance_matrix: np.ndarray, **kwargs) -> dict[str, Any]:
-        """Solve Traveling Salesman Problem (simplified formulation)."""
-        try:
-            n_cities = len(distance_matrix)
-
-            # This is a simplified TSP formulation
-            # Full TSP requires more complex constraints
-            logger.warning("TSP formulation is simplified - may not give valid tours")
-
-            Q = {}
-            # Add distance costs
-            for i in range(n_cities):
-                for j in range(i+1, n_cities):
-                    for t in range(n_cities):
-                        # Variable x_it means city i is visited at time t
-                        var_i = i * n_cities + t
-                        var_j = j * n_cities + ((t + 1) % n_cities)
-                        Q[(var_i, var_j)] = distance_matrix[i, j]
-
-            return self.solve_qubo(Q, **kwargs)
-
-        except Exception as e:
-            logger.error(f"TSP solving failed: {e}")
-            return {'success': False, 'error': str(e)}
+        """Not implemented: a correct TSP QUBO needs one-hot constraints (planned)."""
+        raise NotImplementedError(
+            "TSP is not implemented yet; formulate it as a QUBO with one-hot "
+            "penalties and call solve_qubo()."
+        )
