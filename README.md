@@ -12,40 +12,17 @@
 
 An open software layer across quantum SDKs, with a classical baseline for every result.
 
-SuperQuantX is an experimental, open-source toolkit for quantum machine
-learning and optimisation research by [Superagentic AI](https://super-agentic.ai).
-The same circuits and algorithms run on PennyLane, Qiskit, Cirq, Amazon
-Braket, pytket and a built-in simulator, and every algorithm reports a
-classical reference so you can see whether the quantum part earns its keep.
+SuperQuantX 0.3.0 is an open-source toolkit for quantum machine learning and
+optimisation research by [Superagentic AI](https://super-agentic.ai).
 
-> 🌐 **[superquantx.dev](https://superquantx.dev)** ·
-> 📖 **[Documentation](https://superagenticai.github.io/superquantx/)** ·
-> 📦 **[PyPI](https://pypi.org/project/superquantx/)** ·
-> 🎬 **[Showcase with real output](docs/showcase.md)** · ▶️ **[Demo video](https://www.youtube.com/watch?v=QwPBKtpNSKU)**
+[Website](https://superquantx.dev) · [Documentation](https://superagenticai.github.io/superquantx/) · [PyPI](https://pypi.org/project/superquantx/) · [Showcase](docs/showcase.md)
 
-<div align="center">
-  <a href="https://superquantx.dev" target="_blank">
-    <img src="resources/logo.png" alt="SuperQuantX Logo" width="500">
-  </a>
-</div>
+[Watch the demo](https://www.youtube.com/watch?v=QwPBKtpNSKU) · SuperQuantX 0.3.0 · Local simulation · No quantum hardware used
 
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=QwPBKtpNSKU">
-    <img src="https://img.youtube.com/vi/QwPBKtpNSKU/hqdefault.jpg" alt="Watch the SuperQuantX 0.3.0 demo" width="480">
-  </a>
-</p>
+> **Research software.** Examples use local simulation, not quantum hardware.
+> They do not demonstrate quantum advantage; compare results with classical baselines.
 
-<p align="center">
-  <strong><a href="https://www.youtube.com/watch?v=QwPBKtpNSKU">Watch the demo</a></strong>
-  · SuperQuantX 0.3.0 · Local simulation · No quantum hardware used
-</p>
-
-> **Research software.** Everything below runs on classically simulated
-> quantum circuits. Nothing here demonstrates quantum advantage, and the
-> library is designed to tell you when a quantum model does not beat a
-> classical one.
-
-## What works today
+## Backends
 
 | Backend | Runs on | Status |
 |---------|---------|--------|
@@ -55,33 +32,14 @@ classical reference so you can see whether the quantum part earns its keep.
 | `cirq` | Cirq simulator | ✅ tested |
 | `braket` | Amazon Braket `LocalSimulator` | ✅ tested |
 | `tket` | pytket local simulator | ✅ tested |
-| `ocean` | D-Wave Ocean (QUBO/Ising only) | ⚠️ annealing only, hardware needs a Leap token |
-| IBM Quantum, Braket devices (IonQ, Rigetti), Quantinuum H-Series | via `qiskit`, `braket`, `tket` | ⚠️ untested, needs your own credentials |
-| Azure Quantum, Rigetti Forest, cuQuantum, TensorFlow Quantum | | 🚧 planned, not implemented |
+| `ocean` | D-Wave Ocean (QUBO/Ising only) | Annealing only; hardware untested, requires a Leap token |
+| Remote devices | via `qiskit`, `braket`, `tket` | Untested; requires provider credentials |
 
 "Tested" means the unit tests run a Bell state, a qubit-order check, exact
 expectation values and the fidelity kernel on that backend. Check your own
 install with `superquantx list-backends`.
 
-| Algorithm | Classical check it reports |
-|-----------|----------------------------|
-| `VQE` (RealAmplitudes, EfficientSU2) | exact ground energy (H2 STO-3G built in) |
-| `QAOA` for MaxCut | brute-force optimum and approximation ratio |
-| `QuantumSVM` (fidelity kernel) | tuned RBF SVM and logistic regression via `compare_to_classical` |
-| `QuantumNN` (parameter-shift gradients) | `compare_to_classical` works with any sklearn-style classifier |
-| `QuantumPortfolioAgent` (CVaR-VQE) | brute-force optimal selection and a Markowitz reference |
-| `QuantumClassificationAgent` | `compare_to_classical` verdict and p-value |
-
-## Quick start
-
-```bash
-git clone https://github.com/SuperagenticAI/superquantx.git
-cd superquantx
-uv sync --extra all-backends      # or: pip install -e ".[all-backends]"
-
-uv run superquantx list-backends  # Bell-state check on every backend
-uv run python examples/showcase.py
-```
+## Install
 
 Install the 0.3.0 release from PyPI (Python 3.11+):
 
@@ -95,18 +53,7 @@ Not using a uv project? `uv pip install "superquantx==0.3.0"` or
 `pip install "superquantx==0.3.0"` work too. Each backend has an extra:
 `pennylane`, `qiskit`, `cirq`, `braket`, `tket`, `ocean`, or `all-backends`.
 
-### AI assistants and automatic encodings
-
-The [MCP server](docs/mcp.md) exposes six tools over stdio for circuits,
-backend checks, classification and MaxCut. Start it with `superquantx-mcp`
-or `python -m superquantx.mcp` from your MCP client.
-
-`QuantumSVM(backend="simulator", feature_map="auto")` selects an implemented
-encoding at fit time using a local heuristic. The optional Qmes recommender
-is installed separately; see the [design and limitations](docs/design/qmes-feature-map-auto.md).
-Inspect `selected_feature_map_` and `feature_map_recommendation_` after fitting.
-
-### A quantum classifier, benchmarked against classical models
+## Compare a quantum classifier with classical models
 
 ```python
 import superquantx as sqx
@@ -117,58 +64,14 @@ result = sqx.compare_to_classical(X, y, sqx.QuantumSVM(backend="pennylane"), cv=
 print(result.table())
 ```
 
-```text
-model                                      accuracy  wall time  grid  QPU circuits
-----------------------------------------------------------------------------------
-QuantumSVM (PennyLane), tuned       0.930 +/- 0.051      3.43s    25       119,000
-QuantumSVM (PennyLane), untuned     0.670 +/- 0.125      0.58s     1             -
-SVC (RBF), tuned C and gamma        0.950 +/- 0.055      0.85s    25             -
-Logistic regression, tuned C        0.860 +/- 0.097      0.19s     4             -
-----------------------------------------------------------------------------------
-100 samples, 2 features, 5-fold stratified CV (identical folds for every model), seed=0
-quantum minus best classical: -0.020; no significant difference from SVC (RBF), tuned C and gamma (p=0.54)
-```
+The comparison uses identical folds, equal tuning budgets and per-fold
+preprocessing. `result.table()` reports accuracy, timing and a statistical
+comparison. See [benchmarking](docs/user-guide/benchmarking.md) for the protocol.
 
-This follows the protocol of
-[arXiv:2610.42029](https://arxiv.org/abs/2610.42029): equal tuning budgets,
-identical folds, per-fold preprocessing and the Nadeau-Bengio corrected
-t-test. As that paper reports, a tuned quantum kernel is statistically
-indistinguishable from a tuned RBF SVM here, and bandwidth tuning (0.67 to
-0.93) matters more than the circuit. See
-[Benchmarking](docs/user-guide/benchmarking.md).
-
-### VQE and QAOA with exact answers
-
-```python
-import numpy as np
-import superquantx as sqx
-
-vqe = sqx.create_vqe_for_molecule("H2", backend="qiskit")
-print(vqe.find_ground_state(), vqe.exact_ground_energy())   # both -1.857275 Ha
-
-W = np.array([[0, 1, 1, 0, 1], [1, 0, 1, 1, 0], [1, 1, 0, 1, 0],
-              [0, 1, 1, 0, 1], [1, 0, 0, 1, 0]], dtype=float)
-r = sqx.QAOA(backend="cirq", p=2, seed=7).solve(W)
-print(r["cut_value"], r["classical_optimum"], r["approximation_ratio"])
-```
-
-### Agents that show their work
-
-```python
-import numpy as np
-import superquantx as sqx
-
-returns = np.random.default_rng(0).normal(0.01, 0.02, size=(250, 6))
-res = sqx.QuantumPortfolioAgent(backend="simulator", n_select=3, seed=0).solve(returns)
-print(res.result["selected_assets"], res.result["classical_selected_assets"],
-      res.result["matches_classical_optimum"])
-```
-
-`examples/quantum_agents_demo.py` runs the portfolio and classification
-agents end to end.
-
-The [local SDK and MCP examples](examples/full-demo/README.md) check six
-gate-model simulators, Ocean annealing, H2 VQE, MaxCut QAOA and a local MCP call.
+VQE, MaxCut QAOA and portfolio agents also report classical references.
+See the [showcase](docs/showcase.md) and [SDK examples](examples/full-demo/README.md).
+The [MCP server](docs/mcp.md) exposes circuits, backend checks, classification
+and MaxCut to AI assistants.
 
 ## Command line
 
@@ -182,6 +85,8 @@ superquantx run qsvm --data iris -b simulator
 ## Development
 
 ```bash
+git clone https://github.com/SuperagenticAI/superquantx.git
+cd superquantx
 uv sync --extra all-backends --extra dev
 uv run pytest tests/unit tests/integration
 uv run ruff check src tests
@@ -195,9 +100,3 @@ for version floors.
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
-
-<div align="center">
-
-*[superquantx.dev](https://superquantx.dev) · Built by [Superagentic AI](https://super-agentic.ai)*
-
-</div>
