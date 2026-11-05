@@ -21,13 +21,24 @@ classical reference so you can see whether the quantum part earns its keep.
 > 🌐 **[superquantx.dev](https://superquantx.dev)** ·
 > 📖 **[Documentation](https://superagenticai.github.io/superquantx/)** ·
 > 📦 **[PyPI](https://pypi.org/project/superquantx/)** ·
-> 🎬 **[Showcase with real output](docs/showcase.md)**
+> 🎬 **[Showcase with real output](docs/showcase.md)** · ▶️ **[Demo video](https://www.youtube.com/watch?v=QwPBKtpNSKU)**
 
 <div align="center">
   <a href="https://superquantx.dev" target="_blank">
     <img src="resources/logo.png" alt="SuperQuantX Logo" width="500">
   </a>
 </div>
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=QwPBKtpNSKU">
+    <img src="https://img.youtube.com/vi/QwPBKtpNSKU/hqdefault.jpg" alt="Watch the SuperQuantX 0.3.0 demo" width="480">
+  </a>
+</p>
+
+<p align="center">
+  <strong><a href="https://www.youtube.com/watch?v=QwPBKtpNSKU">Watch the demo</a></strong>
+  · SuperQuantX 0.3.0 · Local simulation · No quantum hardware used
+</p>
 
 > **Research software.** Everything below runs on classically simulated
 > quantum circuits. Nothing here demonstrates quantum advantage, and the

@@ -4,6 +4,16 @@
 today. It runs in about 10 seconds on a laptop, entirely on local
 simulators, and checks every quantum result against something classical.
 
+## Demo video
+
+A short silent walkthrough of SuperQuantX 0.3.0 on local simulators (backends,
+VQE/QAOA with classical checks, then MCP). Caption on the recording:
+**SuperQuantX 0.3.0 · Local simulation · No quantum hardware used**.
+
+[![Watch the SuperQuantX 0.3.0 demo](https://img.youtube.com/vi/QwPBKtpNSKU/hqdefault.jpg)](https://www.youtube.com/watch?v=QwPBKtpNSKU)
+
+**[Watch on YouTube](https://www.youtube.com/watch?v=QwPBKtpNSKU)**
+
 ```bash
 uv sync --extra all-backends
 uv run python examples/showcase.py
