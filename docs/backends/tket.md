@@ -26,7 +26,7 @@ The TKET backend in SuperQuantX offers:
 pip install pytket
 
 # Install SuperQuantX with TKET support
-pip install superquantx[tket]
+uv add "superquantx[tket]==0.3.0"
 ```
 
 ### Extended TKET Installations

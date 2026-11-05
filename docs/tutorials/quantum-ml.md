@@ -22,7 +22,7 @@ By the end of this tutorial, you'll know how to:
 - Completion of [Basic Quantum Computing Tutorial](basic-quantum.md)
 - Basic machine learning knowledge (classification, regression, neural networks)
 - Python ML libraries (scikit-learn, numpy)
-- SuperQuantX installed with ML extras: `pip install superquantx[ml]`
+- SuperQuantX installed: `uv add "superquantx==0.3.0"` (scikit-learn is a core dependency)
 
 ## 📚 Chapter 1: Why Quantum Machine Learning?
 
@@ -37,7 +37,7 @@ Quantum machine learning promises several advantages:
 
 ### Current Reality Check
 
-Let's be honest about current limitations:
+Current limitations:
 
 ```python
 import superquantx as sqx

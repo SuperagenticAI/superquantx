@@ -29,8 +29,11 @@ This guide provides detailed instructions for installing SuperQuantX in various 
 This installs SuperQuantX with the built-in simulator backend:
 
 ```bash
-pip install superquantx
+uv add "superquantx==0.3.0"
 ```
+
+Not using a uv project? `uv pip install "superquantx==0.3.0"` installs into the
+active environment, and `pip install "superquantx==0.3.0"` works too.
 
 **What you get:**
 - Core SuperQuantX functionality
@@ -50,7 +53,7 @@ Install SuperQuantX with specific quantum computing frameworks:
 === "PennyLane (Recommended for ML)"
 
     ```bash
-    pip install superquantx[pennylane]
+    uv add "superquantx[pennylane]==0.3.0"
     ```
 
     **Includes:**
@@ -62,7 +65,7 @@ Install SuperQuantX with specific quantum computing frameworks:
 === "Qiskit (IBM's Framework)"
 
     ```bash
-    pip install superquantx[qiskit]
+    uv add "superquantx[qiskit]==0.3.0"
     ```
 
     **Includes:**
@@ -74,7 +77,7 @@ Install SuperQuantX with specific quantum computing frameworks:
 === "Cirq (Google's Framework)"
 
     ```bash
-    pip install superquantx[cirq]
+    uv add "superquantx[cirq]==0.3.0"
     ```
 
     **Includes:**
@@ -85,7 +88,7 @@ Install SuperQuantX with specific quantum computing frameworks:
 === "Amazon Braket"
 
     ```bash
-    pip install superquantx[braket]
+    uv add "superquantx[braket]==0.3.0"
     ```
 
     **Includes:**
@@ -97,10 +100,10 @@ Install SuperQuantX with specific quantum computing frameworks:
 
     ```bash
     # Install multiple backends at once
-    pip install superquantx[pennylane,qiskit,cirq]
+    uv add "superquantx[pennylane,qiskit,cirq]==0.3.0"
 
     # Or install all quantum backends
-    pip install superquantx[all-backends]
+    uv add "superquantx[all-backends]==0.3.0"
     ```
 
 ### Method 3: Development Installation
@@ -144,7 +147,7 @@ Always use virtual environments to avoid package conflicts:
     superquantx-env\Scripts\activate
 
     # Install SuperQuantX
-    pip install superquantx[pennylane]
+    pip install "superquantx[pennylane]==0.3.0"
     ```
 
 === "conda"
@@ -155,21 +158,21 @@ Always use virtual environments to avoid package conflicts:
     conda activate superquantx
 
     # Install SuperQuantX
-    pip install superquantx[pennylane]
+    pip install "superquantx[pennylane]==0.3.0"
     ```
 
 === "uv (Fast Python Package Manager)"
 
     ```bash
     # Install uv (if not installed)
-    pip install uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh
 
     # Create project with uv
     uv init my-quantum-project
     cd my-quantum-project
 
     # Add SuperQuantX as dependency
-    uv add superquantx[pennylane]
+    uv add "superquantx[pennylane]==0.3.0"
 
     # Activate environment and run
     uv run python your_script.py
@@ -213,7 +216,7 @@ For interactive quantum computing:
 
 ```bash
 # Install SuperQuantX with Jupyter support
-pip install superquantx[pennylane] jupyter
+uv add "superquantx[pennylane]==0.3.0" jupyter
 
 # Start Jupyter
 jupyter notebook
@@ -342,7 +345,7 @@ pip install --upgrade pip
 
 # Install backends individually
 pip install pennylane
-pip install superquantx[pennylane]
+pip install "superquantx[pennylane]==0.3.0"
 
 # For system-specific issues, install system dependencies
 # Ubuntu/Debian:
@@ -365,7 +368,7 @@ pip list | grep superquantx
 
 # Reinstall if needed
 pip uninstall superquantx
-pip install superquantx
+pip install "superquantx==0.3.0"
 
 # Check Python path
 python -c "import sys; print(sys.path)"
@@ -377,7 +380,7 @@ python -c "import sys; print(sys.path)"
 
 ```bash
 # Install with optimized backends
-pip install superquantx[pennylane]
+uv add "superquantx[pennylane]==0.3.0"
 
 # For Intel CPUs, install Intel MKL
 pip install mkl mkl-service

@@ -1,7 +1,7 @@
 # Troubleshooting
 
 **A backend is missing.**
-Install its extra, for example `pip install "superquantx[qiskit]"`, or all
+Install its extra, for example `uv add "superquantx[qiskit]==0.3.0"`, or all
 of them with `uv sync --extra all-backends`. Then run
 `superquantx list-backends`, which runs a Bell circuit on each backend and
 prints the error for any that fail.

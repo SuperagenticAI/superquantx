@@ -29,7 +29,7 @@ The Ocean backend in SuperQuantX provides:
 pip install dwave-ocean-sdk
 
 # Install SuperQuantX with Ocean support
-pip install superquantx[ocean]
+uv add "superquantx[ocean]==0.3.0"
 ```
 
 ### Extended Ocean Tools

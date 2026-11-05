@@ -9,7 +9,7 @@ SuperQuantX requires Python 3.11 or higher. Install it using pip:
 === "Basic Installation"
 
     ```bash
-    pip install superquantx
+    uv add "superquantx==0.3.0"
     ```
 
     This installs SuperQuantX with the built-in simulator backend.
@@ -18,13 +18,13 @@ SuperQuantX requires Python 3.11 or higher. Install it using pip:
 
     ```bash
     # For PennyLane integration
-    pip install superquantx[pennylane]
+    uv add "superquantx[pennylane]==0.3.0"
 
     # For Qiskit integration
-    pip install superquantx[qiskit]
+    uv add "superquantx[qiskit]==0.3.0"
 
     # For multiple backends
-    pip install superquantx[pennylane,qiskit]
+    uv add "superquantx[pennylane,qiskit]==0.3.0"
     ```
 
 === "Development Setup"

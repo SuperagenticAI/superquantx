@@ -60,7 +60,7 @@ from a tuned RBF SVM on standard datasets. The showcase reproduces exactly
 that: bandwidth tuning lifts the quantum kernel from 0.67 to 0.93, and the
 remaining gap to the RBF SVM is not significant (p = 0.54).
 
-So a "no significant difference" verdict is the expected, honest outcome on
+So a "no significant difference" verdict is the expected outcome on
 small classical datasets. A claim of quantum benefit needs data where the
 quantum model wins this test, at a hardware cost you can afford.
 

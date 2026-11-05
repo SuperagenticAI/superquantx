@@ -2,6 +2,7 @@
 [![Python Version](https://img.shields.io/pypi/pyversions/superquantx)](https://pypi.org/project/superquantx/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Tests](https://github.com/SuperagenticAI/superquantx/actions/workflows/ci.yml/badge.svg)](https://github.com/SuperagenticAI/superquantx/actions/workflows/ci.yml)
+[![Website](https://img.shields.io/badge/website-superquantx.dev-7C3AED)](https://superquantx.dev)
 [![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://superagenticai.github.io/superquantx)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
@@ -15,11 +16,13 @@ The same circuits and algorithms run on PennyLane, Qiskit, Cirq, Amazon
 Braket, pytket and a built-in simulator, and every algorithm reports a
 classical reference so you can see whether the quantum part earns its keep.
 
+> 🌐 **[superquantx.dev](https://superquantx.dev)** ·
 > 📖 **[Documentation](https://superagenticai.github.io/superquantx/)** ·
+> 📦 **[PyPI](https://pypi.org/project/superquantx/)** ·
 > 🎬 **[Showcase with real output](docs/showcase.md)**
 
 <div align="center">
-  <a href="https://super-agentic.ai" target="_blank">
+  <a href="https://superquantx.dev" target="_blank">
     <img src="resources/logo.png" alt="SuperQuantX Logo" width="500">
   </a>
 </div>
@@ -70,9 +73,14 @@ uv run python examples/showcase.py
 Install the 0.3.0 release from PyPI (Python 3.11+):
 
 ```bash
-pip install "superquantx==0.3.0"                     # built-in simulator
-pip install "superquantx[mcp,qiskit,pennylane]==0.3.0"  # MCP and SDKs
+uv add "superquantx==0.3.0"                       # built-in simulator
+uv add "superquantx[mcp,qiskit,pennylane]==0.3.0" # MCP and SDKs
+uvx --from "superquantx[mcp]==0.3.0" superquantx-mcp  # run the MCP server, no install
 ```
+
+Not using a uv project? `uv pip install "superquantx==0.3.0"` or
+`pip install "superquantx==0.3.0"` work too. Each backend has an extra:
+`pennylane`, `qiskit`, `cirq`, `braket`, `tket`, `ocean`, or `all-backends`.
 
 ### AI assistants and automatic encodings
 
@@ -85,7 +93,7 @@ encoding at fit time using a local heuristic. The optional Qmes recommender
 is installed separately; see the [design and limitations](docs/design/qmes-feature-map-auto.md).
 Inspect `selected_feature_map_` and `feature_map_recommendation_` after fitting.
 
-### A quantum classifier, honestly benchmarked
+### A quantum classifier, benchmarked against classical models
 
 ```python
 import superquantx as sqx
@@ -174,6 +182,6 @@ Apache License 2.0. See [LICENSE](LICENSE).
 
 <div align="center">
 
-*Built by [Superagentic AI](https://super-agentic.ai)*
+*[superquantx.dev](https://superquantx.dev) · Built by [Superagentic AI](https://super-agentic.ai)*
 
 </div>

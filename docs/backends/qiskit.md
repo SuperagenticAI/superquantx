@@ -20,7 +20,7 @@ The Qiskit backend in SuperQuantX offers:
 
 ```bash
 # Install SuperQuantX with Qiskit support
-pip install superquantx[qiskit]
+uv add "superquantx[qiskit]==0.3.0"
 
 # Or install Qiskit directly
 pip install qiskit qiskit-aer qiskit-ibm-runtime
@@ -1050,7 +1050,7 @@ def robust_qiskit_execution(circuit, backend_name='qasm_simulator'):
 
 ---
 
-*Qiskit's integration with SuperQuantX provides seamless access to IBM's quantum ecosystem, from high-performance simulators to cutting-edge quantum processors. The unified API makes it easy to develop quantum applications while leveraging IBM's quantum expertise.*
+*The Qiskit backend runs on Qiskit Aer and is tested on the simulator. IBM Quantum hardware access goes through qiskit-ibm-runtime with your own credentials and is untested.*
 
 !!! tip "Optimization"
     For best performance on IBM hardware, use `optimization_level=3` and minimize circuit depth. Consider using Qiskit Runtime for reduced latency.

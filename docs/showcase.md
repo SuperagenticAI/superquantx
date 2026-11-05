@@ -20,32 +20,32 @@ uv run python examples/showcase.py
 
 ## Real output
 
-Captured on 2 November 2026 (Python 3.11, PennyLane 0.45, Qiskit 2.6,
-Cirq 1.7, Braket SDK 1.127, pytket 2.18). Timings vary by machine; shot
+Captured on 5 November 2026 with SuperQuantX 0.3.0 (Python 3.12, PennyLane 0.45,
+Qiskit 2.6, Cirq 1.7, Braket SDK 1.127, pytket 2.18). Timings vary by machine; shot
 counts vary with sampling.
 
 ```text
-SuperQuantX 0.2.0 showcase. All runs are local classical simulations.
+SuperQuantX 0.3.0 showcase. All runs are local classical simulations.
 
 1. Bell and GHZ states on every backend (1000 shots each)
 =========================================================
 backend      Bell 00/11   GHZ 000/111  correct    time
-simulator       495/505       507/493      yes   0.00s
-pennylane       492/508       510/490      yes   0.01s
-qiskit          511/489       507/493      yes   0.19s
-cirq            517/483       485/515      yes   0.01s
-braket          485/515       522/478      yes   0.03s
-tket            491/509       497/503      yes   0.03s
+simulator       528/472       488/512      yes   0.00s
+pennylane       489/511       498/502      yes   0.01s
+qiskit          509/491       525/475      yes   0.28s
+cirq            498/502       484/516      yes   0.01s
+braket          505/495       487/513      yes   0.03s
+tket            492/508       493/507      yes   0.05s
 Working: simulator, pennylane, qiskit, cirq, braket, tket
 
 2. Quantum kernel SVM vs tuned classical models (make_moons, pennylane)
 =======================================================================
 model                                      accuracy  wall time  grid  QPU circuits
 ----------------------------------------------------------------------------------
-QuantumSVM (PennyLane), tuned       0.930 +/- 0.051      3.43s    25       119,000
-QuantumSVM (PennyLane), untuned     0.670 +/- 0.125      0.58s     1             -
-SVC (RBF), tuned C and gamma        0.950 +/- 0.055      0.85s    25             -
-Logistic regression, tuned C        0.860 +/- 0.097      0.19s     4             -
+QuantumSVM (PennyLane), tuned       0.930 +/- 0.051      3.15s    25       119,000
+QuantumSVM (PennyLane), untuned     0.670 +/- 0.125      0.55s     1             -
+SVC (RBF), tuned C and gamma        0.950 +/- 0.055      0.53s    25             -
+Logistic regression, tuned C        0.860 +/- 0.097      0.14s     4             -
 ----------------------------------------------------------------------------------
 100 samples, 2 features, 5-fold stratified CV (identical folds for every model), seed=0
 quantum minus best classical: -0.020; no significant difference from SVC (RBF), tuned C and gamma (p=0.54)
@@ -56,9 +56,9 @@ Protocol: arXiv:2610.42029. Quantum kernels are classically simulated.
 QAOA best sampled cut : 01101  value 6
 Brute-force optimum   : 01101  value 6
 Expected cut of state : 5.019 (approximation ratio 0.837; a random cut averages 3.5)
-Matches optimum       : yes   (484 circuit evaluations, 2.4s)
+Matches optimum       : yes   (484 circuit evaluations, 2.1s)
 
-Total time 7.8s
+Total time 7.1s
 ```
 
 ## What this shows, and what it does not
