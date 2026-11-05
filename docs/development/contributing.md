@@ -237,22 +237,18 @@ src/superquantx/
 ### Testing Best Practices
 
 ```python
+import numpy as np
+from superquantx import QuantumSVM, get_backend
+
 def test_quantum_algorithm():
-    """Test quantum algorithm with known expected result."""
-    # Setup
-    backend = get_backend('simulator')
-    algorithm = QuantumSVM(backend=backend)
-    
-    # Test data with known classification
-    X_test = np.array([[0, 0], [1, 1]])
-    y_test = np.array([0, 1])
-    
-    # Execute
-    result = algorithm.fit_predict(X_test, y_test)
-    
-    # Verify
-    assert result.accuracy > 0.9
-    assert len(result.predictions) == len(y_test)
+    """Train a tiny QuantumSVM and check the prediction shape."""
+    backend = get_backend("simulator")
+    model = QuantumSVM(backend=backend, feature_map="ZFeatureMap")
+    X = np.array([[0.0, 0.0], [1.0, 1.0], [0.1, 0.2], [0.9, 0.8]])
+    y = np.array([0, 1, 0, 1])
+    model.fit(X, y)
+    preds = model.predict(X)
+    assert preds.shape == y.shape
 ```
 
 ## 📚 Documentation Standards

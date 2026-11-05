@@ -1,9 +1,5 @@
 # Qiskit Backend Integration
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 5 of 18 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
-
-
 Qiskit is IBM's open-source quantum computing framework that provides access to quantum simulators and real IBM quantum hardware. SuperQuantX integrates seamlessly with Qiskit to provide access to IBM's quantum ecosystem.
 
 ## Overview
@@ -48,25 +44,29 @@ print(result["counts"])  # about 500 each of '00' and '11'
 
 ### IBM Quantum Hardware
 
+!!! note "Requires credentials"
+    Needs an IBM Quantum token; checked against the 0.3.0 constructor, not run.
+
+<!-- docs-check: skip -->
 ```python
-# Connect to IBM Quantum
 from qiskit_ibm_runtime import QiskitRuntimeService
 
 # Save your credentials (one-time setup)
 QiskitRuntimeService.save_account(
-    channel="ibm_quantum",
+    channel="ibm_quantum_platform",
     token="YOUR_IBM_QUANTUM_TOKEN",
-    overwrite=True
+    overwrite=True,
 )
 
-# Use IBM Quantum backend
+# Any device name starting with "ibm" goes to IBM Quantum
+backend = sqx.QiskitBackend(device='ibm_brisbane', shots=1024)
+result = backend.execute_circuit(circuit, shots=1024)
+
+# Or pass the service arguments directly
 backend = sqx.QiskitBackend(
-    backend_name='ibmq_qasm_simulator',  # or real hardware like 'ibm_osaka'
-    shots=1024
+    device='ibm_brisbane',
+    provider={'channel': 'ibm_quantum_platform', 'token': 'YOUR_TOKEN', 'instance': 'YOUR_CRN'},
 )
-
-# Execute on IBM hardware
-result = backend.run(circuit, shots=1024)
 ```
 
 ## Configuration Options
@@ -74,92 +74,63 @@ result = backend.run(circuit, shots=1024)
 ### Backend Selection
 
 ```python
-# Different Qiskit backends
-backends = {
-    'qasm_simulator': 'Classical QASM simulator',
-    'statevector_simulator': 'Statevector simulator', 
-    'unitary_simulator': 'Unitary matrix simulator',
-    'ibmq_qasm_simulator': 'IBM cloud simulator',
-    'ibm_osaka': 'IBM quantum processor (127 qubits)',
-    'ibm_kyoto': 'IBM quantum processor (127 qubits)'
+# Devices understood by QiskitBackend(device=...)
+devices = {
+    'aer_simulator': 'Local Aer simulator (default; also qasm_simulator, statevector_simulator)',
+    'statevector': 'Aer with a fixed method (also density_matrix, stabilizer, matrix_product_state, ...)',
+    'ibm_brisbane': 'IBM Quantum device by name (requires credentials)',
 }
 
-# Create backend with specific device
-backend = sqx.QiskitBackend(
-    backend_name='qasm_simulator',
-    shots=2048,
-    optimization_level=3
-)
+backend = sqx.QiskitBackend(device='statevector', shots=2048)
+print(backend.backend.options.method)
 ```
 
 ### Advanced Configuration
 
 ```python
-# Custom backend configuration
-backend = sqx.QiskitBackend(
-    backend_name='qasm_simulator',
-    shots=1000,
-    optimization_level=2,  # 0-3, higher = more optimization
-    seed_simulator=42,     # For reproducible results
-    max_parallel_threads=4,
-    memory=True,          # Enable memory snapshots
-    noise_model=None      # Custom noise model
-)
+# Custom configuration
+backend = sqx.QiskitBackend(device='aer_simulator', shots=1000)
 
-# Access underlying Qiskit backend
-qiskit_backend = backend.backend
-print(f"Backend configuration: {qiskit_backend.configuration()}")
+# Access the underlying Qiskit backend (an AerSimulator) to change its options
+backend.backend.set_options(seed_simulator=42, max_parallel_threads=4)
+print(backend.backend.options.seed_simulator)
 ```
+
+`QiskitBackend` takes `device`, `provider` and `shots`. Options such as an optimisation level, noise model or memory are set on the Qiskit objects (`backend.backend`, `qiskit.transpile`) as shown below.
 
 ## Working with Circuits
 
 ### Circuit Creation
 
 ```python
+import numpy as np
+
+
 def demonstrate_qiskit_circuits():
-    """Show various Qiskit circuit features."""
-    
+    """Backend circuits are qiskit.QuantumCircuit objects, so native methods work."""
     backend = sqx.get_backend('qiskit')
-    
-    # Create 4-qubit circuit
     circuit = backend.create_circuit(4)
-    
-    # Single qubit gates
-    circuit.h(0)           # Hadamard
-    circuit.x(1)           # Pauli-X
-    circuit.y(2)           # Pauli-Y  
-    circuit.z(3)           # Pauli-Z
-    
-    # Rotation gates
-    import numpy as np
-    circuit.rx(np.pi/4, 0) # X rotation
-    circuit.ry(np.pi/3, 1) # Y rotation
-    circuit.rz(np.pi/6, 2) # Z rotation
-    
-    # Two-qubit gates
-    circuit.cx(0, 1)       # CNOT
-    circuit.cz(1, 2)       # Controlled-Z
-    circuit.swap(2, 3)     # SWAP
-    
-    # Multi-controlled gates
-    circuit.ccx(0, 1, 2)   # Toffoli (CCX)
-    
-    # Phase gates
-    circuit.s(0)           # S gate (√Z)
-    circuit.t(1)           # T gate (√S)
-    
-    # Measure all qubits
-    circuit.measure_all()
-    
-    # Execute circuit
-    result = backend.run(circuit, shots=1000)
-    print(f"Complex circuit results: {result.get_counts()}")
-    
-    # Visualize circuit (if available)
-    try:
-        print(circuit.draw())
-    except:
-        print("Circuit visualization not available")
+
+    circuit.h(0)              # Hadamard
+    circuit.x(1)              # Pauli-X
+    circuit.y(2)              # Pauli-Y
+    circuit.z(3)              # Pauli-Z
+    circuit.rx(np.pi / 4, 0)  # rotations
+    circuit.ry(np.pi / 3, 1)
+    circuit.rz(np.pi / 6, 2)
+    circuit.cx(0, 1)          # CNOT
+    circuit.cz(1, 2)          # controlled-Z
+    circuit.swap(2, 3)        # SWAP
+    circuit.ccx(0, 1, 2)      # Toffoli
+    circuit.s(0)              # S
+    circuit.t(1)              # T
+
+    # The same gates through the portable API: backend.add_gate(circuit, 'H', 0), ...
+    circuit = backend.add_measurement(circuit)
+    result = backend.execute_circuit(circuit, shots=1000)
+    print(f"Counts (qubit 0 is the rightmost bit): {result['counts']}")
+    print(circuit.draw())
+
 
 demonstrate_qiskit_circuits()
 ```
@@ -167,67 +138,44 @@ demonstrate_qiskit_circuits()
 ### Parameterized Circuits
 
 ```python
-def qiskit_parameterized_circuits():
-    """Demonstrate parameterized quantum circuits."""
-    
+import numpy as np
+
+
+def qiskit_parameterized_circuits(seed=0):
+    """Hardware-efficient ansatz and a parameter sensitivity check."""
     backend = sqx.get_backend('qiskit')
-    
-    # Create parameterized circuit for VQE
-    def create_ansatz(params, n_qubits=4, layers=2):
+    n_qubits, layers = 4, 2
+
+    def create_ansatz(params):
         circuit = backend.create_circuit(n_qubits)
-        
-        param_idx = 0
-        
-        # Initial layer
-        for i in range(n_qubits):
-            circuit.ry(params[param_idx], i)
-            param_idx += 1
-        
-        # Entangling layers
-        for layer in range(layers):
-            # CNOT ladder
-            for i in range(n_qubits - 1):
-                circuit.cx(i, i + 1)
-            
-            # Parameterized rotations
-            for i in range(n_qubits):
-                circuit.ry(params[param_idx], i)
-                param_idx += 1
-                circuit.rz(params[param_idx], i) 
-                param_idx += 1
-        
+        idx = 0
+        for q in range(n_qubits):
+            circuit.ry(params[idx], q)
+            idx += 1
+        for _ in range(layers):
+            for q in range(n_qubits - 1):
+                circuit.cx(q, q + 1)
+            for q in range(n_qubits):
+                circuit.ry(params[idx], q)
+                circuit.rz(params[idx + 1], q)
+                idx += 2
         return circuit
-    
-    # Generate random parameters
-    n_params = 4 + 2 * 2 * 4  # Initial + layers * 2 * qubits
-    params = np.random.random(n_params) * 2 * np.pi
-    
-    # Create and run ansatz
-    ansatz = create_ansatz(params)
-    ansatz.measure_all()
-    
-    result = backend.run(ansatz, shots=1000)
-    print(f"Parameterized circuit results: {result.get_counts()}")
-    
-    # Parameter sensitivity analysis
-    print("\nParameter Sensitivity Analysis:")
-    base_result = result.get_counts()
-    base_prob_00 = base_result.get('0000', 0) / 1000
-    
-    # Vary first parameter
+
+    n_params = n_qubits + 2 * layers * n_qubits
+    params = np.random.default_rng(seed).random(n_params) * 2 * np.pi
+
+    # Exact probabilities from the statevector (qubit 0 is the leftmost bit here)
+    def p_zero(p):
+        return abs(backend.statevector_big_endian(create_ansatz(p))[0]) ** 2
+
+    base = p_zero(params)
+    print(f"P(0000) = {base:.4f}")
     for delta in [-0.1, -0.05, 0.05, 0.1]:
-        test_params = params.copy()
-        test_params[0] += delta
-        
-        test_circuit = create_ansatz(test_params)
-        test_circuit.measure_all()
-        
-        test_result = backend.run(test_circuit, shots=1000)
-        test_counts = test_result.get_counts()
-        test_prob_00 = test_counts.get('0000', 0) / 1000
-        
-        print(f"  Δθ = {delta:+.2f}: P(0000) = {test_prob_00:.3f} "
-              f"(change: {test_prob_00 - base_prob_00:+.3f})")
+        shifted = params.copy()
+        shifted[0] += delta
+        print(f"  dtheta = {delta:+.2f}: P(0000) = {p_zero(shifted):.4f} "
+              f"(change: {p_zero(shifted) - base:+.4f})")
+
 
 qiskit_parameterized_circuits()
 ```
@@ -236,168 +184,63 @@ qiskit_parameterized_circuits()
 
 ### Real Hardware Execution
 
+!!! note "Requires credentials"
+    Needs an IBM Quantum account; checked against the 0.3.0 `QiskitBackend` constructor, not run.
+
+<!-- docs-check: skip -->
 ```python
 def run_on_ibm_hardware():
-    """Execute circuits on real IBM quantum hardware."""
-    
-    # Note: Requires IBM Quantum account setup
-    try:
-        from qiskit_ibm_runtime import QiskitRuntimeService
-        
-        # Initialize service
-        service = QiskitRuntimeService(channel="ibm_quantum")
-        
-        # List available backends
-        available_backends = service.backends()
-        print("Available IBM Quantum backends:")
-        for backend in available_backends:
-            status = backend.status()
-            print(f"  {backend.name}: {status.pending_jobs} jobs pending, "
-                  f"operational: {status.operational}")
-        
-        # Select least busy backend
-        from qiskit_ibm_runtime.utils import least_busy
-        backend_name = least_busy(available_backends).name
-        
-        print(f"\nUsing backend: {backend_name}")
-        
-        # Create SuperQuantX backend for IBM hardware
-        sqx_backend = sqx.QiskitBackend(
-            backend_name=backend_name,
-            shots=1024,
-            optimization_level=3  # Max optimization for hardware
-        )
-        
-        # Create simple Bell state
-        circuit = sqx_backend.create_circuit(2)
-        circuit.h(0)
-        circuit.cx(0, 1)
-        circuit.measure_all()
-        
-        print("Submitting job to IBM Quantum...")
-        result = sqx_backend.run(circuit, shots=1024)
-        
-        counts = result.get_counts()
-        print(f"Hardware results: {counts}")
-        
-        # Analyze fidelity
-        prob_00 = counts.get('00', 0) / 1024
-        prob_11 = counts.get('11', 0) / 1024
-        bell_fidelity = prob_00 + prob_11
-        
-        print(f"Bell state fidelity: {bell_fidelity:.3f}")
-        
-        # Compare with ideal
-        if bell_fidelity > 0.8:
-            print("✅ Good Bell state fidelity")
-        elif bell_fidelity > 0.6:
-            print("⚠️ Moderate Bell state fidelity")
-        else:
-            print("❌ Low Bell state fidelity")
-            
-    except ImportError:
-        print("IBM Quantum access requires: pip install qiskit-ibm-runtime")
-    except Exception as e:
-        print(f"IBM Quantum access error: {e}")
-        print("Make sure to set up IBM Quantum credentials")
+    """Run a Bell state on the least busy IBM device."""
+    from qiskit_ibm_runtime import QiskitRuntimeService
 
-# Uncomment to run with proper IBM Quantum setup
+    service = QiskitRuntimeService()
+    device = service.least_busy(operational=True, simulator=False).name
+    print(f"Using backend: {device}")
+
+    # provider= takes the same keyword arguments as QiskitRuntimeService
+    hw = sqx.QiskitBackend(device=device, shots=1024)
+    circuit = hw.create_circuit(2)
+    hw.add_gate(circuit, 'H', 0)
+    hw.add_gate(circuit, 'CNOT', [0, 1])
+    result = hw.execute_circuit(circuit)     # transpiled and run with SamplerV2
+
+    counts = result['counts']
+    print(f"Job {result['job_id']}: {counts}")
+    print(f"Bell fidelity: {(counts.get('00', 0) + counts.get('11', 0)) / 1024:.3f}")
+
+
 # run_on_ibm_hardware()
 ```
 
 ### Device Calibration Data
 
-```python
-def analyze_device_properties():
-    """Analyze IBM quantum device properties and calibration data."""
-    
-    try:
-        from qiskit_ibm_runtime import QiskitRuntimeService
-        
-        service = QiskitRuntimeService(channel="ibm_quantum")
-        backend = service.get_backend('ibm_osaka')  # 127-qubit processor
-        
-        # Get backend properties
-        properties = backend.properties()
-        configuration = backend.configuration()
-        
-        print(f"Backend: {backend.name}")
-        print(f"Number of qubits: {configuration.n_qubits}")
-        print(f"Coupling map: {len(configuration.coupling_map)} connections")
-        
-        # Analyze qubit properties
-        if properties:
-            print("\nQubit Error Rates:")
-            for i in range(min(10, configuration.n_qubits)):  # First 10 qubits
-                # T1 and T2 times
-                t1 = properties.t1(i)
-                t2 = properties.t2(i)
-                
-                # Readout error
-                readout_error = properties.readout_error(i)
-                
-                # Gate error (single qubit)
-                try:
-                    sx_error = properties.gate_error('sx', i)
-                    print(f"  Qubit {i}: T1={t1:.1f}μs, T2={t2:.1f}μs, "
-                          f"Readout={readout_error:.4f}, SX={sx_error:.4f}")
-                except:
-                    print(f"  Qubit {i}: T1={t1:.1f}μs, T2={t2:.1f}μs, "
-                          f"Readout={readout_error:.4f}")
-            
-            # Two-qubit gate errors
-            print("\nTwo-Qubit Gate Errors:")
-            coupling_map = configuration.coupling_map
-            for i, (q1, q2) in enumerate(coupling_map[:10]):  # First 10 pairs
-                try:
-                    cx_error = properties.gate_error('cx', [q1, q2])
-                    print(f"  CX({q1},{q2}): {cx_error:.4f}")
-                except:
-                    continue
-        
-        # Create noise model for simulation
-        from qiskit_aer.noise import NoiseModel
-        noise_model = NoiseModel.from_backend(backend)
-        
-        print(f"\nNoise model created with {len(noise_model.noise_instructions)} "
-              f"noise instructions")
-        
-        # Use noise model in simulation
-        sqx_backend = sqx.QiskitBackend(
-            backend_name='qasm_simulator',
-            noise_model=noise_model,
-            shots=1000
-        )
-        
-        # Test with Bell state
-        circuit = sqx_backend.create_circuit(2)
-        circuit.h(0)
-        circuit.cx(0, 1)
-        circuit.measure_all()
-        
-        print("\nTesting with device noise model:")
-        noisy_result = sqx_backend.run(circuit, shots=1000)
-        noisy_counts = noisy_result.get_counts()
-        
-        print(f"Noisy simulation: {noisy_counts}")
-        
-        # Calculate noise impact
-        prob_00 = noisy_counts.get('00', 0) / 1000
-        prob_11 = noisy_counts.get('11', 0) / 1000
-        prob_01 = noisy_counts.get('01', 0) / 1000
-        prob_10 = noisy_counts.get('10', 0) / 1000
-        
-        fidelity = prob_00 + prob_11
-        error_rate = prob_01 + prob_10
-        
-        print(f"Bell state fidelity with noise: {fidelity:.3f}")
-        print(f"Error rate: {error_rate:.3f}")
-        
-    except Exception as e:
-        print(f"Device analysis requires IBM Quantum access: {e}")
+!!! note "Requires credentials"
+    Needs an IBM Quantum account; checked against the `qiskit-ibm-runtime` API, not run.
 
-# Uncomment to run with IBM Quantum access
-# analyze_device_properties()
+<!-- docs-check: skip -->
+```python
+def analyze_device_properties(device='ibm_brisbane'):
+    """Read calibration data and build a matching noisy simulator."""
+    from qiskit_aer import AerSimulator
+    from qiskit_ibm_runtime import QiskitRuntimeService
+
+    ibm_backend = QiskitRuntimeService().backend(device)
+    target = ibm_backend.target
+    print(f"Backend: {ibm_backend.name}, {ibm_backend.num_qubits} qubits")
+
+    for q in range(5):
+        props = target.qubit_properties[q]
+        readout = target['measure'][(q,)].error
+        print(f"  Qubit {q}: T1={props.t1 * 1e6:.1f}us, T2={props.t2 * 1e6:.1f}us, readout={readout:.4f}")
+
+    # Noisy local simulation that mimics the device
+    sim = sqx.QiskitBackend()
+    sim.backend = AerSimulator.from_backend(ibm_backend)
+    circuit = sim.create_circuit(2)
+    circuit.h(0)
+    circuit.cx(0, 1)
+    counts = sim.execute_circuit(circuit, shots=1000)['counts']
+    print(f"Bell fidelity with device noise: {(counts.get('00', 0) + counts.get('11', 0)) / 1000:.3f}")
 ```
 
 ## Advanced Features
@@ -405,144 +248,75 @@ def analyze_device_properties():
 ### Transpilation and Optimization
 
 ```python
+import numpy as np
+from qiskit import transpile
+
+
 def demonstrate_transpilation():
-    """Show Qiskit circuit transpilation and optimization."""
-    
+    """Show Qiskit transpilation at each optimisation level."""
     backend = sqx.get_backend('qiskit')
-    
-    # Create complex circuit that needs optimization
     circuit = backend.create_circuit(5)
-    
-    # Add many gates that can be optimized
     for i in range(5):
         circuit.h(i)
-        
-    for i in range(4):
-        circuit.cx(i, i + 1)
-    
-    # Add more layers
     for _ in range(3):
-        for i in range(5):
-            circuit.rz(np.pi/4, i)
         for i in range(4):
             circuit.cx(i, i + 1)
-    
-    circuit.measure_all()
-    
-    print("Original circuit stats:")
-    print(f"  Gates: {len(circuit._circuit.data) if hasattr(circuit, '_circuit') else 'N/A'}")
-    
-    # Test different optimization levels
-    optimization_levels = [0, 1, 2, 3]
-    
-    for opt_level in optimization_levels:
-        opt_backend = sqx.QiskitBackend(
-            backend_name='qasm_simulator',
-            optimization_level=opt_level,
-            shots=1000
-        )
-        
-        # Execute with optimization
-        result = opt_backend.run(circuit, shots=1000)
-        counts = result.get_counts()
-        
-        print(f"\nOptimization level {opt_level}:")
-        print(f"  Result distribution: {len(counts)} unique outcomes")
-        print(f"  Most probable: {max(counts.keys(), key=counts.get)} "
-              f"({max(counts.values())/1000:.3f})")
+        for i in range(5):
+            circuit.rz(np.pi / 4, i)
+    circuit.measure_all(add_bits=False)
+    print(f"Original: {circuit.size()} gates, depth {circuit.depth()}")
+
+    # backend.backend is the underlying AerSimulator
+    for level in range(4):
+        compiled = transpile(circuit, backend.backend, optimization_level=level)
+        counts = backend.execute_circuit(compiled, shots=1000)['counts']
+        print(f"Level {level}: {compiled.size()} gates, depth {compiled.depth()}, "
+              f"{len(counts)} outcomes")
+
 
 demonstrate_transpilation()
 ```
+
+`execute_circuit` itself transpiles with Qiskit's default settings; there is no `optimization_level` argument on `QiskitBackend` in 0.3.0.
 
 ### Custom Noise Models
 
 ```python
 def create_custom_noise_models():
-    """Create and use custom noise models."""
-    
-    try:
-        from qiskit_aer.noise import (NoiseModel, depolarizing_error, 
-                                    thermal_relaxation_error, ReadoutError)
-        
-        # Create custom noise model
-        noise_model = NoiseModel()
-        
-        # Single-qubit gate errors
-        single_qubit_error = depolarizing_error(0.001, 1)  # 0.1% error rate
-        noise_model.add_all_qubit_quantum_error(single_qubit_error, ['u1', 'u2', 'u3'])
-        
-        # Two-qubit gate errors
-        two_qubit_error = depolarizing_error(0.01, 2)  # 1% error rate
-        noise_model.add_all_qubit_quantum_error(two_qubit_error, ['cx'])
-        
-        # Thermal relaxation
-        t1 = 50000  # T1 time (ns)
-        t2 = 70000  # T2 time (ns)
-        
-        for qubit in range(5):  # Apply to 5 qubits
-            thermal_error = thermal_relaxation_error(t1, t2, 35)  # 35ns gate time
-            noise_model.add_quantum_error(thermal_error, ['u1', 'u2', 'u3'], [qubit])
-        
-        # Readout errors
-        readout_error = ReadoutError([[0.95, 0.05], [0.1, 0.9]])  # Asymmetric readout
-        noise_model.add_all_qubit_readout_error(readout_error)
-        
-        print("Custom noise model created:")
-        print(f"  Quantum errors: {len(noise_model.noise_instructions)}")
-        print(f"  Readout errors: {len(noise_model._default_readout_errors)}")
-        
-        # Use custom noise model
-        backend = sqx.QiskitBackend(
-            backend_name='qasm_simulator',
-            noise_model=noise_model,
-            shots=2000
+    """Build a Qiskit Aer noise model and compare clean and noisy results."""
+    from qiskit_aer import AerSimulator
+    from qiskit_aer.noise import (
+        NoiseModel,
+        ReadoutError,
+        depolarizing_error,
+        thermal_relaxation_error,
+    )
+
+    noise_model = NoiseModel()
+    noise_model.add_all_qubit_quantum_error(depolarizing_error(0.001, 1), ['h', 'x'])
+    noise_model.add_all_qubit_quantum_error(depolarizing_error(0.01, 2), ['cx'])
+    for qubit in range(3):   # T1 = 50 us, T2 = 70 us, 35 ns gates
+        noise_model.add_quantum_error(
+            thermal_relaxation_error(50_000, 70_000, 35), ['id'], [qubit]
         )
-        
-        # Test various circuits
-        test_circuits = {
-            'Single H': lambda: backend.create_circuit(1).h(0).measure_all(),
-            'Bell State': lambda: backend.create_circuit(2).h(0).cx(0,1).measure_all(),
-            'GHZ State': lambda: backend.create_circuit(3).h(0).cx(0,1).cx(1,2).measure_all()
-        }
-        
-        print("\nNoise impact analysis:")
-        
-        for name, circuit_func in test_circuits.items():
-            # Noiseless simulation
-            clean_backend = sqx.QiskitBackend(backend_name='qasm_simulator', shots=2000)
-            clean_circuit = circuit_func()
-            clean_result = clean_backend.run(clean_circuit, shots=2000)
-            clean_counts = clean_result.get_counts()
-            
-            # Noisy simulation  
-            noisy_circuit = circuit_func()
-            noisy_result = backend.run(noisy_circuit, shots=2000)
-            noisy_counts = noisy_result.get_counts()
-            
-            # Compare fidelities
-            if name == 'Single H':
-                # Expected: 50-50 distribution
-                clean_fidelity = min(clean_counts.get('0', 0), clean_counts.get('1', 0)) / 1000
-                noisy_fidelity = min(noisy_counts.get('0', 0), noisy_counts.get('1', 0)) / 1000
-            else:
-                # Expected: only |00..0⟩ and |11..1⟩
-                all_zeros = '0' * (2 if 'Bell' in name else 3)
-                all_ones = '1' * (2 if 'Bell' in name else 3)
-                
-                clean_fidelity = (clean_counts.get(all_zeros, 0) + 
-                                clean_counts.get(all_ones, 0)) / 2000
-                noisy_fidelity = (noisy_counts.get(all_zeros, 0) + 
-                                noisy_counts.get(all_ones, 0)) / 2000
-            
-            fidelity_loss = clean_fidelity - noisy_fidelity
-            
-            print(f"  {name}:")
-            print(f"    Clean fidelity: {clean_fidelity:.3f}")
-            print(f"    Noisy fidelity: {noisy_fidelity:.3f}")
-            print(f"    Fidelity loss: {fidelity_loss:.3f}")
-    
-    except ImportError:
-        print("Noise modeling requires: pip install qiskit-aer")
+    noise_model.add_all_qubit_readout_error(ReadoutError([[0.95, 0.05], [0.1, 0.9]]))
+    print("Noisy instructions:", noise_model.noise_instructions)
+
+    clean = sqx.QiskitBackend(shots=2000)
+    noisy = sqx.QiskitBackend(shots=2000)
+    noisy.backend = AerSimulator(noise_model=noise_model)   # swap in the noisy simulator
+
+    for n in (2, 3):                                          # Bell and GHZ states
+        fidelities = []
+        for b in (clean, noisy):
+            circuit = b.create_circuit(n)
+            b.add_gate(circuit, 'H', 0)
+            for q in range(n - 1):
+                b.add_gate(circuit, 'CNOT', [q, q + 1])
+            counts = b.execute_circuit(circuit)['counts']
+            fidelities.append((counts.get('0' * n, 0) + counts.get('1' * n, 0)) / 2000)
+        print(f"  {n}-qubit GHZ: clean {fidelities[0]:.3f}, noisy {fidelities[1]:.3f}")
+
 
 create_custom_noise_models()
 ```
@@ -551,263 +325,101 @@ create_custom_noise_models()
 
 ```python
 def demonstrate_error_mitigation():
-    """Show error mitigation techniques with Qiskit."""
-    
-    try:
-        from qiskit_aer.noise import NoiseModel, depolarizing_error
-        
-        # Create noisy backend
-        noise_model = NoiseModel()
-        error = depolarizing_error(0.02, 1)  # 2% single-qubit error
-        noise_model.add_all_qubit_quantum_error(error, ['u1', 'u2', 'u3'])
-        
-        noisy_backend = sqx.QiskitBackend(
-            backend_name='qasm_simulator',
-            noise_model=noise_model,
-            shots=2000
-        )
-        
-        # Test circuit: |+⟩ state
-        def create_plus_state():
-            circuit = noisy_backend.create_circuit(1)
-            circuit.h(0)
-            circuit.measure_all()
-            return circuit
-        
-        # 1. Zero-noise extrapolation
-        print("Error Mitigation: Zero-Noise Extrapolation")
-        
-        noise_factors = [1, 2, 3]  # Amplify noise by these factors
-        expectation_values = []
-        
-        for factor in noise_factors:
-            # Amplify noise by repeating gates
-            circuit = noisy_backend.create_circuit(1)
-            
-            # Apply H gate 'factor' times (odd repetitions = H, even = I)
-            for _ in range(factor):
-                circuit.h(0)
-            
-            # If even number of H gates, apply one more to get |+⟩
-            if factor % 2 == 0:
-                circuit.h(0)
-            
-            circuit.measure_all()
-            
-            result = noisy_backend.run(circuit, shots=2000)
-            counts = result.get_counts()
-            
-            # Expectation value of |+⟩ state
-            prob_0 = counts.get('0', 0) / 2000
-            expectation = 2 * prob_0 - 1  # Convert to [-1, 1]
-            expectation_values.append(expectation)
-            
-            print(f"  Noise factor {factor}: <Z> = {expectation:.3f}")
-        
-        # Extrapolate to zero noise
-        # Fit linear model and extrapolate to factor=0
-        import numpy as np
-        coeffs = np.polyfit(noise_factors, expectation_values, 1)
-        zero_noise_value = coeffs[1]  # y-intercept
-        
-        print(f"  Extrapolated zero-noise: <Z> = {zero_noise_value:.3f}")
-        print(f"  Theoretical value: <Z> = 0.000")
-        print(f"  Error correction: {abs(zero_noise_value):.3f}")
-        
-        # 2. Readout error mitigation
-        print(f"\nError Mitigation: Readout Correction")
-        
-        # Calibrate readout errors
-        def calibrate_readout():
-            # Measure |0⟩ state
-            circuit_0 = noisy_backend.create_circuit(1)
-            circuit_0.measure_all()
-            result_0 = noisy_backend.run(circuit_0, shots=1000)
-            counts_0 = result_0.get_counts()
-            
-            # Measure |1⟩ state
-            circuit_1 = noisy_backend.create_circuit(1)
-            circuit_1.x(0)  # Prepare |1⟩
-            circuit_1.measure_all()
-            result_1 = noisy_backend.run(circuit_1, shots=1000)
-            counts_1 = result_1.get_counts()
-            
-            # Build calibration matrix
-            p00 = counts_0.get('0', 0) / 1000  # P(measure 0 | prepared 0)
-            p01 = counts_0.get('1', 0) / 1000  # P(measure 1 | prepared 0)
-            p10 = counts_1.get('0', 0) / 1000  # P(measure 0 | prepared 1) 
-            p11 = counts_1.get('1', 0) / 1000  # P(measure 1 | prepared 1)
-            
-            calibration_matrix = np.array([[p00, p10], [p01, p11]])
-            return calibration_matrix
-        
-        cal_matrix = calibrate_readout()
-        print(f"  Calibration matrix:")
-        print(f"    [[{cal_matrix[0,0]:.3f}, {cal_matrix[0,1]:.3f}],")
-        print(f"     [{cal_matrix[1,0]:.3f}, {cal_matrix[1,1]:.3f}]]")
-        
-        # Test readout correction
-        test_circuit = create_plus_state()
-        raw_result = noisy_backend.run(test_circuit, shots=1000)
-        raw_counts = raw_result.get_counts()
-        
-        # Apply correction
-        raw_probs = np.array([
-            raw_counts.get('0', 0) / 1000,
-            raw_counts.get('1', 0) / 1000
-        ])
-        
-        corrected_probs = np.linalg.inv(cal_matrix) @ raw_probs
-        
-        print(f"  Raw probabilities: [P(0)={raw_probs[0]:.3f}, P(1)={raw_probs[1]:.3f}]")
-        print(f"  Corrected probs: [P(0)={corrected_probs[0]:.3f}, P(1)={corrected_probs[1]:.3f}]")
-        print(f"  Theoretical: [P(0)=0.500, P(1)=0.500]")
-        
-        # Calculate improvement
-        raw_error = abs(raw_probs[0] - 0.5) + abs(raw_probs[1] - 0.5)
-        corrected_error = abs(corrected_probs[0] - 0.5) + abs(corrected_probs[1] - 0.5)
-        improvement = (raw_error - corrected_error) / raw_error * 100
-        
-        print(f"  Error reduction: {improvement:.1f}%")
-        
-    except ImportError:
-        print("Error mitigation requires advanced Qiskit components")
+    """Zero-noise extrapolation and readout correction on a noisy Aer simulator."""
+    from qiskit_aer import AerSimulator
+    from qiskit_aer.noise import NoiseModel, ReadoutError, depolarizing_error
+
+    noise_model = NoiseModel()
+    noise_model.add_all_qubit_quantum_error(depolarizing_error(0.02, 1), ['x'])
+    noise_model.add_all_qubit_readout_error(ReadoutError([[0.97, 0.03], [0.06, 0.94]]))
+    noisy = sqx.QiskitBackend(shots=4000)
+    noisy.backend = AerSimulator(noise_model=noise_model)
+
+    # 1. Zero-noise extrapolation: X^(2k+1) = X, but noise grows with k
+    print("Zero-noise extrapolation (ideal <Z> of |1> is -1):")
+    factors, values = [1, 3, 5], []
+    for factor in factors:
+        circuit = noisy.create_circuit(1)
+        for _ in range(factor):
+            circuit.x(0)
+            circuit.barrier()   # stop the transpiler from cancelling X pairs
+        circuit.measure_all(add_bits=False)
+        counts = noisy.execute_circuit(circuit)['counts']
+        z = (counts.get('0', 0) - counts.get('1', 0)) / 4000
+        values.append(z)
+        print(f"  noise factor {factor}: <Z> = {z:.3f}")
+    zero_noise = np.polyfit(factors, values, 1)[1]
+    print(f"  extrapolated: <Z> = {zero_noise:.3f}")
+
+    # 2. Readout correction from a calibration matrix
+    def measure(prep_one):
+        circuit = noisy.create_circuit(1)
+        if prep_one:
+            circuit.x(0)
+        circuit.measure_all(add_bits=False)
+        counts = noisy.execute_circuit(circuit)['counts']
+        return np.array([counts.get('0', 0), counts.get('1', 0)]) / 4000
+
+    cal = np.column_stack([measure(False), measure(True)])   # columns: prepared 0, prepared 1
+    raw = measure(True)
+    corrected = np.linalg.solve(cal, raw)
+    print(f"Readout correction: raw P(1)={raw[1]:.3f}, corrected P(1)={corrected[1]:.3f}")
+
 
 demonstrate_error_mitigation()
 ```
+
+SuperQuantX also has helpers for this in `superquantx.noise` (`ZeroNoiseExtrapolation`) and `superquantx.measurements.ResultAnalyzer`; note that `ResultAnalyzer.readout_error_mitigation` is a placeholder in 0.3.0 and returns the counts unchanged.
 
 ## Performance Optimization
 
 ### Execution Time Analysis
 
 ```python
-def qiskit_performance_analysis():
-    """Analyze Qiskit backend performance characteristics."""
-    
-    import time
-    
-    # Test different simulators
-    simulators = [
-        ('qasm_simulator', 'Basic QASM simulator'),
-        ('statevector_simulator', 'Statevector simulator'),
-    ]
-    
-    # Circuit complexity levels
-    complexities = [
-        (2, 1, "Simple 2-qubit, 1 layer"),
-        (4, 2, "Medium 4-qubit, 2 layers"),
-        (6, 3, "Complex 6-qubit, 3 layers"),
-    ]
-    
-    results = {}
-    
-    print("Qiskit Performance Analysis")
-    print("=" * 30)
-    
-    for sim_name, sim_desc in simulators:
-        print(f"\nTesting {sim_name} ({sim_desc}):")
-        results[sim_name] = {}
-        
-        try:
-            for n_qubits, n_layers, desc in complexities:
-                # Create test circuit
-                backend = sqx.QiskitBackend(
-                    backend_name=sim_name,
-                    shots=1000,
-                    optimization_level=2
-                )
-                
-                circuit = backend.create_circuit(n_qubits)
-                
-                # Build parameterized circuit
-                params = np.random.random(n_qubits * n_layers * 2) * 2 * np.pi
-                param_idx = 0
-                
-                for layer in range(n_layers):
-                    # Rotation layer
-                    for qubit in range(n_qubits):
-                        circuit.ry(params[param_idx], qubit)
-                        param_idx += 1
-                        circuit.rz(params[param_idx], qubit)
-                        param_idx += 1
-                    
-                    # Entangling layer
-                    for qubit in range(n_qubits - 1):
-                        circuit.cx(qubit, qubit + 1)
-                
-                circuit.measure_all()
-                
-                # Time execution
-                start_time = time.time()
-                result = backend.run(circuit, shots=1000)
-                execution_time = time.time() - start_time
-                
-                results[sim_name][(n_qubits, n_layers)] = {
-                    'time': execution_time,
-                    'counts': len(result.get_counts())
-                }
-                
-                print(f"  {desc}: {execution_time:.3f}s "
-                      f"({len(result.get_counts())} unique outcomes)")
-                
-        except Exception as e:
-            print(f"  Error with {sim_name}: {e}")
-    
-    # Shot count vs accuracy analysis
-    print(f"\nShot Count vs Accuracy Analysis:")
-    backend = sqx.QiskitBackend(backend_name='qasm_simulator')
-    
-    # Bell state circuit
-    circuit = backend.create_circuit(2)
-    circuit.h(0)
-    circuit.cx(0, 1)
-    circuit.measure_all()
-    
-    shot_counts = [100, 500, 1000, 2000, 5000]
-    theoretical_prob = 0.5  # For Bell state |00⟩ probability
-    
-    for shots in shot_counts:
-        start_time = time.time()
-        result = backend.run(circuit, shots=shots)
-        exec_time = time.time() - start_time
-        
-        counts = result.get_counts()
-        prob_00 = counts.get('00', 0) / shots
-        error = abs(prob_00 - theoretical_prob)
-        
-        print(f"  {shots:4d} shots: P(00)={prob_00:.3f}, "
-              f"Error={error:.3f}, Time={exec_time:.3f}s")
-    
-    # Optimization level impact
-    print(f"\nOptimization Level Impact:")
-    
-    # Complex circuit for optimization testing
-    test_backend = sqx.QiskitBackend(backend_name='qasm_simulator')
-    complex_circuit = test_backend.create_circuit(4)
-    
-    # Create circuit that can be optimized
-    for i in range(4):
-        complex_circuit.h(i)
-        complex_circuit.x(i)  # These X gates after H can be optimized
-        complex_circuit.h(i)  # H-X-H = Z-H can be optimized
-    
-    for i in range(3):
-        complex_circuit.cx(i, i + 1)
-    
-    complex_circuit.measure_all()
-    
-    for opt_level in range(4):
-        opt_backend = sqx.QiskitBackend(
-            backend_name='qasm_simulator',
-            optimization_level=opt_level,
-            shots=1000
-        )
-        
-        start_time = time.time()
-        result = opt_backend.run(complex_circuit, shots=1000)
-        exec_time = time.time() - start_time
-        
-        print(f"  Opt level {opt_level}: {exec_time:.3f}s")
+import time
+
+import numpy as np
+from qiskit import transpile
+
+
+def qiskit_performance_analysis(seed=0):
+    """Execution time by circuit size, and shot count against accuracy."""
+    rng = np.random.default_rng(seed)
+    backend = sqx.QiskitBackend(device='aer_simulator')
+
+    for n_qubits, n_layers in [(2, 1), (4, 2), (6, 3)]:
+        circuit = backend.create_circuit(n_qubits)
+        for _ in range(n_layers):
+            for q in range(n_qubits):
+                circuit.ry(rng.uniform(0, 2 * np.pi), q)
+                circuit.rz(rng.uniform(0, 2 * np.pi), q)
+            for q in range(n_qubits - 1):
+                circuit.cx(q, q + 1)
+        start = time.time()
+        counts = backend.execute_circuit(circuit, shots=1000)['counts']
+        print(f"  {n_qubits} qubits, {n_layers} layers: {time.time() - start:.3f}s, "
+              f"{len(counts)} unique outcomes")
+
+    # Shot count against sampling error for a Bell state
+    bell = backend.create_circuit(2)
+    bell.h(0)
+    bell.cx(0, 1)
+    for shots in [100, 1000, 10000]:
+        p00 = backend.execute_circuit(bell, shots=shots)['counts'].get('00', 0) / shots
+        print(f"  {shots:5d} shots: P(00)={p00:.3f}, error={abs(p00 - 0.5):.3f}")
+
+    # Transpiler optimisation levels on a circuit with removable gates
+    redundant = backend.create_circuit(4)
+    for q in range(4):
+        redundant.h(q)
+        redundant.x(q)
+        redundant.h(q)       # H X H = Z
+    for q in range(3):
+        redundant.cx(q, q + 1)
+    for level in range(4):
+        out = transpile(redundant, backend.backend, optimization_level=level)
+        print(f"  Opt level {level}: {out.size()} gates, depth {out.depth()}")
+
 
 qiskit_performance_analysis()
 ```
@@ -818,99 +430,23 @@ qiskit_performance_analysis()
 
 ```python
 def qiskit_quantum_ml_example():
-    """Comprehensive QML example using Qiskit backend."""
-    
+    """Quantum SVM on the Qiskit backend."""
     from sklearn.datasets import make_classification
+    from sklearn.metrics import accuracy_score
     from sklearn.model_selection import train_test_split
     from sklearn.preprocessing import StandardScaler
-    from sklearn.metrics import accuracy_score
-    
-    print("Quantum Machine Learning with Qiskit")
-    print("=" * 38)
-    
-    # Generate dataset
-    X, y = make_classification(
-        n_samples=100, 
-        n_features=4, 
-        n_classes=2,
-        n_redundant=0,
-        random_state=42
-    )
-    
-    # Preprocess data
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_scaled, y, test_size=0.3, random_state=42
-    )
-    
-    print(f"Dataset: {len(X)} samples, {X.shape[1]} features, 2 classes")
+
+    X, y = make_classification(n_samples=60, n_features=4, n_redundant=0, random_state=42)
+    X = StandardScaler().fit_transform(X)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
     print(f"Training: {len(X_train)}, Testing: {len(X_test)}")
-    
-    # Create Quantum SVM using Qiskit backend
-    qsvm = sqx.QuantumSVM(
-        backend='qiskit',
-        feature_map='ZFeatureMap',
-        num_features=4,
-        shots=1024
-    )
-    
-    # Train quantum SVM
-    print("\nTraining Quantum SVM with Qiskit backend...")
-    qsvm.fit(X_train, y_train)
-    
-    # Make predictions
-    train_pred = qsvm.predict(X_train)
-    test_pred = qsvm.predict(X_test)
-    
-    train_acc = accuracy_score(y_train, train_pred)
-    test_acc = accuracy_score(y_test, test_pred)
-    
-    print(f"Training Accuracy: {train_acc:.3f}")
-    print(f"Test Accuracy: {test_acc:.3f}")
-    
-    # Compare with different Qiskit simulators
-    simulators = ['qasm_simulator', 'statevector_simulator']
-    
-    print(f"\nComparing Qiskit simulators:")
-    for sim in simulators:
-        try:
-            sim_qsvm = sqx.QuantumSVM(
-                backend=sqx.QiskitBackend(backend_name=sim),
-                feature_map='ZFeatureMap',
-                num_features=4
-            )
-            
-            sim_qsvm.fit(X_train, y_train)
-            sim_pred = sim_qsvm.predict(X_test)
-            sim_acc = accuracy_score(y_test, sim_pred)
-            
-            print(f"  {sim}: {sim_acc:.3f}")
-            
-        except Exception as e:
-            print(f"  {sim}: Error - {e}")
-    
-    # Feature map comparison
-    print(f"\nFeature map comparison:")
-    feature_maps = ['ZFeatureMap', 'ZZFeatureMap', 'PauliFeatureMap']
-    
-    for fm in feature_maps:
-        try:
-            fm_qsvm = sqx.QuantumSVM(
-                backend='qiskit',
-                feature_map=fm,
-                num_features=4
-            )
-            
-            fm_qsvm.fit(X_train, y_train)
-            fm_pred = fm_qsvm.predict(X_test)
-            fm_acc = accuracy_score(y_test, fm_pred)
-            
-            print(f"  {fm}: {fm_acc:.3f}")
-            
-        except Exception as e:
-            print(f"  {fm}: Error - {e}")
+
+    # Train on the Qiskit backend with each feature map
+    for fm in ['ZFeatureMap', 'ZZFeatureMap', 'PauliFeatureMap']:
+        fm_qsvm = sqx.QuantumSVM(backend=sqx.QiskitBackend(), feature_map=fm, feature_map_reps=1)
+        fm_acc = accuracy_score(y_test, fm_qsvm.fit(X_train, y_train).predict(X_test))
+        print(f"  {fm}: {fm_acc:.3f}")
+
 
 qiskit_quantum_ml_example()
 ```
@@ -921,58 +457,56 @@ qiskit_quantum_ml_example()
 
 #### 1. IBM Quantum Authentication
 
+!!! note "Requires credentials"
+    Needs an IBM Quantum token; not run. Current `qiskit-ibm-runtime` accepts `channel="ibm_quantum_platform"` or `"ibm_cloud"`; the old `"ibm_quantum"` channel is rejected.
+
+<!-- docs-check: skip -->
 ```python
-# Fix authentication issues
 from qiskit_ibm_runtime import QiskitRuntimeService
 
-# Check saved accounts
-saved_accounts = QiskitRuntimeService.saved_accounts()
-print("Saved accounts:", saved_accounts)
+print("Saved accounts:", QiskitRuntimeService.saved_accounts())
 
-# Re-save credentials if needed
 QiskitRuntimeService.save_account(
-    channel="ibm_quantum",
+    channel="ibm_quantum_platform",
     token="YOUR_TOKEN",
-    overwrite=True
+    overwrite=True,
 )
 ```
 
 #### 2. Backend Availability
 
-```python
-# Check backend status
-def check_backend_status():
-    try:
-        service = QiskitRuntimeService()
-        backends = service.backends()
-        
-        for backend in backends:
-            status = backend.status()
-            print(f"{backend.name}: "
-                  f"operational={status.operational}, "
-                  f"pending_jobs={status.pending_jobs}")
-    except Exception as e:
-        print(f"Cannot check backends: {e}")
+!!! note "Requires credentials"
+    Needs an IBM Quantum account; not run.
 
-check_backend_status()
+<!-- docs-check: skip -->
+```python
+from qiskit_ibm_runtime import QiskitRuntimeService
+
+for ibm_backend in QiskitRuntimeService().backends():
+    status = ibm_backend.status()
+    print(f"{ibm_backend.name}: operational={status.operational}, "
+          f"pending_jobs={status.pending_jobs}")
 ```
 
 #### 3. Memory Issues
 
 ```python
-# Optimize for large circuits
-backend = sqx.QiskitBackend(
-    backend_name='qasm_simulator',
-    max_parallel_threads=1,  # Reduce memory usage
-    shots=1000,
-    optimization_level=3     # More optimization
-)
+# Large circuits: the matrix-product-state method needs far less memory
+# than a full statevector for weakly entangled circuits
+backend = sqx.QiskitBackend(device='matrix_product_state', shots=1000)
+
+wide = backend.create_circuit(40)
+backend.add_gate(wide, 'H', 0)
+for q in range(39):
+    backend.add_gate(wide, 'CNOT', [q, q + 1])
+counts = backend.execute_circuit(wide)['counts']
+print(sorted(counts))   # only all-zeros and all-ones
 ```
 
 ### Performance Tips
 
 1. **Use appropriate simulators**: `statevector_simulator` for small circuits, `qasm_simulator` for general use
-2. **Optimize circuits**: Use `optimization_level=3` for hardware execution
+2. **Optimize circuits**: transpile with `qiskit.transpile(circuit, backend.backend, optimization_level=3)` before hardware execution
 3. **Manage shots**: Balance accuracy vs execution time
 4. **Batch jobs**: Submit multiple circuits together when possible
 5. **Monitor queue**: Check IBM Quantum queue status before submission
@@ -983,55 +517,52 @@ backend = sqx.QiskitBackend(
 
 ```python
 # qiskit_helpers.py
+import time
+
+
 class QiskitHelpers:
     @staticmethod
-    def create_efficient_backend(n_qubits, use_hardware=False):
-        if use_hardware:
-            return sqx.QiskitBackend(
-                backend_name='least_busy',
-                optimization_level=3,
-                shots=1024
-            )
-        else:
-            simulator = 'statevector_simulator' if n_qubits <= 10 else 'qasm_simulator'
-            return sqx.QiskitBackend(
-                backend_name=simulator,
-                optimization_level=2,
-                shots=1000
-            )
-    
+    def create_efficient_backend(n_qubits, ibm_device=None, provider=None):
+        if ibm_device:   # requires credentials
+            return sqx.QiskitBackend(device=ibm_device, provider=provider, shots=1024)
+        method = 'statevector' if n_qubits <= 20 else 'matrix_product_state'
+        return sqx.QiskitBackend(device=method, shots=1000)
+
     @staticmethod
     def submit_with_retry(backend, circuit, max_retries=3):
         for attempt in range(max_retries):
             try:
-                return backend.run(circuit)
-            except Exception as e:
+                return backend.execute_circuit(circuit)
+            except Exception:
                 if attempt == max_retries - 1:
-                    raise e
+                    raise
                 print(f"Attempt {attempt + 1} failed, retrying...")
-                time.sleep(2 ** attempt)  # Exponential backoff
+                time.sleep(2 ** attempt)  # exponential backoff
+
+
+helper_backend = QiskitHelpers.create_efficient_backend(2)
+bell = helper_backend.create_circuit(2)
+bell.h(0)
+bell.cx(0, 1)
+print(QiskitHelpers.submit_with_retry(helper_backend, bell)['counts'])
 ```
 
 ### Error Handling
 
 ```python
-def robust_qiskit_execution(circuit, backend_name='qasm_simulator'):
-    """Execute circuit with comprehensive error handling."""
-    
+def robust_qiskit_execution(circuit, device='ibm_brisbane', fallback='aer_simulator'):
+    """Try a device and fall back to the local Aer simulator on failure."""
     try:
-        backend = sqx.QiskitBackend(backend_name=backend_name)
-        result = backend.run(circuit, shots=1000)
-        return result
-        
+        return sqx.QiskitBackend(device=device).execute_circuit(circuit, shots=1000)
     except Exception as e:
-        print(f"Execution failed with {backend_name}: {e}")
-        
-        # Fallback to basic simulator
-        if backend_name != 'qasm_simulator':
-            print("Falling back to qasm_simulator...")
-            return robust_qiskit_execution(circuit, 'qasm_simulator')
-        else:
-            raise e
+        print(f"Execution failed with {device}: {e.__class__.__name__}")
+        if device == fallback:
+            raise
+        print(f"Falling back to {fallback}...")
+        return robust_qiskit_execution(circuit, fallback, fallback)
+
+
+print(robust_qiskit_execution(bell)['counts'])
 ```
 
 ## Resources
@@ -1051,7 +582,7 @@ def robust_qiskit_execution(circuit, backend_name='qasm_simulator'):
 *The Qiskit backend runs on Qiskit Aer and is tested on the simulator. IBM Quantum hardware access goes through qiskit-ibm-runtime with your own credentials and is untested.*
 
 !!! tip "Optimization"
-    For best performance on IBM hardware, use `optimization_level=3` and minimize circuit depth. Consider using Qiskit Runtime for reduced latency.
+    For best performance on IBM hardware, transpile with `optimization_level=3` and minimize circuit depth. Consider using Qiskit Runtime for reduced latency.
 
 !!! warning "Queue Times"
     Real IBM quantum hardware may have significant queue times. Check device status and consider using simulators for development.

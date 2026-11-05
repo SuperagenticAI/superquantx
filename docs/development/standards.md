@@ -1,9 +1,5 @@
 # Code Standards
 
-!!! warning "Unverified examples"
-    Code on this page is illustrative and partly written as fragments. Only 6 of 17 snippets run as-is against the current release. The test suite in `tests/` is the source of truth.
-
-
 Comprehensive coding standards and guidelines for SuperQuantX development to ensure consistency, maintainability, and quality across the codebase.
 
 ## 🎯 General Principles
@@ -33,6 +29,9 @@ Follow [PEP 8](https://pep8.org/) with the following specifics:
 # Line length: 88 characters (Black formatter default)
 # Indentation: 4 spaces (no tabs)
 # Quotes: Double quotes for strings, single for internal
+
+import numpy as np
+
 
 class QuantumAlgorithm:
     """
@@ -96,10 +95,12 @@ class BackendNotFoundError(Exception):
 
 #### Constants
 ```python
+import numpy as np
+
 # UPPER_SNAKE_CASE for constants
 DEFAULT_SHOTS = 1024
 MAX_QUBITS = 32
-SUPPORTED_BACKENDS = ["simulator", "pennylane", "qiskit", "cirq"]
+SUPPORTED_BACKENDS = ["simulator", "pennylane", "qiskit", "cirq", "braket", "tket", "ocean"]
 
 # Module-level constants
 PI = np.pi
@@ -127,8 +128,10 @@ class QuantumAlgorithm:
 Use comprehensive type hints:
 
 ```python
-from typing import List, Dict, Optional, Union, Callable, Tuple, Any
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
+
+from superquantx.backends.base_backend import BaseBackend
 
 # Basic types
 def process_data(data: List[float]) -> Dict[str, float]:
@@ -147,7 +150,7 @@ def quantum_operation(
 def get_backend(
     name: str,
     config: Optional[Dict[str, Any]] = None
-) -> Union[QuantumBackend, None]:
+) -> Union[BaseBackend, None]:
     """Get quantum backend by name."""
     pass
 
@@ -331,144 +334,108 @@ Note:
 ### Test Structure
 
 ```python
-import pytest
 import numpy as np
-from unittest.mock import Mock, patch
+import pytest
+from unittest.mock import patch
+
 from superquantx.algorithms import QuantumSVM
+from superquantx.backends import SimulatorBackend
+
 
 class TestQuantumSVM:
-    """Test suite for Quantum Support Vector Machine."""
-    
+    """Test suite for the quantum support vector machine."""
+
     @pytest.fixture
     def sample_data(self):
-        """Provide sample dataset for testing."""
-        np.random.seed(42)
-        X = np.random.randn(20, 2)
+        """Small, linearly separable dataset."""
+        rng = np.random.default_rng(42)
+        X = rng.normal(size=(20, 2))
         y = (X[:, 0] + X[:, 1] > 0).astype(int)
         return X, y
-    
+
     @pytest.fixture
     def qsvm(self):
-        """Provide QSVM instance for testing."""
         return QuantumSVM(backend="simulator")
-    
-    def test_initialization(self):
-        """Test QSVM initialization with default parameters."""
-        qsvm = QuantumSVM()
-        
-        assert qsvm.backend == "simulator"
+
+    def test_initialization(self, qsvm):
+        """Defaults: simulator backend object, C=1.0, not fitted."""
+        assert isinstance(qsvm.backend, SimulatorBackend)
         assert qsvm.C == 1.0
-        assert not qsvm._is_trained
-    
+        assert not qsvm.is_fitted
+
     def test_fit_with_valid_data(self, qsvm, sample_data):
-        """Test fitting QSVM with valid training data."""
         X, y = sample_data
-        
         result = qsvm.fit(X, y)
-        
-        # Should return self for method chaining
-        assert result is qsvm
-        assert qsvm._is_trained
-        assert hasattr(qsvm, 'kernel_matrix_')
-    
+
+        assert result is qsvm          # method chaining
+        assert qsvm.is_fitted
+        assert qsvm.kernel_matrix_.shape == (len(X), len(X))
+
     def test_fit_with_invalid_data(self, qsvm):
-        """Test fitting QSVM with invalid data raises ValueError."""
         X = np.array([[1, 2], [3, 4]])
-        y = np.array([0, 1, 2])  # Wrong length
-        
-        with pytest.raises(ValueError, match="X and y must have same length"):
+        y = np.array([0, 1, 2])        # wrong length
+
+        with pytest.raises(ValueError, match="same number of samples"):
             qsvm.fit(X, y)
-    
+
     @pytest.mark.parametrize("backend", ["simulator", "pennylane"])
     def test_different_backends(self, backend, sample_data):
-        """Test QSVM works with different backends."""
         X, y = sample_data
-        
         try:
             qsvm = QuantumSVM(backend=backend)
-            qsvm.fit(X, y)
-            predictions = qsvm.predict(X)
-            
-            assert len(predictions) == len(y)
-            assert all(pred in [0, 1] for pred in predictions)
         except ImportError:
-            pytest.skip(f"Backend {backend} not available")
-    
+            pytest.skip(f"Backend {backend} not installed")
+        predictions = qsvm.fit(X, y).predict(X)
+
+        assert len(predictions) == len(y)
+        assert set(predictions) <= {0, 1}
+
     def test_predict_before_fit_raises_error(self, qsvm, sample_data):
-        """Test that predict raises error before fit is called."""
         X, _ = sample_data
-        
-        with pytest.raises(RuntimeError, match="must be trained first"):
+        with pytest.raises(ValueError, match="must be fitted"):
             qsvm.predict(X)
-    
-    @patch('superquantx.backends.get_backend')
-    def test_backend_integration(self, mock_get_backend, qsvm, sample_data):
-        """Test backend integration with mocking."""
+
+    def test_backend_is_used(self, qsvm, sample_data):
+        """Spy on the backend to check the kernel goes through it."""
         X, y = sample_data
-        
-        # Mock backend behavior
-        mock_backend = Mock()
-        mock_backend.execute.return_value = Mock(counts={'00': 50, '11': 50})
-        mock_get_backend.return_value = mock_backend
-        
-        qsvm.fit(X, y)
-        
-        # Verify backend was called
-        mock_get_backend.assert_called_once()
-        mock_backend.execute.assert_called()
+        with patch.object(qsvm.backend, "compute_kernel_matrix",
+                          wraps=qsvm.backend.compute_kernel_matrix) as spy:
+            qsvm.fit(X, y)
+        spy.assert_called()
 ```
 
 ### Property-Based Testing
 
 ```python
-from hypothesis import given, strategies as st
+import numpy as np
 import hypothesis.extra.numpy as npst
+from hypothesis import given, strategies as st
+
+from superquantx.gates import GateMatrix
+
 
 class TestQuantumGates:
     """Property-based tests for quantum gates."""
-    
-    @given(theta=st.floats(min_value=0, max_value=2*np.pi))
+
+    @given(theta=st.floats(min_value=0, max_value=2 * np.pi))
     def test_rotation_gates_unitary(self, theta):
-        """Test that rotation gates are always unitary."""
-        gates = [
-            GateMatrix.rx(theta),
-            GateMatrix.ry(theta),
-            GateMatrix.rz(theta)
-        ]
-        
-        for gate in gates:
-            # Unitary condition: U†U = I
-            identity = np.eye(2, dtype=complex)
-            result = gate.conj().T @ gate
-            assert np.allclose(result, identity, atol=1e-10)
-    
+        """Rotation gates are always unitary."""
+        for gate in [GateMatrix.rx(theta), GateMatrix.ry(theta), GateMatrix.rz(theta)]:
+            assert np.allclose(gate.conj().T @ gate, np.eye(2), atol=1e-10)
+
     @given(
         state=npst.arrays(
             dtype=complex,
             shape=(2,),
-            elements=st.complex_numbers(
-                min_magnitude=0,
-                max_magnitude=1,
-                allow_infinity=False,
-                allow_nan=False
-            )
+            elements=st.complex_numbers(max_magnitude=1, allow_infinity=False, allow_nan=False),
         )
     )
     def test_pauli_gates_preserve_norm(self, state):
-        """Test that Pauli gates preserve state norm."""
-        # Normalize input state
-        if np.linalg.norm(state) > 0:
+        """Pauli gates preserve the norm of a state."""
+        if np.linalg.norm(state) > 1e-6:
             state = state / np.linalg.norm(state)
-            
-            pauli_gates = [GateMatrix.X, GateMatrix.Y, GateMatrix.Z]
-            
-            for gate in pauli_gates:
-                result_state = gate @ state
-                assert np.allclose(
-                    np.linalg.norm(result_state), 
-                    1.0, 
-                    atol=1e-10
-                )
+            for gate in [GateMatrix.X, GateMatrix.Y, GateMatrix.Z]:
+                assert np.isclose(np.linalg.norm(gate @ state), 1.0, atol=1e-10)
 ```
 
 ## 🔧 Code Quality Tools
@@ -701,38 +668,43 @@ def sanitize_backend_name(name: str) -> str:
 ### Error Handling
 
 ```python
-class SuperQuantXError(Exception):
-    """Base exception for SuperQuantX."""
-    pass
+# The hierarchy in superquantx/exceptions.py (abridged)
+from superquantx.exceptions import (
+    AlgorithmError,
+    BackendError,
+    QuantumCircuitError,
+    SuperQuantXError,
+)
+import logging
 
-class BackendError(SuperQuantXError):
-    """Error related to quantum backend operations."""
-    pass
+import superquantx as sqx
 
-class CircuitError(SuperQuantXError):
-    """Error in quantum circuit construction or execution."""
-    pass
+logger = logging.getLogger(__name__)
 
-class AlgorithmError(SuperQuantXError):
-    """Error in quantum algorithm execution."""
-    pass
 
 # Good error handling
-def execute_quantum_circuit(circuit: QuantumCircuit) -> MeasurementResult:
-    """Execute quantum circuit with proper error handling."""
+def execute_quantum_circuit(backend_name: str, n_qubits: int) -> dict:
+    """Run a GHZ circuit, turning backend failures into AlgorithmError."""
     try:
-        validate_circuit(circuit)
-        backend = get_backend()
-        result = backend.execute(circuit)
-        return process_result(result)
-        
+        backend = sqx.get_backend(backend_name)
+        circuit = backend.create_circuit(n_qubits)
+        backend.add_gate(circuit, 'H', 0)
+        for q in range(n_qubits - 1):
+            backend.add_gate(circuit, 'CNOT', [q, q + 1])
+        backend.add_measurement(circuit)
+        return backend.execute_circuit(circuit, shots=100)
+
     except BackendError as e:
         logger.error(f"Backend execution failed: {e}")
         raise AlgorithmError(f"Circuit execution failed: {e}") from e
-    
+
     except Exception as e:
         logger.error(f"Unexpected error in circuit execution: {e}")
         raise AlgorithmError("Unexpected error during execution") from e
+
+
+print(execute_quantum_circuit('simulator', 3)['counts'])
+assert issubclass(AlgorithmError, SuperQuantXError)
 ```
 
 ## 📊 Logging Standards

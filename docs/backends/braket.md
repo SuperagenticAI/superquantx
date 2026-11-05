@@ -1,9 +1,5 @@
 # Amazon Braket Backend Integration
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 7 of 14 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
-
-
 Amazon Braket is AWS's fully managed quantum computing service that provides access to quantum computers from multiple hardware providers. SuperQuantX integrates with Braket to enable cloud-based quantum computing with enterprise-grade security and scalability.
 
 ## Overview
@@ -88,93 +84,63 @@ print(result["counts"])  # about 500 each of '00' and '11'
 
 ### Cloud Simulation
 
+!!! note "Requires credentials"
+    Needs AWS credentials and an S3 bucket; checked against the 0.3.0 constructor, not run.
+
+<!-- docs-check: skip -->
 ```python
-# Use AWS cloud simulators
+# AWS managed state-vector simulator
 backend = sqx.BraketBackend(
-    device_arn='arn:aws:braket:::device/quantum-simulator/amazon/sv1',
-    s3_bucket='my-braket-bucket',
-    s3_prefix='my-experiments',
-    shots=1000
+    device='arn:aws:braket:::device/quantum-simulator/amazon/sv1',
+    s3_folder=('my-braket-bucket', 'my-experiments'),
+    shots=1000,
 )
 
-result = backend.run(circuit, shots=1000)
-print(f"Cloud simulation results: {result.get_counts()}")
+result = backend.execute_circuit(circuit, shots=1000)
+print(f"Cloud simulation results: {result['counts']}")
 ```
 
 ### Quantum Hardware Access
 
-```python
-# Access IonQ quantum computer
-ionq_backend = sqx.BraketBackend(
-    device_arn='arn:aws:braket:::device/qpu/ionq/ionQdevice',
-    s3_bucket='my-braket-bucket',
-    s3_prefix='ionq-experiments',
-    shots=100  # Reduced shots for cost control
-)
+!!! note "Requires credentials"
+    Needs AWS credentials, Braket access in the device's region and an S3 bucket; checked against the 0.3.0 constructor, not run.
 
-# Execute on real quantum hardware
-try:
-    result = ionq_backend.run(circuit, shots=100)
-    print(f"IonQ hardware results: {result.get_counts()}")
-except Exception as e:
-    print(f"Hardware execution requires active device: {e}")
+<!-- docs-check: skip -->
+```python
+# Access an IonQ quantum computer
+ionq_backend = sqx.BraketBackend(
+    device='arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1',
+    s3_folder=('my-braket-bucket', 'ionq-experiments'),
+    shots=100,  # fewer shots to control cost
+)
+result = ionq_backend.execute_circuit(circuit, shots=100)
+print(f"IonQ hardware results: {result['counts']} (task {result['task_arn']})")
 ```
 
 ## Device Selection
 
 ### Available Devices
 
+!!! note "Requires credentials"
+    Lists devices through `AwsDevice.get_devices()`, which needs AWS credentials; not run.
+
+<!-- docs-check: skip -->
 ```python
 def list_braket_devices():
-    """List all available Braket devices."""
-    
-    try:
-        from braket.aws import AwsDevice
-        from braket.device_schema import DeviceActionType
-        
-        print("Available Amazon Braket Devices:")
-        print("=" * 40)
-        
-        # Get all devices
-        devices = AwsDevice.get_devices()
-        
-        # Group by provider
-        providers = {}
-        for device in devices:
-            provider = device.provider_name
-            if provider not in providers:
-                providers[provider] = []
-            providers[provider].append(device)
-        
-        for provider, device_list in providers.items():
-            print(f"\n{provider}:")
-            for device in device_list:
-                status = "ONLINE" if device.is_available else "OFFLINE"
-                device_type = device.type.value
-                
-                print(f"  {device.name} ({device_type}): {status}")
-                print(f"    ARN: {device.arn}")
-                
-                # Show device properties
-                if hasattr(device, 'properties'):
-                    props = device.properties
-                    if hasattr(props, 'paradigm'):
-                        if hasattr(props.paradigm, 'qubitCount'):
-                            print(f"    Qubits: {props.paradigm.qubitCount}")
-                        if hasattr(props.paradigm, 'connectivity'):
-                            connectivity = props.paradigm.connectivity
-                            if hasattr(connectivity, 'fullyConnected'):
-                                if connectivity.fullyConnected:
-                                    print(f"    Connectivity: Fully connected")
-                                else:
-                                    print(f"    Connectivity: Limited")
-                
-                print()
-    
-    except ImportError:
-        print("Braket device listing requires: pip install amazon-braket-sdk")
-    except Exception as e:
-        print(f"Error listing devices: {e}")
+    """List Amazon Braket devices grouped by provider."""
+    from braket.aws import AwsDevice
+
+    providers = {}
+    for device in AwsDevice.get_devices():
+        providers.setdefault(device.provider_name, []).append(device)
+
+    for provider, device_list in providers.items():
+        print(f"\n{provider}:")
+        for device in device_list:
+            status = "ONLINE" if device.is_available else "OFFLINE"
+            print(f"  {device.name} ({device.type.value}): {status}")
+            print(f"    ARN: {device.arn}")
+
 
 list_braket_devices()
 ```
@@ -182,107 +148,58 @@ list_braket_devices()
 ### Device-Specific Configuration
 
 ```python
-def configure_for_device(device_type='simulator'):
-    """Configure backend for specific device types."""
-    
-    if device_type == 'ionq':
-        return sqx.BraketBackend(
-            device_arn='arn:aws:braket:::device/qpu/ionq/ionQdevice',
-            s3_bucket='my-braket-bucket',
-            s3_prefix='ionq-jobs',
-            shots=100,  # Cost control
-            max_parallel_threads=1
-        )
-    
-    elif device_type == 'rigetti':
-        return sqx.BraketBackend(
-            device_arn='arn:aws:braket:::device/qpu/rigetti/Aspen-M-3',
-            s3_bucket='my-braket-bucket', 
-            s3_prefix='rigetti-jobs',
-            shots=1000,
-            poll_timeout_seconds=86400  # 24 hours for queue
-        )
-    
-    elif device_type == 'sv1':
-        # State vector simulator (up to 34 qubits)
-        return sqx.BraketBackend(
-            device_arn='arn:aws:braket:::device/quantum-simulator/amazon/sv1',
-            s3_bucket='my-braket-bucket',
-            s3_prefix='sv1-jobs',
-            shots=0  # Exact simulation
-        )
-    
-    elif device_type == 'tn1':
-        # Tensor network simulator (up to 50 qubits)
-        return sqx.BraketBackend(
-            device_arn='arn:aws:braket:::device/quantum-simulator/amazon/tn1',
-            s3_bucket='my-braket-bucket',
-            s3_prefix='tn1-jobs',
-            shots=1000
-        )
-    
-    else:
-        # Local simulator
-        return sqx.BraketBackend(
-            device_arn='local:braket/braket.devices.LocalSimulator',
-            shots=1000
-        )
+# Device strings understood by BraketBackend(device=...)
+DEVICES = {
+    'local_sv': 'local:braket/braket_sv',        # free local state-vector simulator
+    'local_dm': 'local:braket/braket_dm',        # free local density-matrix simulator
+    'sv1': 'arn:aws:braket:::device/quantum-simulator/amazon/sv1',
+    'tn1': 'arn:aws:braket:::device/quantum-simulator/amazon/tn1',
+    'dm1': 'arn:aws:braket:::device/quantum-simulator/amazon/dm1',
+    'ionq': 'arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1',
+}
 
-# Test different devices
-devices = ['simulator', 'sv1', 'tn1']
-for device in devices:
-    try:
-        backend = configure_for_device(device)
-        print(f"✅ {device} backend configured successfully")
-    except Exception as e:
-        print(f"❌ {device} configuration failed: {e}")
+
+def configure_for_device(name='local_sv', shots=1000, s3_folder=None):
+    """Managed simulators and QPUs (ARNs) need AWS credentials and an S3 folder."""
+    return sqx.BraketBackend(device=DEVICES[name], shots=shots, s3_folder=s3_folder)
+
+
+for name in ['local_sv', 'local_dm']:
+    backend = configure_for_device(name)
+    print(f"{name}: configured, max qubits {backend.capabilities['max_qubits']}")
 ```
+
+Cloud devices are configured the same way with an ARN and `s3_folder=('bucket', 'prefix')` (requires credentials; not run here). Options such as `max_parallel_threads` or `poll_timeout_seconds` are not available on `BraketBackend` in 0.3.0.
 
 ## Working with Circuits
 
 ### Native Braket Gates
 
 ```python
+import numpy as np
+
+
 def demonstrate_braket_gates():
-    """Show Braket-native gate operations."""
-    
+    """Portable gate names on the Braket backend."""
     backend = sqx.get_backend('braket')
-    
-    # Create circuit with native Braket gates
-    circuit = backend.create_circuit(4)
-    
-    # Single-qubit gates
-    circuit.h(0)           # Hadamard
-    circuit.x(1)           # Pauli-X
-    circuit.y(2)           # Pauli-Y
-    circuit.z(3)           # Pauli-Z
-    
-    # Rotation gates
-    import numpy as np
-    circuit.rx(np.pi/4, 0) # Rx rotation
-    circuit.ry(np.pi/3, 1) # Ry rotation
-    circuit.rz(np.pi/6, 2) # Rz rotation
-    
-    # Phase gates
-    circuit.s(0)           # S gate
-    circuit.t(1)           # T gate
-    
-    # Two-qubit gates
-    circuit.cx(0, 1)       # CNOT
-    circuit.cz(1, 2)       # Controlled-Z
-    circuit.swap(2, 3)     # SWAP
-    
-    # Parametric gates
-    circuit.phaseshift(np.pi/4, 0)  # Phase shift
-    
-    # Add measurements
-    circuit.measure_all()
-    
-    # Execute circuit
-    result = backend.run(circuit, shots=1000)
-    print(f"Braket gates demonstration: {result.get_counts()}")
-    
+    circuit = backend.create_circuit(4)          # a braket.circuits.Circuit
+
+    for gate, qubit in [('H', 0), ('X', 1), ('Y', 2), ('Z', 3), ('S', 0), ('T', 1)]:
+        circuit = backend.add_gate(circuit, gate, qubit)
+    circuit = backend.add_gate(circuit, 'RX', 0, [np.pi / 4])
+    circuit = backend.add_gate(circuit, 'RY', 1, [np.pi / 3])
+    circuit = backend.add_gate(circuit, 'RZ', 2, [np.pi / 6])
+    circuit = backend.add_gate(circuit, 'CNOT', [0, 1])
+    circuit = backend.add_gate(circuit, 'CZ', [1, 2])
+    circuit = backend.add_gate(circuit, 'SWAP', [2, 3])
+
+    # Native Braket methods work too (target first, then angle)
+    circuit.phaseshift(0, np.pi / 4)
+
+    result = backend.execute_circuit(circuit, shots=1000)
+    print(f"Counts (qubit 0 is the leftmost bit): {result['counts']}")
     return circuit
+
 
 demo_circuit = demonstrate_braket_gates()
 ```
@@ -290,99 +207,48 @@ demo_circuit = demonstrate_braket_gates()
 ### Advanced Circuit Features
 
 ```python
-def braket_advanced_circuits():
-    """Demonstrate advanced Braket circuit features."""
-    
-    from braket.circuits import Circuit
-    from braket.circuits.gates import *
+def braket_advanced_circuits(seed=0):
+    """Native Braket circuit features: parameterised ansatz, noise and result types."""
     import numpy as np
-    
-    print("Advanced Braket Circuit Features")
-    print("=" * 35)
-    
-    # 1. Parameterized circuits
+    from braket.circuits import Circuit, Noise, observables
+    from braket.devices import LocalSimulator
+
+    # 1. Parameterised ansatz written directly in Braket
     def create_parameterized_ansatz(params, n_qubits=4, depth=2):
-        """Create parameterized ansatz for VQE."""
         circuit = Circuit()
-        
-        param_idx = 0
-        
-        # Initial layer
+        idx = 0
         for i in range(n_qubits):
-            circuit.ry(params[param_idx], i)
-            param_idx += 1
-        
-        # Entangling layers
-        for layer in range(depth):
-            # Two-qubit gates
+            circuit.ry(i, params[idx])
+            idx += 1
+        for _ in range(depth):
             for i in range(n_qubits - 1):
                 circuit.cnot(i, i + 1)
-            
-            # Parameterized single-qubit gates
             for i in range(n_qubits):
-                circuit.ry(params[param_idx], i)
-                param_idx += 1
-                circuit.rz(params[param_idx], i)
-                param_idx += 1
-        
+                circuit.ry(i, params[idx]).rz(i, params[idx + 1])
+                idx += 2
         return circuit
-    
-    # Generate parameters
-    n_params = 4 + 2 * 2 * 4  # Initial + depth * 2 * qubits
-    params = np.random.random(n_params) * 2 * np.pi
-    
-    ansatz = create_parameterized_ansatz(params)
-    print(f"Parameterized ansatz created with {n_params} parameters")
-    
-    # 2. Noise modeling
-    def add_noise_to_circuit(circuit):
-        """Add noise to circuit."""
-        from braket.circuits.noises import *
-        
-        noisy_circuit = circuit.copy()
-        
-        # Add depolarizing noise after each gate
-        for instruction in circuit.instructions:
-            if len(instruction.target) == 1:  # Single-qubit gate
-                qubit = instruction.target[0]
-                noisy_circuit.depolarizing(qubit, probability=0.001)
-            elif len(instruction.target) == 2:  # Two-qubit gate
-                for qubit in instruction.target:
-                    noisy_circuit.depolarizing(qubit, probability=0.005)
-        
-        return noisy_circuit
-    
-    # Create test circuit and add noise
-    test_circuit = Circuit()
-    test_circuit.h(0).cnot(0, 1).ry(np.pi/4, 0)
-    
-    noisy_circuit = add_noise_to_circuit(test_circuit)
-    print(f"Added noise to circuit with {len(test_circuit.instructions)} instructions")
-    
-    # 3. Result types
-    def demonstrate_result_types():
-        """Show different measurement result types."""
-        from braket.circuits import observables
-        
-        circuit = Circuit()
-        circuit.h(0).cnot(0, 1)
-        
-        # Probability measurement
-        circuit.probability(target=[0, 1])
-        
-        # Expectation value measurement
-        circuit.expectation(observable=observables.Z(), target=0)
-        
-        # Variance measurement
-        circuit.variance(observable=observables.X(), target=0)
-        
-        # Sample measurement (default)
-        circuit.sample(observable=observables.Z(), target=[0, 1])
-        
-        return circuit
-    
-    result_circuit = demonstrate_result_types()
-    print(f"Circuit with multiple result types created")
+
+    n_params = 4 + 2 * 2 * 4
+    ansatz = create_parameterized_ansatz(np.random.default_rng(seed).random(n_params) * 2 * np.pi)
+    print(f"Ansatz with {n_params} parameters, depth {ansatz.depth}")
+
+    # 2. Noise: apply depolarizing noise to every gate, run on the density-matrix simulator
+    bell = Circuit().h(0).cnot(0, 1)
+    noisy = bell.copy().apply_gate_noise(Noise.Depolarizing(probability=0.02))
+    counts = LocalSimulator('braket_dm').run(noisy, shots=2000).result().measurement_counts
+    print(f"Noisy Bell counts: {dict(counts)}")
+
+    # 3. Result types (exact on the state-vector simulator with shots=0)
+    rt = Circuit().h(0).cnot(0, 1)
+    rt.probability(target=[0, 1])
+    rt.expectation(observable=observables.Z(), target=[0])
+    rt.variance(observable=observables.X(), target=[0])
+    values = LocalSimulator().run(rt, shots=0).result().values
+    print(f"Probabilities {values[0]}, <Z0> = {values[1]:.3f}, Var(X0) = {values[2]:.3f}")
+
+    # Any of these Braket circuits can also go through the SuperQuantX backend
+    print(sqx.BraketBackend().execute_circuit(bell, shots=100)['counts'])
+
 
 braket_advanced_circuits()
 ```
@@ -461,7 +327,7 @@ def optimize_braket_usage():
     def development_workflow():
         """Use free local simulator for development."""
         local_backend = sqx.BraketBackend(
-            device_arn='local:braket/braket.devices.LocalSimulator',
+            device='local:braket/braket_sv',
             shots=10000  # No cost for shots
         )
         
@@ -553,138 +419,62 @@ optimize_braket_usage()
 ### Classical-Quantum Integration
 
 ```python
-def braket_hybrid_algorithm_example():
-    """Demonstrate hybrid classical-quantum algorithm."""
-    
-    from braket.circuits import Circuit
-    from braket.circuits.gates import *
+def braket_hybrid_algorithm_example(seed=0):
+    """VQE written by hand on the Braket backend, with shot-based Pauli measurements."""
     import numpy as np
     from scipy.optimize import minimize
-    
-    print("Hybrid Algorithm: VQE with Braket")
-    print("=" * 35)
-    
-    class BraketVQE:
-        """Variational Quantum Eigensolver using Braket."""
-        
-        def __init__(self, hamiltonian, backend_arn='local:braket/braket.devices.LocalSimulator'):
-            self.hamiltonian = hamiltonian  # List of (coeff, pauli_string) tuples
-            self.backend = sqx.BraketBackend(device_arn=backend_arn)
-            self.n_qubits = len(hamiltonian[0][1])  # Length of Pauli string
-            
-        def create_ansatz(self, params):
-            """Create variational ansatz circuit."""
-            circuit = Circuit()
-            
-            param_idx = 0
-            
-            # Initial Y rotations
-            for i in range(self.n_qubits):
-                circuit.ry(params[param_idx], i)
-                param_idx += 1
-            
-            # Entangling layer
-            for i in range(self.n_qubits - 1):
-                circuit.cnot(i, i + 1)
-            
-            # Final rotations
-            for i in range(self.n_qubits):
-                circuit.ry(params[param_idx], i)
-                param_idx += 1
-                circuit.rz(params[param_idx], i)
-                param_idx += 1
-            
-            return circuit
-        
-        def measure_pauli_expectation(self, circuit, pauli_string):
-            """Measure expectation value of Pauli string."""
-            # Convert Pauli string to measurements
-            measurement_circuit = circuit.copy()
-            
-            # Add basis rotations for X and Y measurements
-            for i, pauli in enumerate(pauli_string):
-                if pauli == 'X':
-                    measurement_circuit.ry(-np.pi/2, i)  # Rotate Y basis to Z
-                elif pauli == 'Y':
-                    measurement_circuit.rx(np.pi/2, i)   # Rotate X basis to Z
-                # Z measurements need no rotation
-            
-            # Add measurements
-            for i in range(self.n_qubits):
-                measurement_circuit.sample(observable=observables.Z(), target=i)
-            
-            # Execute circuit
-            result = self.backend.run(measurement_circuit, shots=1000)
-            
-            # Calculate expectation value (simplified)
-            # In practice, you'd need to properly handle the measurement results
-            # This is a placeholder for the actual calculation
-            return np.random.random() * 2 - 1  # Random value in [-1, 1]
-        
-        def compute_energy(self, params):
-            """Compute energy expectation value."""
-            ansatz = self.create_ansatz(params)
-            
-            energy = 0.0
-            for coeff, pauli_string in self.hamiltonian:
-                expectation = self.measure_pauli_expectation(ansatz, pauli_string)
-                energy += coeff * expectation
-            
-            return energy
-        
-        def optimize(self, initial_params=None, method='COBYLA', maxiter=100):
-            """Optimize VQE parameters."""
-            if initial_params is None:
-                n_params = 2 * self.n_qubits + self.n_qubits  # RY + RY + RZ
-                initial_params = np.random.random(n_params) * 2 * np.pi
-            
-            print(f"Starting VQE optimization...")
-            print(f"  Hamiltonian terms: {len(self.hamiltonian)}")
-            print(f"  Parameters: {len(initial_params)}")
-            print(f"  Optimizer: {method}")
-            
-            def cost_function(params):
-                energy = self.compute_energy(params)
-                print(f"    Energy: {energy:.6f}")
-                return energy
-            
-            result = minimize(
-                cost_function,
-                initial_params,
-                method=method,
-                options={'maxiter': maxiter}
-            )
-            
-            return result
-    
-    # Example: H2 molecule Hamiltonian
+
+    backend = sqx.BraketBackend(device='local:braket/braket_sv', shots=2000)
+
+    # H2 Hamiltonian (STO-3G, 0.74 Angstrom) as (coefficient, Pauli string)
     h2_hamiltonian = [
-        (-1.0523732, 'II'),  # Identity
-        (0.39793742, 'ZI'),  # Z on qubit 0
-        (-0.39793742, 'IZ'), # Z on qubit 1
-        (-0.01128010, 'ZZ'), # Z on both qubits
-        (0.18093119, 'XX')   # X on both qubits
+        (-1.0523732, 'II'), (0.39793742, 'ZI'), (-0.39793742, 'IZ'),
+        (-0.01128010, 'ZZ'), (0.18093119, 'XX'),
     ]
-    
-    # Run VQE
-    vqe = BraketVQE(h2_hamiltonian)
-    
-    # Optimize (using fewer iterations for demo)
-    result = vqe.optimize(maxiter=5)
-    
-    print(f"\nVQE Results:")
-    print(f"  Ground state energy: {result.fun:.6f}")
-    print(f"  Optimization success: {result.success}")
-    print(f"  Function evaluations: {result.nfev}")
-    
-    # Compare with classical result
-    classical_energy = -1.8  # Approximate H2 ground state
-    quantum_energy = result.fun
-    
-    if abs(quantum_energy - classical_energy) < 0.1:
-        print(f"✅ Quantum result close to classical expectation")
-    else:
-        print(f"⚠️  Quantum result differs from classical (normal for demo)")
+    n_qubits = 2
+
+    def create_ansatz(params):
+        circuit = backend.create_circuit(n_qubits)
+        for i in range(n_qubits):
+            circuit = backend.add_gate(circuit, 'RY', i, [params[i]])
+        circuit = backend.add_gate(circuit, 'CNOT', [0, 1])
+        for i in range(n_qubits):
+            circuit = backend.add_gate(circuit, 'RY', i, [params[n_qubits + i]])
+        return circuit
+
+    def pauli_expectation(params, pauli):
+        """Rotate into the Pauli basis, sample, and average the parity."""
+        circuit = create_ansatz(params)
+        for i, p in enumerate(pauli):
+            if p == 'X':
+                circuit = backend.add_gate(circuit, 'H', i)
+            elif p == 'Y':
+                circuit = backend.add_gate(circuit, 'RX', i, [np.pi / 2])
+        counts = backend.execute_circuit(circuit)['counts']   # qubit 0 is the leftmost bit
+        total = sum(counts.values())
+        return sum(
+            c * (-1) ** sum(int(bits[i]) for i, p in enumerate(pauli) if p != 'I')
+            for bits, c in counts.items()
+        ) / total
+
+    def energy(params):
+        return sum(
+            coeff if pauli == 'II' else coeff * pauli_expectation(params, pauli)
+            for coeff, pauli in h2_hamiltonian
+        )
+
+    rng = np.random.default_rng(seed)
+    result = minimize(energy, rng.uniform(0, np.pi, 2 * n_qubits),
+                      method='COBYLA', options={'maxiter': 60})
+
+    exact = sqx.Hamiltonian.from_dict({p: c for c, p in h2_hamiltonian}).ground_state_energy()
+    print(f"VQE energy (shots): {result.fun:.4f}   exact: {exact:.4f}")
+
+    # The built-in VQE does the same with exact expectation values
+    vqe = sqx.VQE(hamiltonian=sqx.Hamiltonian.from_dict({p: c for c, p in h2_hamiltonian}),
+                  backend=backend, seed=seed)
+    print(f"sqx.VQE on Braket:  {vqe.find_ground_state():.4f}")
+
 
 braket_hybrid_algorithm_example()
 ```
@@ -721,14 +511,13 @@ def braket_job_management():
                     print(f"Attempt {attempt + 1}: Submitting job...")
                     
                     backend = sqx.BraketBackend(
-                        device_arn=self.device_arn,
-                        s3_bucket=self.s3_bucket,
-                        s3_prefix=f'attempt_{attempt}',
+                        device=self.device_arn,
+                        s3_folder=(self.s3_bucket, f'attempt_{attempt}'),
                         shots=shots
                     )
                     
                     start_time = time.time()
-                    result = backend.run(circuit, shots=shots)
+                    result = backend.execute_circuit(circuit, shots=shots)
                     execution_time = time.time() - start_time
                     
                     # Record successful job
@@ -787,8 +576,8 @@ def braket_job_management():
     
     # Example usage
     executor = RobustBraketExecutor(
-        device_arn='local:braket/braket.devices.LocalSimulator',
-        s3_bucket='my-braket-experiments'  # Would be real S3 bucket
+        device_arn='local:braket/braket_sv',   # an ARN plus a real bucket for AWS
+        s3_bucket='my-braket-experiments'
     )
     
     # Create test circuit
@@ -798,7 +587,7 @@ def braket_job_management():
     # Submit job with retry logic
     try:
         result = executor.submit_with_retry(test_circuit, shots=1000)
-        print(f"Job result: {len(result.get_counts() if hasattr(result, 'get_counts') else {})} outcomes")
+        print(f"Job result: {result['counts']}")
     except Exception as e:
         print(f"Final job failure: {e}")
     
@@ -874,13 +663,12 @@ def braket_security_best_practices():
     print(f"\nExample Secure Configuration:")
     print(f"```python")
     print(f"backend = sqx.BraketBackend(")
-    print(f"    device_arn='arn:aws:braket:::device/quantum-simulator/amazon/sv1',")
-    print(f"    s3_bucket='my-secure-braket-bucket-{{region}}-{{account}}',")
-    print(f"    s3_prefix='quantum-experiments/{{project}}/{{date}}',")
-    print(f"    kms_key='arn:aws:kms:region:account:key/key-id',")
+    print(f"    device='arn:aws:braket:::device/quantum-simulator/amazon/sv1',")
+    print(f"    s3_folder=('my-secure-braket-bucket-{{region}}-{{account}}', 'quantum-experiments/{{project}}'),")
+    print(f"    aws_session=session,  # a braket.aws.AwsSession built from a least-privilege role")
     print(f"    shots=1000,")
-    print(f"    tags={{'Project': 'QuantumML', 'Owner': 'TeamName'}}")
     print(f")")
+    print(f"# Encryption (KMS) and tags are set on the S3 bucket and IAM side, not on the backend")
     print(f"```")
 
 braket_security_best_practices()

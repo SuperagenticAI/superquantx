@@ -1,9 +1,5 @@
 # Your First Quantum Program
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 4 of 13 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
-
-
 Welcome to your first quantum program with SuperQuantX! This comprehensive guide will walk you through building quantum applications from the ground up, explaining each concept along the way.
 
 ## 🎯 What You'll Learn

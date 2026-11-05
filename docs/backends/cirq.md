@@ -1,9 +1,5 @@
 # Cirq Backend Integration
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 3 of 15 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
-
-
 Cirq is Google's open-source quantum computing framework that focuses on near-term quantum devices and NISQ algorithms. SuperQuantX integrates with Cirq to provide access to Google's quantum ecosystem and advanced circuit optimization features.
 
 ## Overview
@@ -48,29 +44,15 @@ print(result["counts"])  # about 500 each of '00' and '11'
 
 ### Google Quantum Hardware
 
-```python
-# Note: Requires Google Quantum AI access
-# This is for demonstration - actual access requires approval
+!!! note "Requires credentials"
+    Needs `cirq-google` and Google Quantum AI processor access; checked against the 0.3.0 constructor, not run.
 
-# Connect to Google quantum processor
-try:
-    import cirq_google
-    
-    # Get Google quantum engine service
-    engine = cirq_google.get_engine()
-    
-    # Use Google processor
-    backend = sqx.CirqBackend(
-        processor_id='rainbow',  # Example processor
-        shots=1000
-    )
-    
-    # Execute on Google hardware
-    result = backend.run(circuit, shots=1000)
-    print(f"Google quantum result: {result.get_counts()}")
-    
-except Exception as e:
-    print(f"Google Quantum access requires setup: {e}")
+<!-- docs-check: skip -->
+```python
+# processor_id switches CirqBackend to cirq_google.get_engine()
+backend = sqx.CirqBackend(processor_id='rainbow', shots=1000)
+result = backend.execute_circuit(circuit, shots=1000)
+print(f"Google quantum result: {result['counts']}")
 ```
 
 ## Configuration Options
@@ -78,30 +60,19 @@ except Exception as e:
 ### Simulator Configuration
 
 ```python
-# Different Cirq simulators
-simulators = {
-    'simulator': 'Basic state vector simulator',
-    'density_matrix_simulator': 'Density matrix with noise support',
-    'sparse_simulator': 'Sparse state vector simulator',
-    'clifford_simulator': 'Efficient Clifford simulation',
-}
+# CirqBackend runs on cirq.Simulator
+backend = sqx.CirqBackend(device='simulator', shots=2048)
 
-# Create backend with specific simulator
-backend = sqx.CirqBackend(
-    simulator='density_matrix_simulator',
-    shots=2048,
-    seed=42
-)
+# For other Cirq simulators (density matrix, Clifford), use Cirq directly
+import cirq
 
-# Custom simulator configuration
-backend = sqx.CirqBackend(
-    simulator='simulator',
-    shots=1000,
-    noise_model=None,      # Custom noise model
-    initial_state=None,    # Custom initial state
-    qubit_order=None       # Custom qubit ordering
+dm_result = cirq.DensityMatrixSimulator(seed=42).simulate(
+    cirq.Circuit(cirq.H(cirq.LineQubit(0)))
 )
+print(dm_result.final_density_matrix.round(3))
 ```
+
+`CirqBackend` takes `device`, `processor_id` and `shots`. Options such as `simulator=`, `noise_model=`, `qubits=` or `seed=` are not available in 0.3.0.
 
 ### Advanced Configuration
 
@@ -109,27 +80,20 @@ backend = sqx.CirqBackend(
 import cirq
 import numpy as np
 
-# Custom qubit layout (Google Sycamore-like)
+
+# Custom qubit layouts are built with Cirq directly
 def create_sycamore_qubits(rows=5, cols=6):
-    """Create Sycamore-like qubit layout."""
-    qubits = []
-    for row in range(rows):
-        for col in range(cols):
-            # Skip some qubits to match Sycamore pattern
-            if (row % 2 == 0 and col % 2 == 1) or (row % 2 == 1 and col % 2 == 0):
-                continue
-            qubits.append(cirq.GridQubit(row, col))
-    return qubits
+    """Sycamore-like checkerboard of GridQubits."""
+    return [cirq.GridQubit(r, c) for r in range(rows) for c in range(cols) if (r + c) % 2 == 0]
 
-# Create backend with custom qubits
+
 custom_qubits = create_sycamore_qubits(3, 4)
-backend = sqx.CirqBackend(
-    qubits=custom_qubits,
-    simulator='simulator',
-    shots=1000
-)
+circuit = cirq.Circuit(cirq.H(custom_qubits[0]), cirq.CNOT(custom_qubits[0], custom_qubits[1]))
 
+# execute_circuit also accepts a plain cirq.Circuit (qubits taken in sorted order)
+backend = sqx.CirqBackend(shots=1000)
 print(f"Custom qubit layout: {len(custom_qubits)} qubits")
+print(backend.execute_circuit(circuit)['counts'])
 ```
 
 ## Working with Circuits
@@ -137,50 +101,31 @@ print(f"Custom qubit layout: {len(custom_qubits)} qubits")
 ### Circuit Construction
 
 ```python
+import numpy as np
+
+
 def demonstrate_cirq_circuits():
-    """Show Cirq circuit construction features."""
-    
+    """Portable gate names on the Cirq backend."""
     backend = sqx.get_backend('cirq')
-    
-    # Create circuit with 4 qubits
-    circuit = backend.create_circuit(4)
-    
-    # Basic single-qubit gates
-    circuit.h(0)           # Hadamard
-    circuit.x(1)           # Pauli-X
-    circuit.y(2)           # Pauli-Y
-    circuit.z(3)           # Pauli-Z
-    
-    # Rotation gates
-    circuit.rx(np.pi/4, 0) # X rotation
-    circuit.ry(np.pi/3, 1) # Y rotation
-    circuit.rz(np.pi/6, 2) # Z rotation
-    
-    # Phase gates
-    circuit.s(0)           # S gate
-    circuit.t(1)           # T gate
-    
-    # Two-qubit gates
-    circuit.cx(0, 1)       # CNOT
-    circuit.cz(1, 2)       # Controlled-Z
-    circuit.swap(2, 3)     # SWAP
-    
-    # Controlled operations
-    circuit.cz(0, 3)       # Controlled-Z
-    
-    # Add measurement
-    circuit.measure_all()
-    
-    # Execute circuit
-    result = backend.run(circuit, shots=1000)
-    print(f"Cirq circuit results: {result.get_counts()}")
-    
-    # Display circuit structure (if available)
-    try:
-        print("Circuit structure:")
-        print(circuit)
-    except:
-        print("Circuit visualization not available")
+    circuit = backend.create_circuit(4)      # (cirq.Circuit, [LineQubit(0), ...])
+
+    for gate, qubit in [('H', 0), ('X', 1), ('Y', 2), ('Z', 3), ('S', 0), ('T', 1)]:
+        circuit = backend.add_gate(circuit, gate, qubit)
+    circuit = backend.add_gate(circuit, 'RX', 0, [np.pi / 4])
+    circuit = backend.add_gate(circuit, 'RY', 1, [np.pi / 3])
+    circuit = backend.add_gate(circuit, 'RZ', 2, [np.pi / 6])
+    circuit = backend.add_gate(circuit, 'CNOT', [0, 1])
+    circuit = backend.add_gate(circuit, 'CZ', [1, 2])
+    circuit = backend.add_gate(circuit, 'SWAP', [2, 3])
+    circuit = backend.add_gate(circuit, 'CZ', [0, 3])
+
+    circuit = backend.add_measurement(circuit)
+    result = backend.execute_circuit(circuit, shots=1000)
+    print(f"Cirq results (qubit 0 is the leftmost bit): {result['counts']}")
+
+    cirq_circuit, qubits = circuit
+    print(cirq_circuit)                      # native Cirq diagram
+
 
 demonstrate_cirq_circuits()
 ```
@@ -643,88 +588,41 @@ cirq_noise_modeling()
 
 ```python
 def cirq_circuit_optimization():
-    """Demonstrate Cirq's circuit optimization capabilities."""
-    
+    """Cirq transformers (cirq >= 1.0) on a circuit with removable gates."""
     import cirq
-    
-    print("Circuit Optimization with Cirq")
-    print("=" * 32)
-    
-    # Create unoptimized circuit
-    qubits = [cirq.GridQubit(0, i) for i in range(4)]
-    unoptimized_circuit = cirq.Circuit()
-    
-    # Add redundant operations that can be optimized
-    unoptimized_circuit.append([
-        cirq.H(qubits[0]),
-        cirq.X(qubits[0]),  # H-X can be optimized
-        cirq.H(qubits[0]),  # H-X-H = Z-H
-        
-        cirq.Y(qubits[1]),
-        cirq.Y(qubits[1]),  # Y-Y = I (cancels out)
-        
-        cirq.CZ(qubits[0], qubits[1]),
-        cirq.CZ(qubits[0], qubits[1]),  # CZ-CZ = I
-        
-        cirq.SWAP(qubits[2], qubits[3]),
-        cirq.SWAP(qubits[2], qubits[3]),  # SWAP-SWAP = I
+
+    qubits = cirq.LineQubit.range(4)
+    unoptimized = cirq.Circuit([
+        cirq.H(qubits[0]), cirq.X(qubits[0]), cirq.H(qubits[0]),   # H X H = Z
+        cirq.Y(qubits[1]), cirq.Y(qubits[1]),                      # Y Y = I
+        cirq.CZ(qubits[0], qubits[1]), cirq.CZ(qubits[0], qubits[1]),
+        cirq.SWAP(qubits[2], qubits[3]), cirq.SWAP(qubits[2], qubits[3]),
     ])
-    
-    unoptimized_circuit.append(cirq.measure_each(*qubits))
-    
-    print("Original circuit:")
-    print(f"  Moments: {len(unoptimized_circuit)}")
-    print(f"  Operations: {len(list(unoptimized_circuit.all_operations()))}")
-    
-    # Apply various optimization strategies
-    optimizers = [
-        ("Merge Single-Qubit Gates", cirq.MergeSingleQubitGates()),
-        ("Drop Empty Moments", cirq.DropEmptyMoments()),
-        ("Drop Negligible Operations", cirq.DropNegligible()),
-        ("Eject Z", cirq.EjectZ()),
-        ("Eject PhasedPaulis", cirq.EjectPhasedPaulis()),
+
+    def stats(c):
+        return f"{len(c)} moments, {len(list(c.all_operations()))} operations"
+
+    print("Original:", stats(unoptimized))
+    transformers = [
+        ("Merge single-qubit gates", cirq.merge_single_qubit_gates_to_phxz),
+        ("Merge two-qubit blocks", lambda c: cirq.optimize_for_target_gateset(
+            c, gateset=cirq.CZTargetGateset())),
+        ("Eject Z", cirq.eject_z),
+        ("Eject phased Paulis", cirq.eject_phased_paulis),
+        ("Drop negligible operations", cirq.drop_negligible_operations),
+        ("Drop empty moments", cirq.drop_empty_moments),
     ]
-    
-    current_circuit = unoptimized_circuit.copy()
-    
-    for name, optimizer in optimizers:
-        try:
-            optimizer.optimize_circuit(current_circuit)
-            print(f"\nAfter {name}:")
-            print(f"  Moments: {len(current_circuit)}")
-            print(f"  Operations: {len(list(current_circuit.all_operations()))}")
-        except Exception as e:
-            print(f"  {name} failed: {e}")
-    
-    # Compare execution results
-    simulator = cirq.Simulator()
-    
-    # Execute original circuit
-    original_result = simulator.run(unoptimized_circuit, repetitions=1000)
-    original_counts = {}
-    for i in range(1000):
-        measurement = ''.join([str(original_result.measurements[f'{qubit}'][i][0]) for qubit in qubits])
-        original_counts[measurement] = original_counts.get(measurement, 0) + 1
-    
-    # Execute optimized circuit
-    optimized_result = simulator.run(current_circuit, repetitions=1000)
-    optimized_counts = {}
-    for i in range(1000):
-        measurement = ''.join([str(optimized_result.measurements[f'{qubit}'][i][0]) for qubit in qubits])
-        optimized_counts[measurement] = optimized_counts.get(measurement, 0) + 1
-    
-    print(f"\nExecution Results Comparison:")
-    print(f"Original circuit outcomes: {len(original_counts)}")
-    print(f"Optimized circuit outcomes: {len(optimized_counts)}")
-    
-    # Check if results are equivalent
-    outcomes_match = (set(original_counts.keys()) == set(optimized_counts.keys()))
-    print(f"Outcomes match: {outcomes_match}")
-    
-    if outcomes_match:
-        max_diff = max(abs(original_counts.get(outcome, 0) - optimized_counts.get(outcome, 0)) 
-                      for outcome in original_counts.keys())
-        print(f"Maximum count difference: {max_diff}")
+    optimized = unoptimized
+    for name, transform in transformers:
+        optimized = transform(optimized)
+        print(f"After {name}: {stats(optimized)}")
+
+    # The optimised circuit implements the same unitary (up to global phase)
+    cirq.testing.assert_circuits_with_terminal_measurements_are_equivalent(
+        unoptimized, optimized, atol=1e-6
+    )
+    print("Equivalent: True")
+
 
 cirq_circuit_optimization()
 ```
@@ -978,179 +876,28 @@ cirq_performance_benchmarking()
 
 ```python
 def cirq_quantum_ml_example():
-    """Implement quantum ML using Cirq backend."""
-    
+    """Quantum classifiers on the Cirq backend, against a classical SVM."""
     from sklearn.datasets import make_moons
+    from sklearn.metrics import accuracy_score
     from sklearn.model_selection import train_test_split
     from sklearn.preprocessing import StandardScaler
-    from sklearn.metrics import accuracy_score
-    import cirq
-    
-    print("Quantum ML with Cirq Backend")
-    print("=" * 30)
-    
-    # Generate dataset
-    X, y = make_moons(n_samples=100, noise=0.1, random_state=42)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-    
-    # Scale features
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-    
-    print(f"Dataset: {len(X)} samples, {X.shape[1]} features, 2 classes")
-    
-    # Create variational quantum classifier
-    class CirqVariationalClassifier:
-        def __init__(self, n_qubits=2, n_layers=2):
-            self.n_qubits = n_qubits
-            self.n_layers = n_layers
-            self.qubits = [cirq.GridQubit(0, i) for i in range(n_qubits)]
-            self.n_params = n_qubits * n_layers * 2  # RY and RZ per qubit per layer
-            self.params = np.random.random(self.n_params) * 2 * np.pi
-        
-        def create_ansatz(self, x_data, params):
-            """Create variational ansatz circuit."""
-            circuit = cirq.Circuit()
-            
-            # Data encoding
-            for i, xi in enumerate(x_data[:self.n_qubits]):
-                circuit.append(cirq.ry(np.pi * xi)(self.qubits[i]))
-            
-            # Variational layers
-            param_idx = 0
-            for layer in range(self.n_layers):
-                # Parameterized rotations
-                for i in range(self.n_qubits):
-                    circuit.append(cirq.ry(params[param_idx])(self.qubits[i]))
-                    param_idx += 1
-                    circuit.append(cirq.rz(params[param_idx])(self.qubits[i]))
-                    param_idx += 1
-                
-                # Entangling gates
-                if layer < self.n_layers - 1:
-                    for i in range(self.n_qubits - 1):
-                        circuit.append(cirq.CZ(self.qubits[i], self.qubits[i + 1]))
-            
-            return circuit
-        
-        def measure_expectation(self, x_data, params):
-            """Measure expectation value for classification."""
-            circuit = self.create_ansatz(x_data, params)
-            
-            # Add measurement
-            circuit.append(cirq.measure(self.qubits[0], key='measurement'))
-            
-            simulator = cirq.Simulator()
-            result = simulator.run(circuit, repetitions=1000)
-            
-            # Calculate expectation value of first qubit
-            measurements = result.measurements['measurement']
-            expectation = np.mean(1 - 2 * measurements)  # Convert {0,1} to {1,-1}
-            
-            return expectation
-        
-        def predict_single(self, x_data, params=None):
-            """Predict single sample."""
-            if params is None:
-                params = self.params
-            
-            expectation = self.measure_expectation(x_data, params)
-            return 1 if expectation > 0 else 0
-        
-        def cost_function(self, params, X, y):
-            """Cost function for training."""
-            predictions = []
-            for xi in X:
-                pred = self.predict_single(xi, params)
-                predictions.append(pred)
-            
-            # Binary cross-entropy loss
-            predictions = np.array(predictions, dtype=float)
-            y = np.array(y, dtype=float)
-            
-            # Add small epsilon to prevent log(0)
-            epsilon = 1e-10
-            predictions = np.clip(predictions, epsilon, 1 - epsilon)
-            
-            loss = -np.mean(y * np.log(predictions) + (1 - y) * np.log(1 - predictions))
-            return loss
-        
-        def train(self, X, y, epochs=30, learning_rate=0.1):
-            """Train using parameter-shift rule."""
-            print(f"Training VQC for {epochs} epochs...")
-            
-            cost_history = []
-            
-            for epoch in range(epochs):
-                # Compute gradients using parameter-shift rule
-                gradients = np.zeros_like(self.params)
-                
-                for i in range(len(self.params)):
-                    # Forward shift
-                    params_plus = self.params.copy()
-                    params_plus[i] += np.pi / 2
-                    cost_plus = self.cost_function(params_plus, X, y)
-                    
-                    # Backward shift
-                    params_minus = self.params.copy()
-                    params_minus[i] -= np.pi / 2
-                    cost_minus = self.cost_function(params_minus, X, y)
-                    
-                    # Parameter-shift gradient
-                    gradients[i] = (cost_plus - cost_minus) / 2
-                
-                # Update parameters
-                self.params = self.params - learning_rate * gradients
-                
-                # Record cost
-                current_cost = self.cost_function(self.params, X, y)
-                cost_history.append(current_cost)
-                
-                if epoch % 10 == 0:
-                    print(f"  Epoch {epoch}: Cost = {current_cost:.4f}")
-            
-            return cost_history
-        
-        def predict(self, X):
-            """Predict multiple samples."""
-            predictions = []
-            for xi in X:
-                pred = self.predict_single(xi)
-                predictions.append(pred)
-            return np.array(predictions)
-    
-    # Create and train classifier
-    vqc = CirqVariationalClassifier(n_qubits=2, n_layers=2)
-    cost_history = vqc.train(X_train_scaled, y_train, epochs=25, learning_rate=0.3)
-    
-    # Make predictions
-    train_pred = vqc.predict(X_train_scaled)
-    test_pred = vqc.predict(X_test_scaled)
-    
-    train_acc = accuracy_score(y_train, train_pred)
-    test_acc = accuracy_score(y_test, test_pred)
-    
-    print(f"\nResults:")
-    print(f"Training Accuracy: {train_acc:.3f}")
-    print(f"Test Accuracy: {test_acc:.3f}")
-    
-    # Compare with classical ML
     from sklearn.svm import SVC
-    classical_svm = SVC(kernel='rbf')
-    classical_svm.fit(X_train_scaled, y_train)
-    classical_pred = classical_svm.predict(X_test_scaled)
-    classical_acc = accuracy_score(y_test, classical_pred)
-    
-    print(f"Classical SVM Accuracy: {classical_acc:.3f}")
-    
-    # Performance comparison
-    if test_acc > classical_acc:
-        print("✅ Quantum classifier outperforms classical!")
-    elif test_acc > classical_acc - 0.05:
-        print("🤔 Quantum classifier is competitive")
-    else:
-        print("📈 Classical method currently better")
+
+    X, y = make_moons(n_samples=60, noise=0.1, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    scaler = StandardScaler().fit(X_train)
+    X_train, X_test = scaler.transform(X_train), scaler.transform(X_test)
+
+    models = {
+        'QuantumSVM (cirq)': sqx.QuantumSVM(backend='cirq', feature_map='ZFeatureMap'),
+        'QuantumNN (cirq)': sqx.QuantumNN(backend='cirq', n_layers=2, learning_rate=0.1,
+                                          max_epochs=15, seed=0),
+        'Classical SVM': SVC(kernel='rbf'),
+    }
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+        print(f"{name}: test accuracy {accuracy_score(y_test, model.predict(X_test)):.3f}")
+
 
 cirq_quantum_ml_example()
 ```
@@ -1164,61 +911,43 @@ cirq_quantum_ml_example()
 import cirq
 import numpy as np
 
+
 class CirqUtils:
     """Utility functions for Cirq backend operations."""
-    
+
     @staticmethod
     def create_grid_qubits(rows, cols):
-        """Create grid qubit layout."""
         return [cirq.GridQubit(r, c) for r in range(rows) for c in range(cols)]
-    
+
     @staticmethod
     def create_line_qubits(n):
-        """Create line qubit layout."""
         return [cirq.LineQubit(i) for i in range(n)]
-    
+
     @staticmethod
     def create_connectivity_map(qubits, topology='linear'):
-        """Create qubit connectivity map."""
         connections = []
-        
         if topology == 'linear':
-            for i in range(len(qubits) - 1):
-                connections.append((qubits[i], qubits[i + 1]))
-        
+            connections = [(qubits[i], qubits[i + 1]) for i in range(len(qubits) - 1)]
         elif topology == 'circular':
-            for i in range(len(qubits)):
-                connections.append((qubits[i], qubits[(i + 1) % len(qubits)]))
-        
+            connections = [(qubits[i], qubits[(i + 1) % len(qubits)]) for i in range(len(qubits))]
         elif topology == 'grid':
-            # Assumes qubits are GridQubits
             for qubit in qubits:
-                if isinstance(qubit, cirq.GridQubit):
-                    neighbors = [
-                        cirq.GridQubit(qubit.row + dr, qubit.col + dc)
-                        for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]
-                    ]
-                    for neighbor in neighbors:
-                        if neighbor in qubits and (qubit, neighbor) not in connections:
-                            connections.append((qubit, neighbor))
-        
+                for dr, dc in [(0, 1), (1, 0)]:
+                    neighbor = cirq.GridQubit(qubit.row + dr, qubit.col + dc)
+                    if neighbor in qubits:
+                        connections.append((qubit, neighbor))
         return connections
-    
+
     @staticmethod
-    def optimize_circuit_for_device(circuit, device_connectivity):
-        """Optimize circuit for specific device connectivity."""
-        # Apply basic optimizations
-        optimizers = [
-            cirq.MergeSingleQubitGates(),
-            cirq.DropEmptyMoments(),
-            cirq.DropNegligible()
-        ]
-        
-        optimized_circuit = circuit.copy()
-        for optimizer in optimizers:
-            optimizer.optimize_circuit(optimized_circuit)
-        
-        return optimized_circuit
+    def optimize_circuit(circuit):
+        """Basic optimisation with Cirq transformers."""
+        circuit = cirq.merge_single_qubit_gates_to_phxz(circuit)
+        circuit = cirq.drop_negligible_operations(circuit)
+        return cirq.drop_empty_moments(circuit)
+
+
+grid = CirqUtils.create_grid_qubits(2, 2)
+print(len(CirqUtils.create_connectivity_map(grid, 'grid')))   # 4 edges
 ```
 
 ### Error Handling
@@ -1274,7 +1003,7 @@ def robust_cirq_execution(circuit, simulator_type='Simulator', max_retries=3):
 *Cirq's integration with SuperQuantX brings Google's quantum computing expertise to your applications. With its focus on NISQ algorithms and flexible circuit construction, Cirq is ideal for near-term quantum applications and research.*
 
 !!! tip "Circuit Optimization"
-    Use Cirq's moment structure and optimization passes to create efficient circuits. The `MergeSingleQubitGates` optimizer can significantly reduce circuit depth.
+    Use Cirq's moment structure and optimization passes to create efficient circuits. Transformers such as `cirq.merge_single_qubit_gates_to_phxz` can significantly reduce circuit depth.
 
 !!! warning "Memory Scaling"
     Density matrix simulation scales as O(4^n) in memory. For circuits with >10 qubits, prefer state vector simulation when possible.

@@ -1,9 +1,5 @@
 # SuperQuantX Architecture
 
-!!! warning "Unverified examples"
-    Code on this page is illustrative and partly written as fragments. Only 5 of 16 snippets run as-is against the current release. The test suite in `tests/` is the source of truth.
-
-
 This document provides a comprehensive overview of SuperQuantX's architecture, design principles, and implementation details.
 
 ## 🏗️ High-Level Architecture
@@ -56,8 +52,10 @@ SuperQuantX follows a modular, layered architecture designed for quantum computi
 ### Backend System
 
 ```python
-# Backend abstraction allows seamless switching
-backend = sqx.get_backend('pennylane')  # or 'qiskit', 'cirq', etc.
+import superquantx as sqx
+
+# Backend abstraction: swap the name, keep the code
+backend = sqx.get_backend('pennylane')  # or 'simulator', 'qiskit', 'cirq', 'braket', 'tket'
 algorithm = sqx.QuantumSVM(backend=backend)
 ```
 
@@ -70,27 +68,36 @@ algorithm = sqx.QuantumSVM(backend=backend)
 ### Circuit Management
 
 ```python
-# Unified circuit construction
-circuit = sqx.QuantumCircuit(n_qubits=4)
+# Backend-independent circuit description (draw, compose, serialise)
+circuit = sqx.QuantumCircuit(4)
 circuit.h(0)
 circuit.cx(0, 1)
 circuit.measure_all()
+
+# Executable circuit on a specific backend, built with the shared gate names
+backend = sqx.get_backend('simulator')
+native = backend.create_circuit(4)
+backend.add_gate(native, 'H', 0)
+backend.add_gate(native, 'CNOT', [0, 1])
+backend.add_measurement(native)
+print(backend.execute_circuit(native, shots=100)['counts'])
 ```
 
 **Components:**
-- `QuantumCircuit`: Main circuit representation
-- `QuantumGate`: Individual gate operations
-- `Parameter`: Symbolic parameters for variational algorithms
-- `Measurement`: Quantum measurement operations
+- `QuantumCircuit`: backend-independent circuit description
+- `QuantumGate`: individual gate operations
+- Backend circuits: created by `backend.create_circuit(n)` and executed by `backend.execute_circuit`
+- `MeasurementResult`: counts with analysis helpers
 
 ### Algorithm Framework
 
 ```python
 # High-level algorithm interface
 qsvm = sqx.QuantumSVM(
+    backend='simulator',
     feature_map='ZZFeatureMap',
-    ansatz='RealAmplitudes',
-    optimizer='SPSA'
+    feature_map_reps=2,
+    C=1.0,
 )
 ```
 
@@ -107,21 +114,32 @@ qsvm = sqx.QuantumSVM(
 Each backend implements the `QuantumBackend` interface:
 
 ```python
-class QuantumBackend(ABC):
+from abc import ABC, abstractmethod
+
+
+class BaseBackend(ABC):
+    """Abridged from superquantx/backends/base_backend.py."""
+
     @abstractmethod
-    def create_circuit(self, n_qubits: int) -> QuantumCircuit:
-        """Create quantum circuit"""
-        pass
-    
+    def _initialize_backend(self) -> None: ...
+
     @abstractmethod
-    def execute(self, circuit: QuantumCircuit, shots: int) -> Result:
-        """Execute quantum circuit"""
-        pass
-    
+    def create_circuit(self, n_qubits: int): ...
+
     @abstractmethod
-    def compile_circuit(self, circuit: QuantumCircuit) -> CompiledCircuit:
-        """Compile circuit for execution"""
-        pass
+    def add_gate(self, circuit, gate: str, qubits, params=None): ...
+
+    @abstractmethod
+    def add_measurement(self, circuit, qubits=None): ...
+
+    @abstractmethod
+    def execute_circuit(self, circuit, shots=None) -> dict: ...
+
+    @abstractmethod
+    def get_statevector(self, circuit): ...
+
+    @abstractmethod
+    def _get_n_qubits(self, circuit) -> int: ...
 ```
 
 ### Gate System
@@ -129,19 +147,12 @@ class QuantumBackend(ABC):
 Gates are represented using a flexible matrix-based system:
 
 ```python
-class GateMatrix:
-    # Pauli gates
-    X = np.array([[0, 1], [1, 0]], dtype=complex)
-    Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
-    Z = np.array([[1, 0], [0, -1]], dtype=complex)
-    
-    @staticmethod
-    def rx(theta: float) -> np.ndarray:
-        """Rotation around X-axis"""
-        return np.array([
-            [np.cos(theta/2), -1j*np.sin(theta/2)],
-            [-1j*np.sin(theta/2), np.cos(theta/2)]
-        ])
+import numpy as np
+from superquantx.gates import GateMatrix
+
+# Fixed gates are class attributes, rotations are static methods
+print(GateMatrix.X)
+print(np.round(GateMatrix.rx(np.pi / 2), 3))
 ```
 
 ### Measurement System
@@ -149,15 +160,12 @@ class GateMatrix:
 Measurements are handled through a unified interface:
 
 ```python
-class MeasurementResult:
-    counts: Dict[str, int]
-    shots: int
-    memory: Optional[List[str]]
-    metadata: Dict[str, Any]
-    
-    def probabilities(self) -> Dict[str, float]:
-        """Convert counts to probabilities"""
-        return {k: v/self.shots for k, v in self.counts.items()}
+from superquantx.measurements import MeasurementResult
+
+# Pydantic model: counts, shots, optional memory and metadata
+result = MeasurementResult(counts={'00': 480, '11': 520}, shots=1000)
+print(result.probabilities)
+print(result.most_frequent)
 ```
 
 ## 🔬 Algorithm Architecture
@@ -231,43 +239,64 @@ Raw Results → Measurement Analysis → Error Mitigation → Final Results
 
 ### Adding New Backends
 
-1. **Implement Backend Interface**
+1. **Implement Backend Interface** (all seven abstract methods of `BaseBackend`)
    ```python
-   class NewBackend(QuantumBackend):
-       def create_circuit(self, n_qubits):
-           # Backend-specific implementation
-           pass
+   from superquantx.backends.base_backend import BaseBackend
+
+   class NewBackend(BaseBackend):
+       def _initialize_backend(self): ...
+       def create_circuit(self, n_qubits): ...
+       def add_gate(self, circuit, gate, qubits, params=None): ...
+       def add_measurement(self, circuit, qubits=None): ...
+       def execute_circuit(self, circuit, shots=None): ...
+       def get_statevector(self, circuit): ...
+       def _get_n_qubits(self, circuit): ...
    ```
 
 2. **Register Backend**
    ```python
-   BACKEND_REGISTRY['new_backend'] = NewBackend
+   from superquantx.backends import BACKEND_REGISTRY, SimulatorBackend, get_backend
+
+   class MySimulator(SimulatorBackend):   # a real subclass, so this example runs
+       pass
+
+   BACKEND_REGISTRY['my_simulator'] = MySimulator
+   print(type(get_backend('my_simulator')).__name__)
    ```
 
 3. **Add Tests**
    ```python
    def test_new_backend():
-       backend = get_backend('new_backend')
-       # Test backend functionality
+       backend = get_backend('my_simulator')
+       circuit = backend.create_circuit(1)
+       backend.add_gate(circuit, 'X', 0)
+       backend.add_measurement(circuit)
+       assert backend.execute_circuit(circuit, shots=10)['counts'] == {'1': 10}
+
+   test_new_backend()
    ```
 
 ### Adding New Algorithms
 
 1. **Inherit from Base Class**
    ```python
-   class NewQuantumAlgorithm(QuantumAlgorithm):
-       def __init__(self, backend):
-           super().__init__(backend)
-           
-       def run(self, data):
-           # Algorithm implementation
-           pass
+   from superquantx.algorithms import BaseQuantumAlgorithm
+
+   class NewQuantumAlgorithm(BaseQuantumAlgorithm):
+       def fit(self, X, y=None, **kwargs):
+           # Train here; self.backend is already a backend object
+           self.is_fitted = True
+           return self
+
+       def predict(self, X, **kwargs):
+           return [0] * len(X)
+
+   print(NewQuantumAlgorithm(backend='simulator').fit([[0.1]]).predict([[0.1], [0.2]]))
    ```
 
 2. **Implement Required Methods**
-   - `run()`: Main algorithm execution
-   - `fit()`: Training (if applicable)
-   - `predict()`: Prediction (if applicable)
+   - `fit()`: training or optimisation
+   - `predict()`: prediction or the final answer
 
 ## 🔍 Performance Considerations
 
@@ -276,17 +305,17 @@ Raw Results → Measurement Analysis → Error Mitigation → Final Results
 ```python
 class CircuitOptimizer:
     def optimize(self, circuit):
-        """Multi-pass circuit optimization"""
-        # 1. Gate fusion
-        circuit = self._fuse_single_qubit_gates(circuit)
-        
-        # 2. Two-qubit gate reduction
-        circuit = self._reduce_cnot_gates(circuit)
-        
-        # 3. Layout optimization
-        circuit = self._optimize_layout(circuit)
-        
-        return circuit
+     """Multi-pass circuit optimization"""
+     # 1. Gate fusion
+     circuit = self._fuse_single_qubit_gates(circuit)
+     
+     # 2. Two-qubit gate reduction
+     circuit = self._reduce_cnot_gates(circuit)
+     
+     # 3. Layout optimization
+     circuit = self._optimize_layout(circuit)
+     
+     return circuit
 ```
 
 ### Parallel Execution
@@ -294,14 +323,14 @@ class CircuitOptimizer:
 ```python
 class ParallelExecutor:
     def execute_batch(self, circuits, shots):
-        """Execute multiple circuits in parallel"""
-        with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
-            futures = [
-                executor.submit(self._execute_single, circuit, shots)
-                for circuit in circuits
-            ]
-            results = [future.result() for future in futures]
-        return results
+     """Execute multiple circuits in parallel"""
+     with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
+         futures = [
+             executor.submit(self._execute_single, circuit, shots)
+             for circuit in circuits
+         ]
+         results = [future.result() for future in futures]
+     return results
 ```
 
 ### Memory Management
@@ -341,31 +370,39 @@ tests/
 
 ```python
 import logging
-from superquantx.logging import get_logger
 
-logger = get_logger(__name__)
+from superquantx.logging_config import configure_logging
 
-def quantum_function():
+configure_logging(level='INFO')
+logger = logging.getLogger(__name__)   # SuperQuantX modules use standard logging
+
+def quantum_function(backend, circuit):
     logger.info("Starting quantum computation")
     try:
-        result = backend.execute(circuit)
+        result = backend.execute_circuit(circuit, shots=100)
         logger.debug(f"Result: {result}")
         return result
     except Exception as e:
         logger.error(f"Quantum execution failed: {e}")
         raise
+
+quantum_function(backend, native)
 ```
 
 ### Performance Profiling
 
 ```python
-from superquantx.profiler import profile_quantum
+import cProfile
+import pstats
 
-@profile_quantum
-def benchmark_algorithm():
-    """Automatically profile quantum algorithm execution"""
-    # Algorithm implementation
-    pass
+import numpy as np
+
+# There is no built-in profiler; the standard library works well
+profiler = cProfile.Profile()
+profiler.enable()
+sqx.QuantumSVM(backend='simulator').fit(np.random.default_rng(0).normal(size=(20, 2)), np.array([0, 1] * 10))
+profiler.disable()
+pstats.Stats(profiler).sort_stats('cumulative').print_stats(5)
 ```
 
 ## 🔮 Future Architecture

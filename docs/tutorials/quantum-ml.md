@@ -1,9 +1,5 @@
 # Quantum Machine Learning Tutorial
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 1 of 8 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
-
-
 Learn how to apply quantum computing to machine learning problems using SuperQuantX. This tutorial covers the fundamentals of quantum machine learning (QML) and provides hands-on examples you can run today.
 
 ## 🎯 Learning Objectives
@@ -1014,10 +1010,11 @@ def complete_qml_pipeline():
             backend='simulator', 
             feature_map='ZZFeatureMap'
         ),
-        'VQC': sqx.VariationalQuantumClassifier(
-            n_qubits=4, 
-            n_layers=2, 
-            backend='simulator'
+        'QuantumNN': sqx.QuantumNN(
+            backend='simulator',
+            n_layers=2,
+            max_epochs=20,
+            seed=0,
         )
     }
     
@@ -1026,11 +1023,7 @@ def complete_qml_pipeline():
         
         try:
             # Train
-            if 'VQC' in name:
-                model.compile(optimizer='adam', learning_rate=0.1)
-                model.fit(X_train, y_train, epochs=20, verbose=0)
-            else:
-                model.fit(X_train, y_train)
+            model.fit(X_train, y_train)
             
             # Predict
             y_pred = model.predict(X_test)

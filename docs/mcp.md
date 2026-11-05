@@ -203,13 +203,25 @@ Use SuperQuantX 0.3.0 or newer; 0.2.0 does not include the MCP server.
 `examples/mcp_client_demo.py` launches the server over stdio with the official SDK client and calls
 every tool:
 
+!!! note "Requires a running MCP client session"
+    Illustrates the official MCP Python client; skipped in the docs checker because it launches a subprocess server.
+
+<!-- docs-check: skip -->
 ```python
-from mcp import Client, StdioServerParameters
+import asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
 params = StdioServerParameters(command="python", args=["-m", "superquantx.mcp"])
-async with Client(params) as client:
-    result = await client.call_tool("bell_state_demo", {"shots": 1000})
-    print(result.structured_content)
+
+async def main():
+    async with stdio_client(params) as (read, write):
+        async with ClientSession(read, write) as client:
+            await client.initialize()
+            result = await client.call_tool("bell_state_demo", {"shots": 1000})
+            print(result)
+
+asyncio.run(main())
 ```
 
 ## How it relates to the IBM Qiskit MCP servers
