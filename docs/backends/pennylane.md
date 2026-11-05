@@ -31,19 +31,17 @@ pip install pennylane pennylane-qiskit pennylane-cirq
 ```python
 import superquantx as sqx
 
-# Get PennyLane backend
-backend = sqx.get_backend('pennylane')
-print(f"Backend: {backend}")
+# Get the PennyLane backend (local simulator by default)
+backend = sqx.get_backend("pennylane")
 
-# Create a simple circuit
+# Bell state through the unified circuit API
 circuit = backend.create_circuit(2)
-circuit.h(0)
-circuit.cx(0, 1)
-circuit.measure_all()
+circuit = backend.add_gate(circuit, "H", 0)
+circuit = backend.add_gate(circuit, "CNOT", [0, 1])
+circuit = backend.add_measurement(circuit)
 
-# Execute circuit
-result = backend.run(circuit, shots=1000)
-print(f"Results: {result.get_counts()}")
+result = backend.execute_circuit(circuit, shots=1000)
+print(result["counts"])  # about 500 each of '00' and '11'
 ```
 
 ## 🔧 Configuration

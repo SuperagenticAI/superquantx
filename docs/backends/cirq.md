@@ -33,19 +33,17 @@ pip install cirq cirq-google cirq-web
 ```python
 import superquantx as sqx
 
-# Get Cirq backend
-backend = sqx.get_backend('cirq')
-print(f"Backend: {backend}")
+# Get the Cirq backend (local simulator by default)
+backend = sqx.get_backend("cirq")
 
-# Create Bell state circuit
+# Bell state through the unified circuit API
 circuit = backend.create_circuit(2)
-circuit.h(0)
-circuit.cx(0, 1)
-circuit.measure_all()
+circuit = backend.add_gate(circuit, "H", 0)
+circuit = backend.add_gate(circuit, "CNOT", [0, 1])
+circuit = backend.add_measurement(circuit)
 
-# Execute circuit
-result = backend.run(circuit, shots=1000)
-print(f"Bell state results: {result.get_counts()}")
+result = backend.execute_circuit(circuit, shots=1000)
+print(result["counts"])  # about 500 each of '00' and '11'
 ```
 
 ### Google Quantum Hardware
