@@ -1,1011 +1,399 @@
 # Quantum Algorithms
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 0 of 22 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](backends.md).
+SuperQuantX provides quantum algorithms for machine learning and optimisation, each with a classical check. This guide shows how to use them, how to build textbook algorithms from gates, and how to write your own algorithm class.
 
+Every example on this page runs on SuperQuantX 0.3.0 with the built-in `'simulator'` backend, except the annealing example, which needs the `ocean` extra (`uv add "superquantx[ocean]==0.3.0"`).
 
-SuperQuantX provides quantum algorithms for machine learning and optimisation, each with a classical check. This guide covers how to use, customize, and combine these algorithms in your research.
+## 🎯 What ships in 0.3.0
 
-## 🎯 Algorithm Categories
+| Category | Classes and functions |
+|---|---|
+| Machine learning | `QuantumSVM`, `QuantumNN`, `QuantumKMeans`, `QuantumPCA` (`HybridClassifier` has a known issue, see below) |
+| Optimisation | `VQE`, `QAOA`, `create_vqe_for_molecule`, `OceanBackend.solve_qubo` / `solve_ising` / `solve_max_cut` |
+| Physics | `Hamiltonian`, `PauliString` (exact ground state, time evolution, expectation values) |
+| Evaluation | `compare_to_classical`, `benchmark_algorithm` |
+| Agents | see the [Agents API](../api/agents.md) |
 
-SuperQuantX organizes quantum algorithms into several categories:
+!!! note "Not available as library classes"
+    There are no `QuantumFourierTransform`, `QuantumPhaseEstimation`, `QuantumTeleportation`, `GroversAlgorithm`, `QuantumWalk`, `QuantumGAN`, `VariationalQuantumClassifier`, `VariationalQuantumSimulator`, `BB84Protocol`, `ShorsAlgorithm`, `MaxCutProblem` or `QuantumAnnealer` classes in 0.3.0. The section below builds several textbook algorithms directly from gates instead.
 
-- **🔬 Fundamental Algorithms**: Basic quantum computing building blocks
-- **🧠 Quantum Machine Learning**: ML algorithms leveraging quantum computation
-- **⚡ Optimization Algorithms**: Quantum approaches to optimization problems
-- **🔍 Search Algorithms**: Quantum search and database query methods
-- **🔐 Cryptographic Algorithms**: Quantum cryptography and security
-- **🧮 Simulation Algorithms**: Quantum system simulation methods
+## 🔬 Textbook algorithms built from gates
 
-## 🔬 Fundamental Quantum Algorithms
+The simulator circuit has gate methods (`h`, `x`, `y`, `z`, `rx`, `ry`, `rz`, `cx`, `cz`) and `apply_gate(matrix, qubits)` for any other unitary. `backend.statevector_big_endian(circuit)` returns the state with qubit 0 as the most significant bit.
 
 ### Quantum Fourier Transform (QFT)
 
-The QFT is fundamental to many quantum algorithms:
-
 ```python
-import superquantx as sqx
 import numpy as np
+import superquantx as sqx
 
-# Create QFT algorithm
-qft = sqx.QuantumFourierTransform(n_qubits=4, backend='pennylane')
+backend = sqx.get_backend('simulator')
 
-# Apply to a quantum state
-backend = sqx.get_backend('pennylane')
-circuit = backend.create_circuit(4)
 
-# Prepare initial state (can be any superposition)
-circuit.h(0)
-circuit.h(1)
+def cphase(theta):
+    """Controlled phase gate as a 4x4 matrix."""
+    return np.diag([1, 1, 1, np.exp(1j * theta)])
 
-# Apply QFT
-qft_circuit = qft.create_circuit()
-combined_circuit = circuit + qft_circuit
 
-# Execute
-result = backend.run(combined_circuit, shots=1000)
-print(f"QFT result: {result.get_counts()}")
+SWAP = np.eye(4)[[0, 2, 1, 3]]
 
-# Visualize the frequency domain
-qft.plot_frequency_spectrum(result)
+
+def qft(circuit, n):
+    for j in range(n):
+        circuit.h(j)
+        for k in range(j + 1, n):
+            circuit.apply_gate(cphase(np.pi / 2 ** (k - j)), [k, j])
+    for j in range(n // 2):
+        circuit.apply_gate(SWAP, [j, n - 1 - j])
+    return circuit
+
+
+n = 3
+circuit = backend.create_circuit(n)
+circuit.x(2)          # prepare |001> = basis state 1
+qft(circuit, n)
+
+state = backend.statevector_big_endian(circuit)
+expected = np.exp(2j * np.pi * 1 * np.arange(2 ** n) / 2 ** n) / np.sqrt(2 ** n)
+print("QFT output phases (units of 2pi):", np.round(np.angle(state) / (2 * np.pi) % 1, 3))
+print("Matches the DFT of |1>:", np.allclose(state, expected))
 ```
 
 ### Quantum Phase Estimation (QPE)
 
-Estimate eigenvalues of unitary operators:
+Estimate the phase of the T gate, whose eigenvalue on |1> is exp(2 pi i / 8). Three counting qubits recover the phase 1/8 exactly. This reuses `cphase` and `SWAP` from the QFT example.
 
 ```python
-# Create a unitary operator (e.g., rotation)
-import numpy as np
+def inverse_qft(circuit, qubits):
+    n = len(qubits)
+    for j in range(n // 2):
+        circuit.apply_gate(SWAP, [qubits[j], qubits[n - 1 - j]])
+    for j in reversed(range(n)):
+        for k in reversed(range(j + 1, n)):
+            circuit.apply_gate(cphase(-np.pi / 2 ** (k - j)), [qubits[k], qubits[j]])
+        circuit.h(qubits[j])
 
-def create_rotation_unitary(theta):
-    """Create a rotation unitary matrix."""
-    return np.array([
-        [np.cos(theta/2), -1j*np.sin(theta/2)],
-        [-1j*np.sin(theta/2), np.cos(theta/2)]
-    ])
 
-# Phase estimation algorithm
-theta = np.pi/4  # True phase
-unitary = create_rotation_unitary(theta)
+phase = 1 / 8          # T gate
+counting = [0, 1, 2]
+target = 3
 
-qpe = sqx.QuantumPhaseEstimation(
-    unitary_operator=unitary,
-    precision_qubits=4,  # Number of qubits for precision
-    backend='qiskit'
-)
+circuit = backend.create_circuit(4)
+circuit.x(target)      # eigenstate |1>
+for q in counting:
+    circuit.h(q)
+for i, q in enumerate(counting):
+    power = 2 ** (len(counting) - 1 - i)    # qubit 0 is the most significant bit
+    circuit.apply_gate(cphase(2 * np.pi * phase * power), [q, target])
+inverse_qft(circuit, counting)
 
-estimated_phase = qpe.estimate()
-print(f"True phase: {theta:.6f}")
-print(f"Estimated phase: {estimated_phase:.6f}")
-print(f"Error: {abs(theta - estimated_phase):.6f}")
+probs = np.abs(backend.statevector_big_endian(circuit)) ** 2
+best = format(int(np.argmax(probs)), '04b')
+estimate = int(best[:3], 2) / 2 ** 3
+print(f"Most likely outcome {best}, estimated phase {estimate} (true {phase})")
 ```
 
-### Quantum Teleportation
+### Quantum teleportation
 
-Demonstrate quantum information transfer:
+This version uses the deferred-measurement form: the classically controlled corrections become controlled gates, so the whole protocol is one unitary circuit and fidelity can be checked from the statevector.
 
 ```python
-# Quantum teleportation protocol
-teleportation = sqx.QuantumTeleportation(backend='simulator')
+theta, phi = 1.1, 0.4
 
-# Prepare arbitrary quantum state to teleport
-state_to_teleport = [0.6, 0.8j]  # α|0⟩ + β|1⟩
+# The state to teleport, prepared on its own for reference
+ref = backend.create_circuit(1)
+ref.ry(theta, 0)
+ref.rz(phi, 0)
+psi = backend.statevector_big_endian(ref)
 
-# Perform teleportation
-teleported_state = teleportation.teleport_state(state_to_teleport)
+circuit = backend.create_circuit(3)
+circuit.ry(theta, 0)
+circuit.rz(phi, 0)       # qubit 0 holds |psi>
+circuit.h(1)
+circuit.cx(1, 2)         # Bell pair on qubits 1 and 2
+circuit.cx(0, 1)
+circuit.h(0)             # Bell measurement basis
+circuit.cx(1, 2)         # X correction
+circuit.cz(0, 2)         # Z correction
 
-print(f"Original state: {state_to_teleport}")
-print(f"Teleported state: {teleported_state}")
-
-# Verify fidelity
-fidelity = teleportation.calculate_fidelity(state_to_teleport, teleported_state)
+state = backend.statevector_big_endian(circuit).reshape(2, 2, 2)
+rho_bob = np.einsum('abi,abj->ij', state, state.conj())   # trace out qubits 0 and 1
+fidelity = np.real(psi.conj() @ rho_bob @ psi)
 print(f"Teleportation fidelity: {fidelity:.6f}")
+```
+
+### Grover's search
+
+Two-qubit Grover search for the marked item |11>. One iteration finds it with certainty.
+
+```python
+circuit = backend.create_circuit(2)
+circuit.h(0); circuit.h(1)          # uniform superposition
+circuit.cz(0, 1)                    # oracle: flip the phase of |11>
+circuit.h(0); circuit.h(1)          # diffusion operator
+circuit.x(0); circuit.x(1)
+circuit.cz(0, 1)
+circuit.x(0); circuit.x(1)
+circuit.h(0); circuit.h(1)
+circuit.measure_all()
+
+counts = backend.run(circuit, shots=1000).get_counts()
+print("Grover counts:", counts)
 ```
 
 ## 🧠 Quantum Machine Learning
 
 ### Quantum Support Vector Machine (QSVM)
 
-Quantum-enhanced classification:
+`QuantumSVM` computes a quantum kernel and trains a classical SVM on it. Supported feature maps are `'ZZFeatureMap'`, `'ZFeatureMap'`, `'PauliFeatureMap'` and `'AngleEncoding'`; `feature_map_reps` sets the depth.
 
 ```python
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
-
-# Create dataset
-X, y = make_classification(
-    n_samples=200,
-    n_features=4,
-    n_classes=2,
-    n_redundant=0,
-    random_state=42
-)
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Quantum SVM with different feature maps
-feature_maps = ['ZFeatureMap', 'ZZFeatureMap', 'PauliFeatureMap']
-results = {}
-
-for feature_map in feature_maps:
-    qsvm = sqx.QuantumSVM(
-        backend='pennylane',
-        feature_map=feature_map,
-        num_features=4,
-        depth=2
-    )
-    
-    # Train the model
-    qsvm.fit(X_train, y_train)
-    
-    # Evaluate
-    accuracy = qsvm.score(X_test, y_test)
-    results[feature_map] = accuracy
-    
-    print(f"QSVM with {feature_map}: {accuracy:.3f}")
-
-# Compare with classical SVM
 from sklearn.svm import SVC
-classical_svm = SVC(kernel='rbf')
-classical_svm.fit(X_train, y_train)
-classical_accuracy = classical_svm.score(X_test, y_test)
+import superquantx as sqx
 
-print(f"Classical SVM: {classical_accuracy:.3f}")
+X, y = make_classification(n_samples=80, n_features=4, n_classes=2, n_redundant=0, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+
+for feature_map in ['ZFeatureMap', 'ZZFeatureMap', 'PauliFeatureMap']:
+    qsvm = sqx.QuantumSVM(backend='simulator', feature_map=feature_map, feature_map_reps=2)
+    qsvm.fit(X_train, y_train)
+    print(f"QSVM with {feature_map}: {qsvm.score(X_test, y_test):.3f}")
+
+classical = SVC(kernel='rbf').fit(X_train, y_train)
+print(f"Classical RBF SVM: {classical.score(X_test, y_test):.3f}")
 ```
 
-### Variational Quantum Classifier (VQC)
-
-Trainable quantum classifier:
-
-```python
-# Variational Quantum Classifier
-vqc = sqx.VariationalQuantumClassifier(
-    n_qubits=4,
-    n_layers=3,
-    backend='pennylane',
-    optimizer='adam'
-)
-
-# Configure training
-vqc.compile(
-    optimizer='adam',
-    learning_rate=0.01,
-    loss='binary_crossentropy'
-)
-
-# Train the classifier
-history = vqc.fit(
-    X_train, y_train,
-    epochs=100,
-    validation_data=(X_test, y_test),
-    verbose=1
-)
-
-# Plot training history
-vqc.plot_training_history(history)
-
-# Make predictions
-predictions = vqc.predict(X_test)
-probabilities = vqc.predict_proba(X_test)
-
-print(f"VQC Accuracy: {vqc.score(X_test, y_test):.3f}")
-```
+A single train/test split is noisy. For a fair comparison use `compare_to_classical` (see [Benchmarking](benchmarking.md)), which tunes the classical baselines and reports a p-value.
 
 ### Quantum Neural Network (QNN)
 
-Deep quantum neural networks:
+`QuantumNN` is a trainable variational circuit with angle encoding. It covers the "variational quantum classifier" use case.
 
 ```python
-# Build quantum neural network
-qnn = sqx.QuantumNeuralNetwork(
-    architecture=[
-        sqx.layers.QuantumConv2D(filters=4, kernel_size=2),
-        sqx.layers.QuantumPooling2D(pool_size=2),
-        sqx.layers.QuantumDense(units=16, activation='relu'),
-        sqx.layers.QuantumDense(units=2, activation='softmax')
-    ],
-    backend='pennylane'
+qnn = sqx.QuantumNN(
+    backend='simulator',
+    n_layers=2,
+    encoding='angle',
+    entanglement='linear',
+    learning_rate=0.05,
+    max_epochs=20,
+    task_type='classification',
+    seed=0,
 )
-
-# Compile model
-qnn.compile(
-    optimizer='adam',
-    loss='sparse_categorical_crossentropy',
-    metrics=['accuracy']
-)
-
-# Train on quantum data
-qnn.fit(X_train, y_train, epochs=50, batch_size=32)
-
-# Evaluate
-test_loss, test_accuracy = qnn.evaluate(X_test, y_test)
-print(f"QNN Test Accuracy: {test_accuracy:.3f}")
+qnn.fit(X_train, y_train)
+print(f"QNN test accuracy: {qnn.score(X_test, y_test):.3f}")
+history = qnn.get_training_history()
+print("Training history keys:", list(history))
 ```
 
-### Quantum Generative Adversarial Network (QGAN)
+### Hybrid classifier
 
-Generate quantum data:
+!!! bug "Known issue in 0.3.0"
+    `HybridClassifier` is exported but does not work reliably in 0.3.0: the default `'ensemble'` mode and the `'voting'` and `'stacking'` modes raise a NumPy shape error in `fit`, and `'sequential'` trains but gives poor accuracy. Until this is fixed, compare quantum and classical models with `compare_to_classical` (below) instead.
 
-```python
-# Quantum GAN for data generation
-qgan = sqx.QuantumGAN(
-    generator_layers=3,
-    discriminator_layers=2,
-    latent_dim=4,
-    backend='pennylane'
-)
-
-# Train QGAN
-qgan.fit(
-    X_train,
-    epochs=100,
-    batch_size=16
-)
-
-# Generate new samples
-generated_samples = qgan.generate(n_samples=100)
-
-# Visualize real vs generated data
-qgan.plot_data_comparison(X_train, generated_samples)
-```
+!!! note "Not available in 0.3.0"
+    Quantum GANs and Keras-style layer APIs (`sqx.layers`, `model.compile`) are not implemented.
 
 ## ⚡ Optimization Algorithms
 
 ### Variational Quantum Eigensolver (VQE)
 
-Find ground state energies:
-
 ```python
-# Define Hamiltonian (e.g., H2 molecule)
-def create_h2_hamiltonian(bond_distance=0.74):
-    """Create H2 molecule Hamiltonian."""
-    # Simplified H2 Hamiltonian coefficients
-    coeffs = [
-        -1.0523732,  # Identity
-        0.39793742,  # Z0
-        -0.39793742, # Z1
-        -0.01128010, # Z0Z1
-        0.18093119   # X0X1
-    ]
-    
-    paulis = [
-        sqx.PauliString('II'),
-        sqx.PauliString('ZI'), 
-        sqx.PauliString('IZ'),
-        sqx.PauliString('ZZ'),
-        sqx.PauliString('XX')
-    ]
-    
-    return sqx.Hamiltonian(coeffs, paulis)
+import superquantx as sqx
 
-# Create VQE algorithm
-h2_hamiltonian = create_h2_hamiltonian()
+# Two-qubit reduced H2 Hamiltonian (STO-3G, 0.74 Angstrom)
+h2 = sqx.Hamiltonian.from_dict({
+    'II': -1.0523732,
+    'ZI': 0.39793742,
+    'IZ': -0.39793742,
+    'ZZ': -0.01128010,
+    'XX': 0.18093119,
+})
 
-vqe = sqx.VQE(
-    hamiltonian=h2_hamiltonian,
-    ansatz='UCCSD',  # Unitary Coupled Cluster
-    optimizer='COBYLA',
-    backend='pennylane'
-)
-
-# Find ground state
+vqe = sqx.VQE(hamiltonian=h2, ansatz='RealAmplitudes', optimizer='COBYLA', backend='simulator', seed=0)
 ground_energy = vqe.find_ground_state()
-ground_state = vqe.get_ground_state_vector()
+exact_energy = h2.ground_state_energy()
 
-print(f"Ground state energy: {ground_energy:.6f} Ha")
-
-# Compare with exact diagonalization
-exact_energy = h2_hamiltonian.ground_state_energy()
+print(f"VQE energy:   {ground_energy:.6f} Ha")
 print(f"Exact energy: {exact_energy:.6f} Ha")
-print(f"Error: {abs(ground_energy - exact_energy):.6f} Ha")
+print(f"Error:        {abs(ground_energy - exact_energy):.2e} Ha")
 ```
+
+`create_vqe_for_molecule('H2')` builds the same problem from the bundled molecular data. A `'UCCSD'` ansatz is not available; use `'RealAmplitudes'` or a callable.
 
 ### Quantum Approximate Optimization Algorithm (QAOA)
 
-Solve combinatorial optimization:
+`QAOA.solve(adjacency)` runs weighted MaxCut and checks the answer by brute force.
 
 ```python
-# Max-Cut problem example
-def create_maxcut_problem(graph_edges, weights=None):
-    """Create Max-Cut problem instance."""
-    if weights is None:
-        weights = [1.0] * len(graph_edges)
-    
-    problem = sqx.MaxCutProblem(edges=graph_edges, weights=weights)
-    return problem
+import numpy as np
 
-# Define graph
 edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 2)]
-maxcut_problem = create_maxcut_problem(edges)
+adjacency = np.zeros((4, 4))
+for i, j in edges:
+    adjacency[i, j] = adjacency[j, i] = 1.0
 
-# QAOA solver
-qaoa = sqx.QAOA(
-    problem=maxcut_problem,
-    layers=3,  # p parameter
-    optimizer='SPSA',
-    backend='qiskit'
-)
+qaoa = sqx.QAOA(backend='simulator', p=3, optimizer='COBYLA', seed=0)
+result = qaoa.solve(adjacency)
 
-# Solve optimization problem
-optimal_solution = qaoa.solve()
-optimal_value = qaoa.get_optimal_value()
-
-print(f"Optimal cut value: {optimal_value}")
-print(f"Optimal solution: {optimal_solution}")
-
-# Visualize optimization landscape
-qaoa.plot_optimization_landscape()
+print("Best partition:", result['bitstring'])
+print("Cut value:", result['cut_value'], "of optimum", result['classical_optimum'])
+print("Approximation ratio:", round(result['approximation_ratio'], 3))
 ```
 
-### Quantum Annealing
+### Quantum annealing (D-Wave Ocean)
 
-Solve optimization via quantum annealing:
+Annealing problems go through the `ocean` backend. Without D-Wave credentials it uses the local simulated annealer.
 
 ```python
-# Quantum annealing for QUBO problems
-qubo_matrix = np.array([
-    [-1, 2, 2],
-    [0, -1, 2], 
-    [0, 0, -1]
-])
+ocean = sqx.get_backend('ocean')
 
-annealer = sqx.QuantumAnnealer(
-    backend='ocean',  # D-Wave Ocean backend
-    annealing_time=20,  # microseconds
-    num_reads=1000
-)
+# Minimise -x0 - x1 - x2 + 2 x0 x1 + 2 x0 x2 + 2 x1 x2 (pick exactly one variable)
+Q = {(0, 0): -1, (1, 1): -1, (2, 2): -1, (0, 1): 2, (0, 2): 2, (1, 2): 2}
+result = ocean.solve_qubo(Q, num_reads=100)
 
-# Solve QUBO
-solution = annealer.solve_qubo(qubo_matrix)
-
-print(f"Best solution: {solution.best_solution}")
-print(f"Best energy: {solution.best_energy}")
-print(f"Solution frequency: {solution.solution_counts}")
+best = int(np.argmin(result['energies']))
+print("Best solution:", {k: int(v) for k, v in result['samples'][best].items()})
+print("Best energy:", float(result['energies'][best]))
 ```
 
-## 🔍 Search Algorithms
+## 🧮 Simulating quantum systems
 
-### Grover's Algorithm
-
-Quantum database search:
+`Hamiltonian` gives exact reference values for small systems: the matrix, ground-state energy, expectation values and time evolution.
 
 ```python
-# Grover's algorithm for unstructured search
-def oracle_function(x):
-    """Oracle that marks target items."""
-    # Mark items 3 and 7 as targets
-    return x in [3, 7]
+ising = sqx.Hamiltonian.ising_model(4, J=1.0, h=0.5)
+print(f"Ising ground-state energy: {ising.ground_state_energy():.6f}")
 
-grover = sqx.GroversAlgorithm(
-    search_space_size=16,  # 2^4 items
-    oracle=oracle_function,
-    backend='cirq'
-)
+# Time evolution of |0000> under the Ising Hamiltonian: the energy is conserved,
+# but the magnetisation of qubit 0 oscillates because of the transverse field
+z0 = sqx.Hamiltonian.from_dict({'ZIII': 1.0})
+psi0 = np.zeros(2 ** 4, dtype=complex)
+psi0[0] = 1.0
+for t in [0.0, 0.5, 1.0, 2.0]:
+    psi_t = ising.time_evolution(t) @ psi0
+    energy = np.real(ising.expectation_value(psi_t))
+    magnetisation = np.real(z0.expectation_value(psi_t))
+    print(f"t={t}: <H> = {energy:.4f}, <Z0> = {magnetisation:.4f}")
 
-# Run search
-search_results = grover.search()
-
-print(f"Target items found: {search_results.targets}")
-print(f"Success probability: {search_results.success_probability:.3f}")
-print(f"Number of iterations: {search_results.iterations}")
-
-# Analyze amplitude amplification
-grover.plot_amplitude_evolution()
+# The same Hamiltonian solved variationally
+vqe = sqx.VQE(hamiltonian=ising, backend='simulator', reps=2, seed=0)
+print(f"VQE: {vqe.find_ground_state():.6f}")
 ```
 
-### Quantum Walk Algorithm
-
-Quantum random walk for graph traversal:
-
-```python
-# Quantum walk on a graph
-import networkx as nx
-
-# Create graph
-G = nx.cycle_graph(8)  # 8-node cycle graph
-
-quantum_walk = sqx.QuantumWalk(
-    graph=G,
-    steps=10,
-    backend='simulator'
-)
-
-# Run quantum walk starting from node 0
-probability_distribution = quantum_walk.run(start_node=0)
-
-print(f"Final probability distribution: {probability_distribution}")
-
-# Compare with classical random walk
-classical_walk = sqx.ClassicalWalk(graph=G, steps=10)
-classical_distribution = classical_walk.run(start_node=0)
-
-# Plot comparison
-quantum_walk.plot_distribution_comparison(
-    probability_distribution, 
-    classical_distribution
-)
-```
-
-## 🔐 Cryptographic Algorithms
-
-### Quantum Key Distribution (QKD)
-
-Secure key exchange:
-
-```python
-# BB84 Quantum Key Distribution protocol
-qkd = sqx.BB84Protocol(
-    key_length=128,
-    noise_level=0.05,  # 5% channel noise
-    backend='simulator'
-)
-
-# Alice and Bob generate shared key
-alice_key, bob_key, security_params = qkd.generate_shared_key()
-
-print(f"Alice's key: {alice_key[:20]}...")  # Show first 20 bits
-print(f"Bob's key: {bob_key[:20]}...")
-print(f"Key agreement: {alice_key == bob_key}")
-print(f"Security parameters: {security_params}")
-
-# Detect eavesdropping
-eve_present = qkd.detect_eavesdropping()
-print(f"Eavesdropping detected: {eve_present}")
-```
-
-### Shor's Algorithm
-
-Factor large integers:
-
-```python
-# Shor's algorithm for integer factorization
-def shors_algorithm(N, backend='qiskit'):
-    """Factor integer N using Shor's algorithm."""
-    
-    shor = sqx.ShorsAlgorithm(
-        N=N,
-        backend=backend,
-        optimization_level=2
-    )
-    
-    factors = shor.factor()
-    return factors
-
-# Example: Factor 15 (should give factors 3 and 5)
-N = 15
-factors = shors_algorithm(N)
-
-print(f"Factors of {N}: {factors}")
-print(f"Verification: {factors[0] * factors[1] == N}")
-
-# For larger numbers (requires more qubits)
-# N = 21
-# factors = shors_algorithm(N, backend='simulator')
-```
-
-## 🧮 Simulation Algorithms
-
-### Quantum System Simulation
-
-Simulate quantum many-body systems:
-
-```python
-# Simulate Ising model
-def create_ising_hamiltonian(n_spins, coupling_strength=1.0, field_strength=0.5):
-    """Create transverse field Ising model Hamiltonian."""
-    
-    terms = []
-    coefficients = []
-    
-    # Coupling terms: -J * Z_i * Z_{i+1}
-    for i in range(n_spins - 1):
-        pauli_string = ['I'] * n_spins
-        pauli_string[i] = 'Z'
-        pauli_string[i + 1] = 'Z'
-        terms.append(sqx.PauliString(''.join(pauli_string)))
-        coefficients.append(-coupling_strength)
-    
-    # Transverse field terms: -h * X_i
-    for i in range(n_spins):
-        pauli_string = ['I'] * n_spins
-        pauli_string[i] = 'X'
-        terms.append(sqx.PauliString(''.join(pauli_string)))
-        coefficients.append(-field_strength)
-    
-    return sqx.Hamiltonian(coefficients, terms)
-
-# Create and simulate Ising model
-n_spins = 4
-ising_hamiltonian = create_ising_hamiltonian(n_spins)
-
-simulator = sqx.QuantumSimulator(
-    hamiltonian=ising_hamiltonian,
-    backend='pennylane'
-)
-
-# Time evolution
-initial_state = sqx.create_plus_state(n_spins)  # All spins in |+⟩
-evolution_times = np.linspace(0, 2*np.pi, 50)
-
-evolved_states = simulator.time_evolution(
-    initial_state=initial_state,
-    times=evolution_times
-)
-
-# Analyze dynamics
-magnetization = simulator.measure_observable(
-    evolved_states,
-    observable='magnetization'
-)
-
-simulator.plot_dynamics(evolution_times, magnetization)
-```
-
-### Variational Quantum Simulator (VQS)
-
-Simulate ground states of complex systems:
-
-```python
-# Variational quantum simulation
-vqs = sqx.VariationalQuantumSimulator(
-    hamiltonian=ising_hamiltonian,
-    ansatz='hardware_efficient',
-    layers=6,
-    backend='pennylane'
-)
-
-# Find ground state
-ground_state_energy, ground_state_params = vqs.find_ground_state()
-
-print(f"VQS ground state energy: {ground_state_energy:.6f}")
-
-# Compare with exact diagonalization
-exact_ground_energy = ising_hamiltonian.ground_state_energy()
-print(f"Exact ground state energy: {exact_ground_energy:.6f}")
-print(f"Error: {abs(ground_state_energy - exact_ground_energy):.6f}")
-
-# Analyze excited states
-excited_states = vqs.find_excited_states(num_states=3)
-print(f"Excited state energies: {excited_states}")
-```
+!!! note "Not available in 0.3.0"
+    Excited-state solvers, quantum walks, BB84 key distribution and Shor's algorithm are not implemented.
 
 ## 🔧 Custom Algorithm Development
 
-### Building Custom Algorithms
+Subclass `BaseQuantumAlgorithm` and implement `fit` and `predict`. The base class resolves `backend` to a backend object and stores `shots` and `seed`.
 
 ```python
+import numpy as np
+from scipy.optimize import minimize
 from superquantx.algorithms import BaseQuantumAlgorithm
 
-class MyQuantumAlgorithm(BaseQuantumAlgorithm):
-    """Template for custom quantum algorithms."""
-    
-    def __init__(self, backend='simulator', **kwargs):
-        super().__init__(backend=backend)
-        self.parameters = kwargs
-    
-    def create_ansatz(self, params):
-        """Create the quantum circuit ansatz."""
+
+class GroundStateProbability(BaseQuantumAlgorithm):
+    """Train RY angles so that measuring gives |00...0> as often as possible."""
+
+    def __init__(self, n_qubits=3, backend='simulator', **kwargs):
+        super().__init__(backend=backend, **kwargs)
+        self.n_qubits = n_qubits
+
+    def circuit(self, params):
         circuit = self.backend.create_circuit(self.n_qubits)
-        
-        # Your custom circuit construction logic
         for i, param in enumerate(params):
-            circuit.ry(param, i % self.n_qubits)
-        
-        # Add entangling gates
+            circuit.ry(param, i)
         for i in range(self.n_qubits - 1):
             circuit.cx(i, i + 1)
-        
         return circuit
-    
-    def cost_function(self, params):
-        """Define the cost function to optimize."""
-        circuit = self.create_ansatz(params)
-        
-        # Add measurement
+
+    def cost(self, params):
+        probs = np.abs(self.backend.statevector_big_endian(self.circuit(params))) ** 2
+        return -probs[0]
+
+    def fit(self, X=None, y=None, **kwargs):
+        x0 = np.random.default_rng(self.seed).uniform(0, 2 * np.pi, self.n_qubits)
+        res = minimize(self.cost, x0, method='COBYLA')
+        self.optimal_params_, self.optimal_cost_ = res.x, res.fun
+        self.is_fitted = True
+        return self
+
+    def predict(self, X=None, **kwargs):
+        circuit = self.circuit(self.optimal_params_)
         circuit.measure_all()
-        
-        # Execute and compute cost
-        result = self.backend.run(circuit, shots=1000)
-        counts = result.get_counts()
-        
-        # Example cost: maximize |00...0⟩ state probability
-        ground_state_prob = counts.get('0' * self.n_qubits, 0) / 1000
-        return -ground_state_prob  # Minimize negative probability
-    
-    def optimize(self, initial_params=None):
-        """Run the optimization."""
-        if initial_params is None:
-            initial_params = np.random.random(self.n_qubits) * 2 * np.pi
-        
-        from scipy.optimize import minimize
-        
-        result = minimize(
-            self.cost_function,
-            initial_params,
-            method='COBYLA'
-        )
-        
-        return result.x, result.fun
+        return self.backend.run(circuit, shots=self.shots).get_counts()
 
-# Use custom algorithm
-custom_algo = MyQuantumAlgorithm(n_qubits=4, backend='pennylane')
-optimal_params, optimal_cost = custom_algo.optimize()
 
-print(f"Optimal parameters: {optimal_params}")
-print(f"Optimal cost: {optimal_cost}")
+algo = GroundStateProbability(n_qubits=3, backend='simulator', seed=0).fit()
+print(f"P(|000>) = {-algo.optimal_cost_:.4f}")
+print("Sampled counts:", algo.predict())
 ```
 
-### Algorithm Composition
+### Combining algorithms
+
+Algorithms are plain objects, so composition is ordinary Python. Here QAOA answers a MaxCut problem and VQE checks the energy of the corresponding Ising Hamiltonian.
 
 ```python
-# Combine multiple algorithms
-class HybridQuantumAlgorithm:
-    """Combine quantum algorithms for complex problems."""
-    
-    def __init__(self, backend='pennylane'):
-        self.backend = backend
-        self.vqe = sqx.VQE(backend=backend)
-        self.qaoa = sqx.QAOA(backend=backend)
-        self.grover = sqx.GroversAlgorithm(backend=backend)
-    
-    def solve_optimization_with_search(self, problem):
-        """Use QAOA + Grover for optimization."""
-        
-        # First, get approximate solution with QAOA
-        qaoa_solution = self.qaoa.solve(problem)
-        
-        # Use QAOA solution to define search space for Grover
-        search_space = self.create_search_space(qaoa_solution)
-        
-        # Refine with Grover's algorithm
-        refined_solution = self.grover.search(search_space)
-        
-        return refined_solution
-    
-    def quantum_ml_with_simulation(self, hamiltonian, training_data):
-        """Combine VQE and ML for quantum system learning."""
-        
-        # Use VQE to understand ground state
-        ground_energy = self.vqe.find_ground_state(hamiltonian)
-        
-        # Use ground state information in ML model
-        qnn = sqx.QuantumNeuralNetwork(
-            n_qubits=hamiltonian.n_qubits,
-            backend=self.backend
-        )
-        
-        # Initialize with VQE solution
-        initial_params = self.vqe.optimal_parameters
-        qnn.set_initial_parameters(initial_params)
-        
-        # Train ML model
-        qnn.fit(training_data)
-        
-        return qnn
+adjacency = np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]], dtype=float)
+cut = sqx.QAOA(backend='simulator', p=2, seed=0).solve(adjacency)
 
-# Example usage
-hybrid_algo = HybridQuantumAlgorithm(backend='pennylane')
-# ml_model = hybrid_algo.quantum_ml_with_simulation(my_hamiltonian, training_data)
+# MaxCut as an Ising energy: sum over edges of (Z_i Z_j - 1) / 2
+terms = {}
+for i in range(3):
+    for j in range(i + 1, 3):
+        if adjacency[i, j]:
+            label = ''.join('Z' if q in (i, j) else 'I' for q in range(3))
+            terms[label] = terms.get(label, 0) + 0.5 * adjacency[i, j]
+            terms['III'] = terms.get('III', 0) - 0.5 * adjacency[i, j]
+H = sqx.Hamiltonian.from_dict(terms)
+
+print("QAOA cut:", cut['cut_value'], "| -ground energy:", -H.ground_state_energy())
 ```
 
 ## 📊 Algorithm Performance Analysis
 
-### Benchmarking Framework
+Use `compare_to_classical` to compare a quantum classifier against tuned classical baselines on the same cross-validation folds. See [Benchmarking](benchmarking.md) for the full guide.
 
 ```python
-class QuantumAlgorithmBenchmark:
-    """Benchmark quantum algorithms across different metrics."""
-    
-    def __init__(self):
-        self.results = {}
-    
-    def benchmark_algorithm(self, algorithm_class, problem_instances, backends):
-        """Benchmark algorithm across problems and backends."""
-        
-        results = []
-        
-        for problem in problem_instances:
-            for backend_name in backends:
-                try:
-                    # Initialize algorithm
-                    algo = algorithm_class(backend=backend_name)
-                    
-                    # Measure performance
-                    start_time = time.time()
-                    solution = algo.solve(problem)
-                    end_time = time.time()
-                    
-                    # Collect metrics
-                    metrics = {
-                        'backend': backend_name,
-                        'problem_size': getattr(problem, 'size', 'unknown'),
-                        'execution_time': end_time - start_time,
-                        'solution_quality': self.evaluate_solution(solution, problem),
-                        'convergence_steps': getattr(algo, 'num_iterations', None),
-                        'success': True
-                    }
-                    
-                except Exception as e:
-                    metrics = {
-                        'backend': backend_name,
-                        'problem_size': getattr(problem, 'size', 'unknown'),
-                        'error': str(e),
-                        'success': False
-                    }
-                
-                results.append(metrics)
-        
-        return results
-    
-    def create_benchmark_report(self, results):
-        """Generate comprehensive benchmark report."""
-        import pandas as pd
-        
-        df = pd.DataFrame(results)
-        
-        # Performance summary
-        successful_results = df[df['success'] == True]
-        
-        report = {
-            'success_rate': len(successful_results) / len(df),
-            'average_execution_time': successful_results['execution_time'].mean(),
-            'best_backend': successful_results.loc[
-                successful_results['solution_quality'].idxmax(), 'backend'
-            ],
-            'fastest_backend': successful_results.loc[
-                successful_results['execution_time'].idxmin(), 'backend'
-            ]
-        }
-        
-        return report, df
+from sklearn.datasets import make_moons
 
-# Example benchmarking
-benchmark = QuantumAlgorithmBenchmark()
-
-# Create test problems
-problems = [
-    sqx.create_random_maxcut_problem(n_nodes=4),
-    sqx.create_random_maxcut_problem(n_nodes=6),
-    sqx.create_random_maxcut_problem(n_nodes=8)
-]
-
-backends = ['simulator', 'pennylane', 'qiskit']
-
-# Run benchmark
-results = benchmark.benchmark_algorithm(sqx.QAOA, problems, backends)
-report, results_df = benchmark.create_benchmark_report(results)
-
-print("📊 Benchmark Report:")
-for key, value in report.items():
-    print(f"{key}: {value}")
-```
-
-## 🚀 Advanced Algorithm Usage
-
-### Parameter Optimization Strategies
-
-```python
-# Advanced parameter optimization for variational algorithms
-class AdvancedOptimizer:
-    """Advanced optimization strategies for quantum algorithms."""
-    
-    def __init__(self, algorithm):
-        self.algorithm = algorithm
-        self.optimization_history = []
-    
-    def adaptive_optimization(self, initial_params):
-        """Adaptive optimization with multiple strategies."""
-        
-        strategies = [
-            {'method': 'COBYLA', 'maxiter': 100},
-            {'method': 'SPSA', 'maxiter': 200},
-            {'method': 'L-BFGS-B', 'maxiter': 100}
-        ]
-        
-        best_result = None
-        best_cost = float('inf')
-        
-        for strategy in strategies:
-            try:
-                result = self.algorithm.optimize(
-                    initial_params=initial_params,
-                    **strategy
-                )
-                
-                if result.fun < best_cost:
-                    best_cost = result.fun
-                    best_result = result
-                    
-                self.optimization_history.append({
-                    'strategy': strategy['method'],
-                    'cost': result.fun,
-                    'success': result.success,
-                    'iterations': result.nit
-                })
-                
-            except Exception as e:
-                print(f"Strategy {strategy['method']} failed: {e}")
-        
-        return best_result
-    
-    def plot_optimization_comparison(self):
-        """Plot comparison of optimization strategies."""
-        import matplotlib.pyplot as plt
-        
-        strategies = [h['strategy'] for h in self.optimization_history]
-        costs = [h['cost'] for h in self.optimization_history]
-        
-        plt.figure(figsize=(10, 6))
-        plt.bar(strategies, costs)
-        plt.title('Optimization Strategy Comparison')
-        plt.ylabel('Final Cost')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.show()
-
-# Example usage with VQE
-vqe = sqx.VQE(hamiltonian=my_hamiltonian, backend='pennylane')
-optimizer = AdvancedOptimizer(vqe)
-
-best_params = optimizer.adaptive_optimization(
-    initial_params=np.random.random(vqe.num_parameters)
-)
-optimizer.plot_optimization_comparison()
-```
-
-### Error Mitigation
-
-```python
-# Error mitigation techniques for NISQ algorithms
-class ErrorMitigatedAlgorithm:
-    """Wrapper to add error mitigation to quantum algorithms."""
-    
-    def __init__(self, base_algorithm, mitigation_methods=None):
-        self.base_algorithm = base_algorithm
-        if mitigation_methods is None:
-            mitigation_methods = ['zero_noise_extrapolation', 'readout_correction']
-        self.mitigation_methods = mitigation_methods
-    
-    def run_with_mitigation(self, circuit, shots=1000):
-        """Run circuit with error mitigation."""
-        
-        results = {}
-        
-        # Raw result (no mitigation)
-        raw_result = self.base_algorithm.backend.run(circuit, shots=shots)
-        results['raw'] = raw_result.get_counts()
-        
-        # Apply mitigation methods
-        for method in self.mitigation_methods:
-            try:
-                if method == 'zero_noise_extrapolation':
-                    mitigated_result = self.zero_noise_extrapolation(circuit, shots)
-                elif method == 'readout_correction':
-                    mitigated_result = self.readout_correction(circuit, shots)
-                
-                results[method] = mitigated_result
-                
-            except Exception as e:
-                print(f"Mitigation method {method} failed: {e}")
-        
-        return results
-    
-    def zero_noise_extrapolation(self, circuit, shots):
-        """Zero-noise extrapolation error mitigation."""
-        
-        noise_factors = [1, 2, 3]  # Noise amplification factors
-        results = []
-        
-        for factor in noise_factors:
-            # Amplify noise by repeating gates
-            noisy_circuit = self.amplify_noise(circuit, factor)
-            result = self.base_algorithm.backend.run(noisy_circuit, shots=shots)
-            results.append(result.get_counts())
-        
-        # Extrapolate to zero noise
-        extrapolated_result = self.extrapolate_to_zero_noise(results, noise_factors)
-        return extrapolated_result
-    
-    def readout_correction(self, circuit, shots):
-        """Readout error correction."""
-        
-        # Calibrate readout errors
-        calibration_matrix = self.calibrate_readout_errors()
-        
-        # Run original circuit
-        raw_result = self.base_algorithm.backend.run(circuit, shots=shots)
-        raw_counts = raw_result.get_counts()
-        
-        # Apply correction
-        corrected_counts = self.apply_readout_correction(
-            raw_counts, 
-            calibration_matrix
-        )
-        
-        return corrected_counts
-
-# Example usage
-base_vqe = sqx.VQE(hamiltonian=my_hamiltonian, backend='qiskit')
-mitigated_vqe = ErrorMitigatedAlgorithm(base_vqe)
-
-# Run with error mitigation
-results = mitigated_vqe.run_with_mitigation(vqe_circuit)
-print("Results with error mitigation:", results)
+X, y = make_moons(n_samples=60, noise=0.15, random_state=0)
+comparison = sqx.compare_to_classical(X, y, sqx.QuantumSVM(backend='simulator'), cv=3, seed=0)
+print(comparison.table())
+print(comparison.verdict)
 ```
 
 ## 📚 Algorithm Selection Guide
 
-### Decision Tree
-
 ```python
-def recommend_algorithm(problem_type, problem_size, available_backends, objectives):
-    """Recommend best algorithm based on problem characteristics."""
-    
-    recommendations = []
-    
-    if problem_type == 'classification':
-        if problem_size < 1000:
-            recommendations.append(('QuantumSVM', 'pennylane', 'Good for small datasets'))
-        else:
-            recommendations.append(('VariationalQuantumClassifier', 'pennylane', 'Scalable approach'))
-    
-    elif problem_type == 'optimization':
-        if problem_size < 50:
-            recommendations.append(('QAOA', 'qiskit', 'Combinatorial optimization'))
-        else:
-            recommendations.append(('QuantumAnnealing', 'ocean', 'Large-scale problems'))
-    
-    elif problem_type == 'simulation':
-        if 'quantum_system' in objectives:
-            recommendations.append(('VQE', 'pennylane', 'Ground state finding'))
-        if 'dynamics' in objectives:
-            recommendations.append(('QuantumSimulator', 'cirq', 'Time evolution'))
-    
-    elif problem_type == 'search':
-        if problem_size <= 2**16:
-            recommendations.append(('GroversAlgorithm', 'simulator', 'Unstructured search'))
-        else:
-            recommendations.append(('QuantumWalk', 'cirq', 'Large search spaces'))
-    
-    # Filter by available backends
-    filtered_recommendations = [
-        (algo, backend, desc) for algo, backend, desc in recommendations
-        if backend in available_backends
-    ]
-    
-    return filtered_recommendations
+def recommend_algorithm(problem_type):
+    """Map a problem type to the 0.3.0 class to start with."""
+    return {
+        'classification': 'QuantumSVM (kernel) or QuantumNN (variational)',
+        'clustering': 'QuantumKMeans',
+        'dimensionality_reduction': 'QuantumPCA',
+        'combinatorial_optimization': 'QAOA, or OceanBackend.solve_qubo on annealers',
+        'ground_state': 'VQE',
+        'portfolio': 'QuantumPortfolioAgent',
+    }.get(problem_type, 'not covered in 0.3.0')
 
-# Example usage
-available_backends = sqx.list_available_backends()
-recommendations = recommend_algorithm(
-    problem_type='optimization',
-    problem_size=20,
-    available_backends=available_backends,
-    objectives=['combinatorial']
-)
 
-print("🎯 Algorithm Recommendations:")
-for algo, backend, description in recommendations:
-    print(f"  {algo} on {backend}: {description}")
+available = [name for name, info in sqx.list_available_backends().items() if info['available']]
+print("Available backends:", available)
+for problem in ['classification', 'combinatorial_optimization', 'ground_state', 'search']:
+    print(f"{problem}: {recommend_algorithm(problem)}")
 ```
 
 ## 📞 Getting Help
 
-For algorithm-specific help:
+- **[Tutorials](../tutorials/quantum-ml.md)**: step-by-step algorithm tutorials
+- **[API Reference](../api/algorithms.md)**: class and method reference
+- **[Showcase](../showcase.md)**: a full benchmark run with its output
+- **[GitHub Issues](https://github.com/SuperagenticAI/superquantx/issues)**: report bugs
 
-- **[Tutorials](../tutorials/quantum-ml.md)**: Step-by-step algorithm tutorials
-- **[API Reference](../api/algorithms.md)**: Detailed function documentation
-- **[Examples](../showcase.md)**: Real-world algorithm applications
-- **[GitHub Issues](https://github.com/SuperagenticAI/superquantx/issues)**: Report algorithm bugs
-
----
-
-!!! tip "Algorithm Selection"
-    Start with fundamental algorithms to understand quantum computing principles, then move to specialized ML or optimization algorithms based on your research needs.
-
-!!! warning "NISQ Limitations"
-    Current quantum hardware has limitations (noise, limited qubits, short coherence times). Consider these when selecting algorithms for real hardware execution.
-
-!!! info "Performance Optimization"
-    For best performance, choose backends that are optimized for your specific algorithm type (e.g., PennyLane for ML, Qiskit for IBM hardware access).
+!!! warning "NISQ limitations"
+    Current quantum hardware is noisy and small. Every result on this page comes from noiseless simulation; expect lower accuracy on hardware.

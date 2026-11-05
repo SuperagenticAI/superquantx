@@ -1,9 +1,5 @@
 # Algorithms API Reference
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 1 of 6 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
-
-
 SuperQuantX provides a comprehensive collection of quantum algorithms for machine learning, optimization, cryptography, and simulation. All algorithms support multiple quantum backends and provide unified interfaces for easy integration.
 
 ## Base Classes
@@ -147,176 +143,104 @@ SuperQuantX provides a comprehensive collection of quantum algorithms for machin
 
 ## Examples and Usage Patterns
 
-### Machine Learning Example
+All snippets below run on SuperQuantX 0.3.0 with the built-in simulator.
+
+### Quantum SVM
 
 ```python
 import numpy as np
 from sklearn.datasets import make_classification
 import superquantx as sqx
 
-# Generate sample data
 X, y = make_classification(
-    n_samples=100, 
-    n_features=4, 
-    n_classes=2, 
-    random_state=42
+    n_samples=60, n_features=4, n_informative=3, n_redundant=0, random_state=0
 )
+X_train, X_test, y_train, y_test = X[:45], X[45:], y[:45], y[45:]
 
-# Split data
-X_train, X_test = X[:80], X[80:]
-y_train, y_test = y[:80], y[80:]
-
-# Create and train Quantum SVM
-qsvm = sqx.QuantumSVM(
-    backend='simulator',
-    feature_map='ZFeatureMap',
-    num_features=4
-)
-
+qsvm = sqx.QuantumSVM(backend="simulator", feature_map="ZFeatureMap")
 qsvm.fit(X_train, y_train)
-predictions = qsvm.predict(X_test)
-accuracy = qsvm.score(X_test, y_test)
-
-print(f"Quantum SVM Accuracy: {accuracy:.3f}")
+print(float(np.mean(qsvm.predict(X_test) == y_test)))
 ```
 
-### VQE Molecule Example
+### VQE for a Molecule
 
 ```python
 import superquantx as sqx
 
-# Create VQE for H2 molecule
 vqe = sqx.create_vqe_for_molecule(
-    molecule='H2',
-    bond_length=0.735,  # Angstroms
-    backend='simulator'
+    molecule_name="H2",
+    bond_distance=0.735,
+    backend="simulator",
+    maxiter=40,
 )
-
-# Find ground state
-ground_energy = vqe.find_ground_state()
-print(f"H2 Ground State Energy: {ground_energy:.6f} Ha")
-
-# Get optimized parameters
-optimal_params = vqe.get_optimal_parameters()
-print(f"Optimal parameters: {optimal_params}")
+energy = vqe.find_ground_state()
+print(f"H2 ground-state energy: {energy:.6f} Ha")
 ```
 
-### QAOA Optimization Example
+### QAOA MaxCut
+
+```python
+import numpy as np
+import superquantx as sqx
+
+adjacency = np.array([
+    [0, 1, 1, 0],
+    [1, 0, 1, 1],
+    [1, 1, 0, 1],
+    [0, 1, 1, 0],
+], dtype=float)
+
+qaoa = sqx.QAOA(backend="simulator", p=1, maxiter=30, n_restarts=1)
+result = qaoa.solve(adjacency)
+print(result["bitstring"], result["cut_value"], result["classical_optimum"])
+```
+
+### Quantum Portfolio Agent
 
 ```python
 import superquantx as sqx
 
-# Define Max-Cut problem
-edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 2)]
-
-qaoa = sqx.QAOA(
-    problem_type='max_cut',
-    graph_edges=edges,
-    layers=3,
-    backend='simulator'
+returns, cov, _, meta = sqx.generate_portfolio_data(
+    n_assets=4, n_scenarios=40, random_state=0
 )
-
-# Solve optimization problem
-solution = qaoa.solve()
-optimal_value = qaoa.get_optimal_value()
-
-print(f"Max-Cut Solution: {solution}")
-print(f"Cut Value: {optimal_value}")
+agent = sqx.QuantumPortfolioAgent(
+    backend="simulator", n_select=2, maxiter=40, n_restarts=1
+)
+agent.fit(returns)
+result = agent.solve()
+print(result.result["selected_assets"], result.result["matches_classical_optimum"])
 ```
 
-### Quantum Agent Example
-
-```python
-import superquantx as sqx
-
-# Create quantum portfolio optimization agent
-portfolio_agent = sqx.QuantumPortfolioAgent(
-    backend='simulator',
-    risk_tolerance=0.1,
-    optimization_method='qaoa'
-)
-
-# Sample portfolio data
-assets = ['AAPL', 'GOOGL', 'MSFT', 'TSLA']
-returns = [0.12, 0.15, 0.08, 0.20]
-risks = [0.05, 0.10, 0.03, 0.15]
-
-# Optimize portfolio
-optimal_weights = portfolio_agent.optimize_portfolio(
-    assets=assets,
-    expected_returns=returns,
-    risk_estimates=risks,
-    budget=10000
-)
-
-print("Optimal Portfolio:")
-for asset, weight in zip(assets, optimal_weights):
-    print(f"{asset}: {weight:.2%}")
-```
-
-## Best Practices
-
-### Algorithm Selection
-
-1. **For Classification**: Use `QuantumSVM` for small datasets, `QuantumNN` for complex patterns
-2. **For Optimization**: Use `VQE` for chemistry problems, `QAOA` for combinatorial optimization
-3. **For Autonomous Tasks**: Use specialized `QuantumAgent` implementations
-
-### Backend Optimization
-
-```python
-# Choose appropriate backend for algorithm
-algorithms_backends = {
-    'QuantumSVM': 'pennylane',      # Best autodiff support
-    'VQE': 'qiskit',                # Good hardware access
-    'QAOA': 'cirq',                 # Flexible circuit construction
-    'QuantumAgents': 'simulator',    # Fast prototyping
-}
-
-# Use backend-specific optimizations
-qsvm = sqx.QuantumSVM(
-    backend='pennylane',
-    feature_map='ZZFeatureMap',     # More expressive for PennyLane
-    optimization_level=2
-)
-```
-
-### Performance Monitoring
+### Comparing Algorithms
 
 ```python
 import time
+import numpy as np
+from sklearn.datasets import make_classification
 import superquantx as sqx
 
-# Benchmark different algorithms
-def benchmark_algorithm(algorithm_class, X, y, **kwargs):
-    start_time = time.time()
-    
-    algorithm = algorithm_class(**kwargs)
-    algorithm.fit(X, y)
-    predictions = algorithm.predict(X)
-    
-    execution_time = time.time() - start_time
-    accuracy = algorithm.score(X, y)
-    
-    return {
-        'accuracy': accuracy,
-        'time': execution_time,
-        'algorithm': algorithm_class.__name__
-    }
+X, y = make_classification(
+    n_samples=40, n_features=2, n_informative=2, n_redundant=0, random_state=0
+)
 
-# Compare algorithms
-algorithms = [sqx.QuantumSVM, sqx.QuantumNN, sqx.HybridClassifier]
-results = []
+def time_fit(ctor, **kwargs):
+    model = ctor(**kwargs)
+    t0 = time.time()
+    model.fit(X, y)
+    return time.time() - t0, float(np.mean(model.predict(X) == y))
 
-for algo in algorithms:
-    result = benchmark_algorithm(algo, X_train, y_train, backend='simulator')
-    results.append(result)
-    print(f"{result['algorithm']}: {result['accuracy']:.3f} accuracy in {result['time']:.2f}s")
+for name, ctor, kwargs in [
+    ("QuantumSVM", sqx.QuantumSVM, {"backend": "simulator", "feature_map": "ZFeatureMap"}),
+    ("QuantumNN", sqx.QuantumNN, {"backend": "simulator", "n_layers": 1, "max_epochs": 8, "seed": 0}),
+]:
+    secs, acc = time_fit(ctor, **kwargs)
+    print(f"{name}: acc={acc:.3f} in {secs:.2f}s")
 ```
 
 ---
 
 For complete algorithm implementations and advanced usage patterns, see:
-- [Backend Integration Guide](../backends/)
-- [Tutorial Examples](../tutorials/)
-- [User Guide](../user-guide/)
+
+- [Backend Integration Guide](../backends/simulator.md)
+- [Tutorial Examples](../tutorials/basic-quantum.md)
+- [User Guide](../user-guide/overview.md)

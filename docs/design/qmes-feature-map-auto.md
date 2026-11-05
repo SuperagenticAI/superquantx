@@ -113,7 +113,7 @@ Closest-name mapping is approximate:
 from sklearn.datasets import make_classification
 from superquantx.algorithms import QuantumSVM
 
-X, y = make_classification(n_samples=40, n_features=4, n_informative=3, random_state=0)
+X, y = make_classification(n_samples=40, n_features=4, n_informative=3, n_redundant=0, n_repeated=0, random_state=0)
 qsvm = QuantumSVM(backend="simulator", feature_map="auto", shots=100)
 qsvm.fit(X, y)
 print(qsvm.selected_feature_map_)
@@ -126,7 +126,13 @@ Optional Qmes path:
 pip install git+https://github.com/tungduy1704/Qmes
 ```
 
+!!! note "Optional Qmes dependency"
+    Needs the Qmes package from GitHub; not run in the docs checker.
+
+<!-- docs-check: skip -->
 ```python
+from superquantx.algorithms import QuantumSVM
+
 qsvm = QuantumSVM(
     backend="simulator",
     feature_map="auto",

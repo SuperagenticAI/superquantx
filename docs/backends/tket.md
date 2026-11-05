@@ -1,9 +1,5 @@
 # TKET Integration
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 8 of 23 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
-
-
 TKET (Quantum Toolkit) is a quantum SDK developed by Cambridge Quantum Computing (now part of Quantinuum) that provides powerful quantum circuit compilation, optimization, and execution capabilities. SuperQuantX provides comprehensive integration with TKET, enabling access to advanced quantum compilation techniques and Quantinuum's quantum hardware.
 
 ## Overview
@@ -100,26 +96,26 @@ print(f"Optimized circuit: {optimized_circuit.n_gates} gates")
 ### Backend Initialization Options
 
 ```python
-# Local simulator (default)
+# Local simulator (default, needs pytket-qiskit)
 backend = sqx.TKETBackend(device='aer_simulator', shots=1024)
 
-# Quantinuum H1-1E hardware
-backend = sqx.TKETBackend(
-    device='H1-1E',
-    api_key='your-quantinuum-api-key',
-    shots=100  # Reduced shots for hardware
-)
+```
 
-# Quantinuum H1-2E (larger system)
-backend = sqx.TKETBackend(
-    device='H1-2E',
-    machine='H1-2E',
-    api_key='your-api-key',
-    shots=1000
-)
+The `cirq_simulator` device needs `pytket-cirq`, which is not part of the `tket` extra (`pip install pytket-cirq`):
 
-# TKET-Cirq integration
-backend = sqx.TKETBackend(device='cirq_simulator')
+<!-- docs-check: skip -->
+```python
+cirq_backend = sqx.TKETBackend(device='cirq_simulator')
+```
+
+Quantinuum devices (requires credentials and `pytket-quantinuum`, not run here):
+
+<!-- docs-check: skip -->
+```python
+backend = sqx.TKETBackend(device='H1-1E', shots=100)
+
+# 'machine' overrides the device name sent to Quantinuum
+backend = sqx.TKETBackend(device='H1-2E', machine='H1-2E', shots=1000)
 ```
 
 ### Environment Configuration
@@ -139,27 +135,14 @@ export TKET_CACHE_DIR="~/.tket_cache"
 
 TKET provides native access to Quantinuum's trapped-ion quantum computers:
 
+!!! note "Requires credentials"
+    These need `pytket-quantinuum` and a Quantinuum account; checked against the 0.3.0 constructor, not run. The device name is passed to `QuantinuumBackend(device_name=...)`. `api_key` is stored on the backend, but sign-in is handled by pytket-quantinuum's own login.
+
+<!-- docs-check: skip -->
 ```python
-# H1-1E: 20-qubit ion trap system
-backend_h1_1e = sqx.TKETBackend(
-    device='H1-1E',
-    api_key='your-api-key',
-    shots=100
-)
-
-# H1-2E: 56-qubit ion trap system  
-backend_h1_2e = sqx.TKETBackend(
-    device='H1-2E',
-    api_key='your-api-key',
-    shots=100
-)
-
-# H2-1: 32-qubit second-generation system
-backend_h2_1 = sqx.TKETBackend(
-    device='H2-1',
-    api_key='your-api-key',
-    shots=100
-)
+backend_h1_1e = sqx.TKETBackend(device='H1-1E', shots=100)
+backend_h1_2e = sqx.TKETBackend(device='H1-2E', shots=100)
+backend_h2_1 = sqx.TKETBackend(device='H2-1', shots=100)
 ```
 
 ### Hardware-Specific Compilation
@@ -231,139 +214,156 @@ def _results_converged(counts1, counts2, threshold=0.01):
 ### Parameterized Circuits
 
 ```python
-# Create parameterized circuit for variational algorithms
-circuit, param_names = backend.create_parameterized_circuit(
-    n_qubits=4, 
-    n_params=6
-)
+# Variational circuits: rebuild the circuit with numeric angles for each
+# parameter vector (there is no symbolic parameter binding in 0.3.0)
+import numpy as np
 
-print("Parameters:", param_names)
-# Output: ['theta_0', 'theta_1', 'theta_2', 'theta_3', 'theta_4', 'theta_5']
 
-# Build parameterized ansatz
-for i in range(4):
-    circuit = backend.add_gate(circuit, 'ry', i, params=[param_names[i]])
-    
-for i in range(3):
-    circuit = backend.add_gate(circuit, 'cx', [i, i+1])
-    
-for i in range(4):
-    circuit = backend.add_gate(circuit, 'ry', i, params=[param_names[i+4] if i+4 < len(param_names) else 0])
+def build_ansatz(backend, theta):
+    circuit = backend.create_circuit(2)
+    for i in range(2):
+        circuit = backend.add_gate(circuit, 'ry', i, [theta[i]])
+    circuit = backend.add_gate(circuit, 'cx', [0, 1])
+    for i in range(2):
+        circuit = backend.add_gate(circuit, 'ry', i, [theta[i + 2]])
+    return circuit
 
-# Bind specific parameter values
-param_values = {
-    'theta_0': 0.5, 'theta_1': 1.2, 'theta_2': -0.3,
-    'theta_3': 0.8, 'theta_4': 1.1, 'theta_5': -0.7
-}
 
-bound_circuit = backend.bind_parameters(circuit, param_values)
-result = backend.execute_circuit(bound_circuit)
+param_values = np.array([0.5, 1.2, -0.3, 0.8])
+bound_circuit = build_ansatz(backend, param_values)
+
+# Or use the built-in ansatz library
+print(backend.ansatz_param_count('RealAmplitudes', 2, reps=1))   # 4
+ansatz = backend.create_ansatz('RealAmplitudes', 2, param_values, reps=1)
+
+measured = backend.add_measurement(bound_circuit.copy())
+print(backend.execute_circuit(measured, shots=1000)['counts'])
 ```
 
 ### Custom Compiler Passes
 
 ```python
 from pytket.passes import (
-    SequencePass, DecomposeBoxes, CliffordSimp, 
-    RemoveRedundancies, OptimisePhaseGadgets,
-    PauliSimp, FullPeepholeOptimise
+    CliffordSimp,
+    DecomposeBoxes,
+    FullPeepholeOptimise,
+    PauliSimp,
+    RemoveRedundancies,
 )
+from pytket.circuit import OpType
+
 
 def create_custom_optimization_pass():
-    """Create custom optimization sequence."""
-    return SequencePass([
-        DecomposeBoxes(),           # Decompose any box structures
-        CliffordSimp(),             # Simplify Clifford gates
-        PauliSimp(),                # Simplify Pauli gadgets
-        OptimisePhaseGadgets(),     # Optimize phase gates
-        CliffordSimp(),             # Second Clifford pass
-        FullPeepholeOptimise(),     # Peephole optimizations
-        RemoveRedundancies(),       # Remove redundant gates
-    ])
+    """A custom pass sequence, applied in stages.
 
-# Apply custom optimization
+    Each pass has gate-set preconditions (PauliSimp, for example, does not
+    accept the TK1 gates CliffordSimp produces), so order matters.
+    """
+    return [
+        DecomposeBoxes(),        # expand any boxes
+        PauliSimp(),             # resynthesise via Pauli gadgets
+        CliffordSimp(),          # simplify Clifford subcircuits
+        FullPeepholeOptimise(),  # local peephole rewrites
+        RemoveRedundancies(),    # drop gates that cancel
+    ]
+
+
 circuit = backend.create_circuit(5)
-# ... add gates ...
+for i in range(5):
+    circuit = backend.add_gate(circuit, 'h', i)
+# Two rounds of ZZ rotations; TKET merges them
+for angle in (0.3, 0.2):
+    for i in range(4):
+        circuit = backend.add_gate(circuit, 'cx', [i, i + 1])
+        circuit = backend.add_gate(circuit, 'rz', i + 1, [angle])
+        circuit = backend.add_gate(circuit, 'cx', [i, i + 1])
 
-custom_pass = create_custom_optimization_pass()
 optimized_circuit = circuit.copy()
-custom_pass.apply(optimized_circuit)
+for compiler_pass in create_custom_optimization_pass():
+    compiler_pass.apply(optimized_circuit)
 
-print(f"Gates: {circuit.n_gates} → {optimized_circuit.n_gates}")
+print(f"Gates: {circuit.n_gates} -> {optimized_circuit.n_gates}")
+print(f"CX:    {circuit.n_gates_of_type(OpType.CX)} -> {optimized_circuit.n_gates_of_type(OpType.CX)}")
 ```
 
 ### Expectation Value Calculations
 
 ```python
-# Calculate expectation values for observables
-def calculate_energy_expectation(backend, ansatz_circuit, hamiltonian_terms):
-    """Calculate energy expectation value for VQE."""
-    
-    total_energy = 0.0
-    
-    for pauli_string, coeff in hamiltonian_terms.items():
-        # Create measurement circuit for this Pauli string
-        meas_circuit = ansatz_circuit.copy()
-        
-        # Add basis rotations for X and Y measurements
-        for qubit, pauli in enumerate(pauli_string):
-            if pauli == 'X':
-                meas_circuit = backend.add_gate(meas_circuit, 'h', qubit)
-            elif pauli == 'Y':
-                meas_circuit = backend.add_gate(meas_circuit, 'rx', qubit, [-np.pi/2])
-        
-        # Measure expectation value
-        expectation = backend.expectation_value(meas_circuit, 'Z')
-        total_energy += coeff * expectation
-    
-    return total_energy
+import numpy as np
 
-# Example: H2 molecule Hamiltonian
+# H2 Hamiltonian (STO-3G, 0.74 Angstrom), qubit 0 is the leftmost label
 h2_hamiltonian = {
     'II': -1.0523732,
+    'ZI': 0.39793742,
     'IZ': -0.39793742,
-    'ZI': -0.39793742,
     'ZZ': -0.01128010,
-    'XX': 0.18093119
+    'XX': 0.18093119,
 }
 
-# Calculate energy for parameterized circuit
-energy = calculate_energy_expectation(backend, bound_circuit, h2_hamiltonian)
-print(f"Ground state energy estimate: {energy:.6f}")
+# Exact <psi|H|psi> from the TKET statevector (dicts, Hamiltonian objects or matrices)
+energy = backend.compute_expectation(bound_circuit, h2_hamiltonian)
+print(f"Energy of this ansatz state: {energy:.6f}")
+
+
+def shot_based_energy(backend, ansatz, hamiltonian, shots=4000):
+    """The same quantity from measurements: rotate into each Pauli basis and count."""
+    total = 0.0
+    for pauli, coeff in hamiltonian.items():
+        if set(pauli) == {'I'}:
+            total += coeff
+            continue
+        circuit = ansatz.copy()
+        for qubit, p in enumerate(pauli):
+            if p == 'X':
+                circuit = backend.add_gate(circuit, 'h', qubit)
+            elif p == 'Y':
+                circuit = backend.add_gate(circuit, 'rx', qubit, [np.pi / 2])
+        circuit = backend.add_measurement(circuit)
+        counts = backend.counts_big_endian(backend.execute_circuit(circuit, shots=shots)['counts'])
+        parity = sum(
+            c * (-1) ** sum(int(bits[q]) for q, p in enumerate(pauli) if p != 'I')
+            for bits, c in counts.items()
+        )
+        total += coeff * parity / shots
+    return total
+
+
+print(f"Shot-based estimate:        {shot_based_energy(backend, bound_circuit, h2_hamiltonian):.6f}")
 ```
 
 ### Mid-Circuit Measurements
 
 ```python
-# Circuit with mid-circuit measurements and classical control
-def create_adaptive_circuit(backend, n_qubits=3):
-    """Create circuit with adaptive measurements."""
-    from pytket.circuit import if_not_bit
-    
-    circuit = backend.create_circuit(n_qubits)
-    circuit.add_c_register("mid_meas", 1)
-    circuit.add_c_register("final_meas", n_qubits)
-    
-    # Initial superposition
+from pytket.circuit import Bit, Circuit
+
+
+def create_adaptive_circuit(n_qubits=3):
+    """Mid-circuit measurement with a classically controlled correction.
+
+    Classical control is written with pytket directly; the backend
+    executes any pytket Circuit.
+    """
+    circuit = Circuit(n_qubits)
+    mid = Bit("mid", 0)
+    circuit.add_bit(mid)
+    circuit.add_c_register("final", n_qubits)
+
     for i in range(n_qubits):
-        circuit = backend.add_gate(circuit, 'h', i)
-    
-    # Mid-circuit measurement of first qubit
-    circuit.Measure(circuit.qubits[0], circuit.bits[0])
-    
-    # Conditional operations based on measurement
-    with circuit.if_not_bit(circuit.bits[0]):
-        circuit = backend.add_gate(circuit, 'x', 1)
-        circuit = backend.add_gate(circuit, 'x', 2)
-    
-    # Final measurements
+        circuit.H(i)
+    circuit.Measure(circuit.qubits[0], mid)
+
+    # Flip qubits 1 and 2 only when the mid-circuit result was 0
+    circuit.X(1, condition_bits=[mid], condition_value=0)
+    circuit.X(2, condition_bits=[mid], condition_value=0)
+
     for i in range(n_qubits):
-        circuit.Measure(circuit.qubits[i], circuit.bits[i+1])
-    
+        circuit.Measure(circuit.qubits[i], Bit("final", i))
     return circuit
 
-adaptive_circuit = create_adaptive_circuit(backend)
-result = backend.execute_circuit(adaptive_circuit)
+
+adaptive_circuit = create_adaptive_circuit()
+result = backend.execute_circuit(adaptive_circuit, shots=500)
+print(result['counts'])
 ```
 
 ## Performance Optimization
@@ -371,34 +371,31 @@ result = backend.execute_circuit(adaptive_circuit)
 ### Compilation Strategies
 
 ```python
-# Different optimization levels
+from pytket.circuit import OpType
+
+
 def compare_optimization_levels(backend, circuit):
-    """Compare different TKET optimization levels."""
-    
+    """Compare the TKET optimisation levels used by optimize_circuit (0 to 3)."""
     results = {}
-    
     for level in range(4):
         optimized = backend.optimize_circuit(circuit, optimization_level=level)
-        
         results[f"level_{level}"] = {
             'gates': optimized.n_gates,
             'depth': optimized.depth(),
-            'cx_count': optimized.n_gates_of_type(OpType.CX) if hasattr(optimized, 'n_gates_of_type') else 'N/A'
+            'cx_count': optimized.n_gates_of_type(OpType.CX),
         }
-    
     return results
 
-# Test circuit
+
 test_circuit = backend.create_circuit(6)
 for i in range(6):
     test_circuit = backend.add_gate(test_circuit, 'h', i)
 for i in range(5):
-    test_circuit = backend.add_gate(test_circuit, 'cx', [i, i+1])
+    test_circuit = backend.add_gate(test_circuit, 'cx', [i, i + 1])
 for i in range(6):
     test_circuit = backend.add_gate(test_circuit, 'rz', i, [0.5])
 
-optimization_comparison = compare_optimization_levels(backend, test_circuit)
-for level, metrics in optimization_comparison.items():
+for level, metrics in compare_optimization_levels(backend, test_circuit).items():
     print(f"{level}: {metrics}")
 ```
 
@@ -586,148 +583,87 @@ def validate_tket_circuit(circuit, backend):
 ### VQE with TKET Optimization
 
 ```python
-def tket_optimized_vqe():
-    """Complete VQE implementation with TKET optimization."""
-    
-    # Initialize backend
+import numpy as np
+from scipy.optimize import minimize
+
+
+def tket_optimized_vqe(seed=0):
+    """VQE where every ansatz circuit is optimised by TKET before evaluation."""
     backend = sqx.get_backend('tket', device='aer_simulator')
-    
-    # Define H2 Hamiltonian
-    hamiltonian = {
-        'II': -1.0523732,
-        'IZ': -0.39793742,  
-        'ZI': -0.39793742,
-        'ZZ': -0.01128010,
-        'XX': 0.18093119
-    }
-    
+
     def create_ansatz(params):
-        """Create UCCSD-inspired ansatz."""
-        circuit, param_names = backend.create_parameterized_circuit(2, len(params))
-        
-        # Initial state preparation
-        circuit = backend.add_gate(circuit, 'x', 0)  # |01⟩ initial state
-        
-        # Parameterized gates
+        circuit = backend.create_circuit(2)
+        circuit = backend.add_gate(circuit, 'x', 0)            # |10> reference state
         circuit = backend.add_gate(circuit, 'ry', 0, [params[0]])
         circuit = backend.add_gate(circuit, 'ry', 1, [params[1]])
         circuit = backend.add_gate(circuit, 'cx', [0, 1])
         circuit = backend.add_gate(circuit, 'ry', 0, [params[2]])
         circuit = backend.add_gate(circuit, 'ry', 1, [params[3]])
-        
         return circuit
-    
+
     def energy_function(params):
-        """Calculate energy for given parameters."""
-        circuit = create_ansatz(params)
-        
-        # Optimize circuit with TKET
-        optimized_circuit = backend.optimize_circuit(circuit, optimization_level=2)
-        
-        return calculate_energy_expectation(backend, optimized_circuit, hamiltonian)
-    
-    # Optimize parameters
-    from scipy.optimize import minimize
-    
-    initial_params = np.random.random(4) * 2 * np.pi
-    result = minimize(energy_function, initial_params, method='COBYLA')
-    
-    print(f"Optimized energy: {result.fun:.6f}")
-    print(f"Optimal parameters: {result.x}")
-    
+        optimized = backend.optimize_circuit(create_ansatz(params), optimization_level=2)
+        return backend.compute_expectation(optimized, h2_hamiltonian)
+
+    rng = np.random.default_rng(seed)
+    result = minimize(energy_function, rng.random(4) * 2 * np.pi, method='COBYLA')
+    exact = sqx.Hamiltonian.from_dict(h2_hamiltonian).ground_state_energy()
+
+    print(f"Optimized energy: {result.fun:.6f}  (exact {exact:.6f})")
     return result
 
-# Run VQE
+
 vqe_result = tket_optimized_vqe()
 ```
 
 ### QAOA with Hardware Backend
 
 ```python
-def tket_qaoa_max_cut(graph_edges, p_layers=3, use_hardware=False):
-    """QAOA for Max-Cut problem using TKET."""
-    
+import numpy as np
+from scipy.optimize import minimize
+
+
+def tket_qaoa_max_cut(graph_edges, p_layers=2, seed=0):
+    """QAOA for Max-Cut, with TKET optimisation before every execution."""
     n_nodes = max(max(edge) for edge in graph_edges) + 1
-    
-    # Choose backend
-    if use_hardware:
-        backend = sqx.TKETBackend(
-            device='H1-1E',
-            api_key=os.getenv('QUANTINUUM_API_KEY'),
-            shots=1000
-        )
-    else:
-        backend = sqx.TKETBackend(device='aer_simulator')
-    
+    backend = sqx.TKETBackend(device='aer_simulator', shots=1000)
+    # For hardware use sqx.TKETBackend(device='H1-1E') (requires credentials)
+
     def create_qaoa_circuit(gamma, beta):
-        """Create QAOA circuit."""
-        circuit, _ = backend.create_parameterized_circuit(n_nodes, 0)
-        
-        # Initial superposition
+        circuit = backend.create_circuit(n_nodes)
         for i in range(n_nodes):
             circuit = backend.add_gate(circuit, 'h', i)
-        
-        # QAOA layers
         for layer in range(p_layers):
-            # Problem Hamiltonian (ZZ terms)
-            for i, j in graph_edges:
+            for i, j in graph_edges:                      # problem layer (ZZ terms)
                 circuit = backend.add_gate(circuit, 'cx', [i, j])
                 circuit = backend.add_gate(circuit, 'rz', j, [2 * gamma[layer]])
                 circuit = backend.add_gate(circuit, 'cx', [i, j])
-            
-            # Mixer Hamiltonian (X rotations)
-            for i in range(n_nodes):
+            for i in range(n_nodes):                      # mixer layer
                 circuit = backend.add_gate(circuit, 'rx', i, [2 * beta[layer]])
-        
         return circuit
-    
+
     def cost_function(params):
-        """QAOA cost function."""
-        gamma = params[:p_layers]
-        beta = params[p_layers:]
-        
-        circuit = create_qaoa_circuit(gamma, beta)
-        
-        # Optimize with TKET
-        if use_hardware:
-            optimized = backend.optimize_circuit(circuit, optimization_level=3)
-        else:
-            optimized = backend.optimize_circuit(circuit, optimization_level=2)
-        
-        # Add measurements
-        measured_circuit = optimized.copy()
-        measured_circuit = backend.add_measurement(measured_circuit, list(range(n_nodes)))
-        
-        # Execute
-        result = backend.execute_circuit(measured_circuit)
-        
-        # Calculate expectation value
-        expectation = 0.0
-        total_shots = sum(result['counts'].values())
-        
-        for bitstring, count in result['counts'].items():
-            # Calculate cost for this bitstring
-            cost = 0
-            for i, j in graph_edges:
-                if bitstring[i] != bitstring[j]:
-                    cost += 1
-            
-            expectation += (count / total_shots) * cost
-        
-        return -expectation  # Maximize cut (minimize negative)
-    
-    # Optimize QAOA parameters
-    initial_params = np.random.uniform(0, 2*np.pi, 2*p_layers)
-    result = minimize(cost_function, initial_params, method='COBYLA')
-    
-    print(f"Optimal QAOA cost: {-result.fun:.4f}")
-    print(f"Optimal parameters: {result.x}")
-    
+        circuit = create_qaoa_circuit(params[:p_layers], params[p_layers:])
+        optimized = backend.optimize_circuit(circuit, optimization_level=2)
+        optimized = backend.add_measurement(optimized, list(range(n_nodes)))
+        counts = backend.counts_big_endian(backend.execute_circuit(optimized)['counts'])
+
+        total = sum(counts.values())
+        expectation = sum(
+            count / total * sum(bits[i] != bits[j] for i, j in graph_edges)
+            for bits, count in counts.items()
+        )
+        return -expectation  # maximise the cut
+
+    rng = np.random.default_rng(seed)
+    result = minimize(cost_function, rng.uniform(0, np.pi, 2 * p_layers),
+                      method='COBYLA', options={'maxiter': 60})
+    print(f"Expected cut: {-result.fun:.3f} (best possible: 3)")
     return result
 
-# Example: small graph
+
 edges = [(0, 1), (1, 2), (2, 0), (0, 3)]
-qaoa_result = tket_qaoa_max_cut(edges, p_layers=2)
+qaoa_result = tket_qaoa_max_cut(edges)
 ```
 
 ## Best Practices
@@ -765,14 +701,18 @@ pip install pytket[all]
 ```
 
 **Quantinuum API Authentication Failed**
-```python
-# Check API key configuration
-import os
-print("API Key:", os.getenv('QUANTINUUM_API_KEY'))
+!!! note "Requires credentials"
+    Needs `pytket-quantinuum` and a Quantinuum account. Checked against the 0.3.0 constructor, not run.
 
-# Test connection
-backend = sqx.TKETBackend(device='H1-1E', api_key='your-key')
-info = backend.get_backend_info()
+<!-- docs-check: skip -->
+```python
+# Is the Quantinuum extension installed?
+import importlib.util
+print("pytket-quantinuum:", importlib.util.find_spec("pytket.extensions.quantinuum") is not None)
+
+# Then try the device; authentication is handled by pytket-quantinuum
+backend = sqx.TKETBackend(device='H1-1E')
+print(backend.get_backend_info())
 ```
 
 **Circuit Compilation Failed**
@@ -913,7 +853,7 @@ The TKET backend provides these key methods:
 - `get_backend_info()`: Backend information
 - `get_circuit_info()`: Circuit capabilities
 
-For complete API documentation, see the [API Reference](../api/backends.md#tket-backend) section.
+For complete API documentation, see the [API Reference](../api/backends.md) section.
 
 ---
 

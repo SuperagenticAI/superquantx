@@ -1,9 +1,5 @@
 # Configuration Guide
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 11 of 17 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
-
-
 This comprehensive guide covers how to configure SuperQuantX for your specific needs, from basic settings to advanced customizations for research and production-like environments.
 
 ## 🎯 Overview
@@ -257,6 +253,10 @@ PENNYLANE_DEVICE=lightning.qubit
 
 Load it in your Python script:
 
+!!! note "Optional dependency"
+    Needs an extra package that is not part of SuperQuantX 0.3.0; not run.
+
+<!-- docs-check: skip -->
 ```python
 import os
 from dotenv import load_dotenv
@@ -387,6 +387,10 @@ print(f"Max qubits: {sqx.get_config('max_qubits')}")
 
 ### Secure Key Management
 
+!!! note "Optional dependency"
+    Needs an extra package that is not part of SuperQuantX 0.3.0; not run.
+
+<!-- docs-check: skip -->
 ```python
 import superquantx as sqx
 from keyring import get_password

@@ -1,9 +1,5 @@
 # Testing Guide
 
-!!! warning "Unverified examples"
-    Code on this page is illustrative and partly written as fragments. Only 7 of 9 snippets run as-is against the current release. The test suite in `tests/` is the source of truth.
-
-
 Comprehensive testing strategy for SuperQuantX to ensure reliability, correctness, and performance of quantum algorithms and backend integrations.
 
 ## 🧪 Testing Philosophy
@@ -138,110 +134,87 @@ class TestQuantumGates:
 ### Testing Quantum Circuits
 
 ```python
+import numpy as np
 from superquantx.circuits import QuantumCircuit
-from superquantx.measurements import MeasurementResult
+
 
 class TestQuantumCircuits:
+    """Tests for the backend-independent circuit description."""
+
     def test_circuit_creation(self):
-        """Test basic circuit creation"""
-        circuit = QuantumCircuit(n_qubits=3, n_classical=3)
-        
+        circuit = QuantumCircuit(3, 3)
+
         assert circuit.num_qubits == 3
         assert circuit.num_classical_bits == 3
-        assert len(circuit.data) == 0
-    
+        assert len(circuit.gates) == 0
+
     def test_gate_application(self):
-        """Test applying gates to circuit"""
         circuit = QuantumCircuit(2)
-        
-        # Apply gates
         circuit.h(0)
         circuit.cx(0, 1)
-        
-        assert len(circuit.data) == 2
-        assert circuit.data[0].name == 'h'
-        assert circuit.data[1].name == 'cx'
-    
+
+        assert [g.name for g in circuit.gates] == ['H', 'CNOT']
+        assert circuit.gates[1].qubits == [0, 1]
+
     def test_bell_state_circuit(self):
-        """Test Bell state preparation circuit"""
         circuit = QuantumCircuit(2, 2)
-        
-        # Create Bell state |Φ+⟩ = (|00⟩ + |11⟩)/√2
         circuit.h(0)
         circuit.cx(0, 1)
         circuit.measure_all()
-        
-        # Verify circuit structure
-        assert circuit.depth() == 2  # H gate, then CX gate
-        assert circuit.count_ops()['h'] == 1
-        assert circuit.count_ops()['cx'] == 1
-        assert circuit.count_ops()['measure'] == 2
-    
-    def test_parameterized_circuit(self):
-        """Test circuits with parameters"""
-        from superquantx.circuits import Parameter
-        
-        theta = Parameter('theta')
+
+        assert len(circuit.gates) == 2
+        assert circuit.measurements == [(0, 0), (1, 1)]
+
+    def test_rotation_parameters(self):
+        # There is no symbolic Parameter class; rotations take numbers
         circuit = QuantumCircuit(1)
-        circuit.ry(theta, 0)
-        
-        # Bind parameter
-        bound_circuit = circuit.bind_parameters({theta: np.pi/2})
-        
-        assert len(bound_circuit.parameters) == 0
-        assert bound_circuit.data[0].params[0] == np.pi/2
+        circuit.ry(np.pi / 2, 0)
+
+        assert circuit.gates[0].parameters == [np.pi / 2]
+
+    def test_json_round_trip(self):
+        circuit = QuantumCircuit(2)
+        circuit.h(0)
+        circuit.cx(0, 1)
+
+        assert QuantumCircuit.from_json(circuit.to_json()).gates == circuit.gates
 ```
 
 ### Testing Algorithms
 
 ```python
-from superquantx.algorithms import QuantumSVM
 from sklearn.datasets import make_classification
+from superquantx.algorithms import QuantumSVM
+from superquantx.backends import SimulatorBackend
+
 
 class TestQuantumAlgorithms:
     def test_qsvm_initialization(self):
-        """Test QSVM initialization"""
-        backend = 'simulator'
-        qsvm = QuantumSVM(backend=backend)
-        
-        assert qsvm.backend == backend
-        assert qsvm.feature_map is not None
-        assert qsvm.quantum_kernel is not None
-    
+        qsvm = QuantumSVM(backend='simulator', feature_map='ZZFeatureMap')
+
+        assert isinstance(qsvm.backend, SimulatorBackend)   # names resolve to backend objects
+        assert qsvm.feature_map == 'ZZFeatureMap'
+        assert not qsvm.is_fitted
+
     def test_qsvm_small_dataset(self):
-        """Test QSVM on small synthetic dataset"""
-        # Create simple 2D dataset
         X, y = make_classification(
-            n_samples=20, n_features=2, n_redundant=0, 
-            n_informative=2, n_clusters_per_class=1, random_state=42
+            n_samples=20, n_features=2, n_redundant=0,
+            n_informative=2, n_clusters_per_class=1, random_state=42,
         )
-        
         qsvm = QuantumSVM(backend='simulator')
-        
-        # Fit and predict
-        qsvm.fit(X, y)
-        predictions = qsvm.predict(X)
-        
-        # Basic validations
+        predictions = qsvm.fit(X, y).predict(X)
+
         assert len(predictions) == len(y)
-        assert all(pred in [0, 1] for pred in predictions)
-        
-        # Should achieve reasonable accuracy on training data
-        accuracy = np.mean(predictions == y)
-        assert accuracy > 0.7  # At least 70% accuracy
-    
+        assert set(predictions) <= {0, 1}
+        assert np.mean(predictions == y) >= 0.6   # training accuracy floor
+
     @pytest.mark.parametrize("backend", ["simulator", "pennylane"])
     def test_qsvm_backend_consistency(self, backend):
-        """Test QSVM consistency across backends"""
         X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
         y = np.array([0, 1, 1, 0])  # XOR pattern
-        
-        qsvm = QuantumSVM(backend=backend)
-        
-        # Should not crash and produce valid output
-        qsvm.fit(X, y)
-        predictions = qsvm.predict(X)
-        
+
+        predictions = QuantumSVM(backend=backend).fit(X, y).predict(X)
+
         assert len(predictions) == len(y)
         assert all(isinstance(pred, (int, np.integer)) for pred in predictions)
 ```
@@ -254,72 +227,46 @@ class TestQuantumAlgorithms:
 import pytest
 from superquantx import get_backend
 
+
+def bell_counts(backend_name, shots=1000):
+    backend = get_backend(backend_name)
+    circuit = backend.create_circuit(2)
+    backend.add_gate(circuit, 'H', 0)
+    backend.add_gate(circuit, 'CNOT', [0, 1])
+    backend.add_measurement(circuit)
+    return backend.execute_circuit(circuit, shots=shots)['counts']
+
+
 class TestBackendIntegration:
-    @pytest.mark.parametrize("backend_name", [
-        "simulator", "pennylane", "qiskit", "cirq"
-    ])
+    @pytest.mark.parametrize("backend_name", ["simulator", "pennylane", "qiskit", "cirq"])
     def test_backend_availability(self, backend_name):
-        """Test that backends can be loaded"""
         try:
             backend = get_backend(backend_name)
-            assert backend is not None
         except ImportError:
             pytest.skip(f"Backend {backend_name} not available")
-    
+        assert backend is not None
+
     def test_cross_backend_consistency(self):
-        """Test that same circuit produces similar results across backends"""
-        circuit = QuantumCircuit(2, 2)
-        circuit.h(0)
-        circuit.cx(0, 1)
-        circuit.measure_all()
-        
-        backends = ["simulator"]  # Add more as available
+        """The same Bell circuit gives similar distributions on every backend."""
         results = {}
-        
-        for backend_name in backends:
+        for backend_name in ["simulator", "qiskit", "cirq", "pennylane"]:
             try:
-                backend = get_backend(backend_name)
-                result = backend.execute(circuit, shots=1000)
-                results[backend_name] = result
+                results[backend_name] = bell_counts(backend_name)
             except ImportError:
                 continue
-        
-        # Compare probability distributions
-        if len(results) > 1:
-            backend_names = list(results.keys())
-            ref_probs = results[backend_names[0]].probabilities
-            
-            for backend_name in backend_names[1:]:
-                probs = results[backend_name].probabilities
-                
-                # Check that probability distributions are similar
-                for outcome in ref_probs:
-                    if outcome in probs:
-                        diff = abs(ref_probs[outcome] - probs[outcome])
-                        assert diff < 0.1  # Within 10%
-    
+
+        reference = results.pop('simulator')
+        for counts in results.values():
+            for outcome in ('00', '11'):
+                diff = abs(reference.get(outcome, 0) - counts.get(outcome, 0)) / 1000
+                assert diff < 0.1   # within 10%
+
     def test_bell_state_measurement(self):
-        """Test Bell state measurement across backends"""
-        circuit = QuantumCircuit(2, 2)
-        circuit.h(0)
-        circuit.cx(0, 1)
-        circuit.measure_all()
-        
-        backend = get_backend('simulator')
-        result = backend.execute(circuit, shots=1000)
-        
-        # Bell state should only produce |00⟩ and |11⟩
-        valid_outcomes = {'00', '11'}
-        for outcome in result.counts:
-            assert outcome in valid_outcomes
-        
-        # Should be roughly 50/50 distribution
-        if '00' in result.counts and '11' in result.counts:
-            prob_00 = result.counts['00'] / 1000
-            prob_11 = result.counts['11'] / 1000
-            
-            assert 0.3 < prob_00 < 0.7  # Rough statistical test
-            assert 0.3 < prob_11 < 0.7
+        counts = bell_counts('simulator')
+
+        assert set(counts) <= {'00', '11'}   # only correlated outcomes
+        assert 0.3 < counts.get('00', 0) / 1000 < 0.7
+        assert 0.3 < counts.get('11', 0) / 1000 < 0.7
 ```
 
 ### End-to-End Workflow Tests
@@ -327,58 +274,45 @@ class TestBackendIntegration:
 ```python
 class TestWorkflows:
     def test_complete_qml_workflow(self):
-        """Test complete quantum machine learning workflow"""
+        """Data preparation, training, prediction and evaluation."""
         from sklearn.datasets import make_blobs
-        from sklearn.model_selection import train_test_split
         from sklearn.metrics import accuracy_score
-        
-        # 1. Data preparation
+        from sklearn.model_selection import train_test_split
+
         X, y = make_blobs(n_samples=40, centers=2, random_state=42)
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.3, random_state=42
         )
-        
-        # 2. Model training
-        qsvm = QuantumSVM(backend='simulator')
-        qsvm.fit(X_train, y_train)
-        
-        # 3. Prediction
-        y_pred = qsvm.predict(X_test)
-        
-        # 4. Evaluation
-        accuracy = accuracy_score(y_test, y_pred)
-        
-        # Should achieve reasonable performance
-        assert accuracy > 0.6
+
+        qsvm = QuantumSVM(backend='simulator', feature_map='ZFeatureMap')
+        y_pred = qsvm.fit(X_train, y_train).predict(X_test)
+
+        assert accuracy_score(y_test, y_pred) > 0.7
         assert len(y_pred) == len(y_test)
-    
-    def test_noise_modeling_workflow(self):
-        """Test noise modeling and error mitigation workflow"""
-        from superquantx.noise import NoiseModel, DepolarizingChannel
-        from superquantx.measurements import ResultAnalyzer
-        
-        # 1. Create noisy backend
-        noise_model = NoiseModel()
-        noise_channel = DepolarizingChannel(probability=0.01)
-        noise_model.add_gate_noise('h', noise_channel)
-        
-        # 2. Create test circuit
-        circuit = QuantumCircuit(2, 2)
-        circuit.h(0)
-        circuit.cx(0, 1)
-        circuit.measure_all()
-        
-        # 3. Execute with and without noise
-        clean_backend = get_backend('simulator')
-        noisy_backend = get_backend('simulator', noise_model=noise_model)
-        
-        clean_result = clean_backend.execute(circuit, shots=1000)
-        noisy_result = noisy_backend.execute(circuit, shots=1000)
-        
-        # 4. Compare results
-        comparison = ResultAnalyzer.compare_results(clean_result, noisy_result)
-        
-        # Noise should create some difference
+
+    def test_readout_noise_workflow(self):
+        """Compare ideal counts with counts after simulated readout noise."""
+        from superquantx.measurements import MeasurementResult, ResultAnalyzer
+
+        backend = get_backend('simulator')
+        circuit = backend.create_circuit(2)
+        backend.add_gate(circuit, 'H', 0)
+        backend.add_gate(circuit, 'CNOT', [0, 1])
+        backend.add_measurement(circuit)
+        clean = backend.execute_circuit(circuit, shots=1000)['counts']
+
+        # Flip each measured bit with probability 5% (classical readout noise)
+        rng = np.random.default_rng(0)
+        noisy = {}
+        for bits, count in clean.items():
+            for _ in range(count):
+                out = ''.join(b if rng.random() > 0.05 else str(1 - int(b)) for b in bits)
+                noisy[out] = noisy.get(out, 0) + 1
+
+        comparison = ResultAnalyzer.compare_results(
+            MeasurementResult(counts=clean, shots=1000),
+            MeasurementResult(counts=noisy, shots=1000),
+        )
         assert comparison['total_variation_distance'] > 0
 ```
 
@@ -388,117 +322,93 @@ class TestWorkflows:
 
 ```python
 import time
+
 import pytest
-from superquantx.benchmarks import QuantumBenchmark
+from superquantx import get_backend
+
 
 class TestPerformance:
     @pytest.mark.performance
-    def test_circuit_compilation_performance(self):
-        """Benchmark circuit compilation speed"""
-        circuit = QuantumCircuit(10)
-        
-        # Add many gates
-        for i in range(100):
-            circuit.h(i % 10)
-            if i % 10 < 9:
-                circuit.cx(i % 10, (i % 10) + 1)
-        
+    def test_circuit_execution_performance(self):
+        """A 10-qubit, 190-gate circuit should run quickly on the simulator."""
         backend = get_backend('simulator')
-        
-        # Measure compilation time
+        circuit = backend.create_circuit(10)
+        for i in range(100):
+            backend.add_gate(circuit, 'H', i % 10)
+            if i % 10 < 9:
+                backend.add_gate(circuit, 'CNOT', [i % 10, i % 10 + 1])
+        backend.add_measurement(circuit)
+
         start_time = time.time()
-        compiled_circuit = backend.compile_circuit(circuit)
-        compilation_time = time.time() - start_time
-        
-        # Should compile reasonably quickly
-        assert compilation_time < 5.0  # Less than 5 seconds
-        assert compiled_circuit is not None
-    
+        result = backend.execute_circuit(circuit, shots=1000)
+        assert time.time() - start_time < 5.0
+        assert sum(result['counts'].values()) == 1000
+
     @pytest.mark.performance
     def test_algorithm_scaling(self):
-        """Test algorithm performance scaling"""
+        """QSVM training time should not explode with dataset size."""
         from sklearn.datasets import make_classification
-        
-        sizes = [10, 20, 40]
+
         times = []
-        
-        for size in sizes:
-            X, y = make_classification(n_samples=size, n_features=2, random_state=42)
-            
-            qsvm = QuantumSVM(backend='simulator')
-            
+        for size in [10, 20, 40]:
+            X, y = make_classification(
+                n_samples=size, n_features=2, n_redundant=0, n_informative=2, random_state=42
+            )
             start_time = time.time()
-            qsvm.fit(X, y)
-            training_time = time.time() - start_time
-            
-            times.append(training_time)
-        
-        # Training time shouldn't increase exponentially
-        assert times[-1] < times[0] * 10  # No more than 10x increase
-    
+            QuantumSVM(backend='simulator').fit(X, y)
+            times.append(time.time() - start_time)
+
+        assert times[-1] < max(times[0], 0.05) * 50   # kernel cost is O(n^2), with headroom
+
     @pytest.mark.performance
     def test_memory_usage(self):
-        """Test memory usage during execution"""
-        import psutil
+        """Executing a 12-qubit circuit should not use much memory."""
+        psutil = pytest.importorskip("psutil")
         import os
-        
+
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss
-        
-        # Create and execute large circuit
-        circuit = QuantumCircuit(12)
+
+        backend = get_backend('simulator', max_qubits=12)
+        circuit = backend.create_circuit(12)
         for i in range(12):
-            circuit.h(i)
-        circuit.measure_all()
-        
-        backend = get_backend('simulator')
-        result = backend.execute(circuit, shots=1000)
-        
-        final_memory = process.memory_info().rss
-        memory_increase = final_memory - initial_memory
-        
-        # Memory increase should be reasonable (less than 100MB)
-        assert memory_increase < 100 * 1024 * 1024
+            backend.add_gate(circuit, 'H', i)
+        backend.add_measurement(circuit)
+        backend.execute_circuit(circuit, shots=1000)
+
+        assert process.memory_info().rss - initial_memory < 100 * 1024 * 1024
 ```
 
 ### Regression Testing
 
 ```python
 class TestRegression:
-    def test_known_algorithm_results(self):
-        """Test that algorithms produce known results on standard datasets"""
-        # Store expected results for regression testing
-        expected_results = {
-            'iris_qsvm_accuracy': 0.95,
-            'bell_state_fidelity': 0.99,
-            'vqe_h2_energy': -1.137
-        }
-        
-        # Test each known result
-        for test_name, expected_value in expected_results.items():
-            if test_name == 'iris_qsvm_accuracy':
-                actual_value = self._test_iris_qsvm()
-                assert abs(actual_value - expected_value) < 0.05
-    
-    def _test_iris_qsvm(self):
-        """Helper method for QSVM on Iris dataset"""
+    """Pin results recorded on SuperQuantX 0.3.0 so changes are noticed."""
+
+    def test_iris_qsvm_accuracy(self):
         from sklearn.datasets import load_iris
         from sklearn.model_selection import train_test_split
-        
-        # Use subset of Iris dataset (2 classes, 2 features)
+
         iris = load_iris()
-        X = iris.data[:100, :2]  # First 2 features, first 2 classes
-        y = iris.target[:100]
-        
+        X, y = iris.data[:100, :2], iris.target[:100]   # 2 classes, 2 features
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.3, random_state=42
         )
-        
-        qsvm = QuantumSVM(backend='simulator')
-        qsvm.fit(X_train, y_train)
-        predictions = qsvm.predict(X_test)
-        
-        return np.mean(predictions == y_test)
+        qsvm = QuantumSVM(backend='simulator', feature_map='ZFeatureMap', feature_map_reps=1)
+        accuracy = np.mean(qsvm.fit(X_train, y_train).predict(X_test) == y_test)
+
+        assert abs(accuracy - 0.77) < 0.05   # baseline recorded on 0.3.0
+
+    def test_vqe_h2_energy(self):
+        from superquantx import VQE, Hamiltonian
+
+        h2 = Hamiltonian.from_dict({
+            'II': -1.0523732, 'ZI': 0.39793742, 'IZ': -0.39793742,
+            'ZZ': -0.01128010, 'XX': 0.18093119,
+        })
+        energy = VQE(hamiltonian=h2, backend='simulator', optimizer='COBYLA', seed=0).find_ground_state()
+
+        assert abs(energy - (-1.857275)) < 1e-3   # exact: h2.ground_state_energy()
 ```
 
 ## 🛠️ Test Utilities
@@ -529,30 +439,38 @@ def ghz_state(n_qubits):
 
 ```python
 # tests/fixtures/test_circuits.py
-from superquantx.circuits import QuantumCircuit
+import numpy as np
+from superquantx import get_backend
 
-def bell_circuit():
-    """Create Bell state preparation circuit"""
-    circuit = QuantumCircuit(2, 2)
-    circuit.h(0)
-    circuit.cx(0, 1)
-    circuit.measure_all()
+
+def bell_circuit(backend):
+    """Bell state preparation on a backend circuit."""
+    circuit = backend.create_circuit(2)
+    backend.add_gate(circuit, 'H', 0)
+    backend.add_gate(circuit, 'CNOT', [0, 1])
+    backend.add_measurement(circuit)
     return circuit
 
-def qft_circuit(n_qubits):
-    """Create Quantum Fourier Transform circuit"""
-    circuit = QuantumCircuit(n_qubits)
-    
+
+def qft_circuit(backend, n_qubits):
+    """Quantum Fourier Transform built from H, controlled-RZ and SWAP.
+
+    CRZ(theta) equals the controlled-phase gate up to a phase on the control,
+    which is enough for tests that compare measurement statistics.
+    """
+    circuit = backend.create_circuit(n_qubits)
     for i in range(n_qubits):
-        circuit.h(i)
+        backend.add_gate(circuit, 'H', i)
         for j in range(i + 1, n_qubits):
-            circuit.cp(np.pi / 2**(j - i), j, i)
-    
-    # Reverse qubit order
+            backend.add_gate(circuit, 'CRZ', [j, i], [np.pi / 2 ** (j - i)])
     for i in range(n_qubits // 2):
-        circuit.swap(i, n_qubits - 1 - i)
-    
+        backend.add_gate(circuit, 'SWAP', [i, n_qubits - 1 - i])
     return circuit
+
+
+sim = get_backend('simulator')
+print(sim.execute_circuit(bell_circuit(sim), shots=100)['counts'])
+print(qft_circuit(sim, 3) is not None)
 ```
 
 ## 📊 Test Reporting

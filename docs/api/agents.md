@@ -1,1015 +1,304 @@
 # Quantum Agents API Reference
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 4 of 23 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
+Quantum agents bundle one or more SuperQuantX algorithms behind a task-level interface. Every agent reports a classical baseline next to the quantum answer, computed in the same call, so you can see how the quantum result compares.
 
-
-SuperQuantX's quantum agents represent the next evolution of AI - autonomous systems that leverage quantum computing to achieve enhanced performance in specialized domains. This reference documents all quantum agent classes and their capabilities.
+All examples on this page run on SuperQuantX 0.3.0 with the built-in simulator.
 
 ## Overview
 
-Quantum agents are specialized combinations of quantum algorithms designed for specific problem domains. They provide high-level interfaces for complex quantum machine learning workflows and autonomous decision-making.
+| Agent | What it does | Classical check |
+|---|---|---|
+| [QuantumPortfolioAgent](#quantumportfolioagent) | Picks `k` of `n` assets with CVaR-VQE on a mean-variance QUBO | Brute-force optimum and a Markowitz solution |
+| [QuantumOptimizationAgent](#quantumoptimizationagent) | Weighted MaxCut with QAOA, or a ground state with VQE | Brute force or exact diagonalisation |
+| [QuantumClassificationAgent](#quantumclassificationagent) | Trains quantum classifiers, optionally as an ensemble | Tuned RBF SVM and logistic regression on the same folds |
+| [QuantumTradingAgent](#quantumtradingagent) | Experimental: portfolio selection only | Same as the portfolio agent |
+| [QuantumResearchAgent](#quantumresearchagent) | Experimental: VQE ground-state simulation only | Exact diagonalisation |
 
-### Agent Types
+Agents do not report a "quantum advantage" figure. Features that are not implemented raise `NotImplementedError` instead of returning placeholder output.
 
-- **[QuantumTradingAgent](#quantumtradingagent)**: Autonomous financial trading with quantum advantages
-- **[QuantumResearchAgent](#quantumresearchagent)**: Scientific discovery and hypothesis generation  
-- **[QuantumOptimizationAgent](#quantumoptimizationagent)**: General combinatorial and continuous optimization
-- **[QuantumClassificationAgent](#quantumclassificationagent)**: Automated ML with ensemble methods
-- **[QuantumPortfolioAgent](#quantumportfolioagent)**: Portfolio optimization and risk management
-
-## Base Classes
+## Base class
 
 ### QuantumAgent
-
-Base class for all quantum agents providing common functionality.
 
 ```python
 from superquantx.algorithms.quantum_agents import QuantumAgent
 
+
 class MyQuantumAgent(QuantumAgent):
     def _initialize_agent(self):
-        # Initialize agent-specific algorithms
+        # Create the algorithms this agent uses and store them in self.algorithms
         pass
-    
+
     def solve(self, problem_instance, **kwargs):
-        # Implement problem-solving logic
+        # Return a QuantumResult, for example via self._result(result_dict, start_time)
         pass
+
+    # QuantumAgent is a BaseQuantumAlgorithm, so fit and predict are required too
+    def fit(self, X, y=None, **kwargs):
+        self.is_fitted = True
+        return self
+
+    def predict(self, X, **kwargs):
+        return X
+
+
+agent = MyQuantumAgent(backend='simulator')
+print(agent.get_agent_info()['agent_type'])
 ```
 
-#### Constructor
+**Constructor:** `QuantumAgent(backend, agent_config=None, shots=1024, **kwargs)`
 
-##### __init__(backend, agent_config=None, shots=1024, **kwargs)
+- `backend` (str or backend): backend name such as `'simulator'` or a backend instance
+- `agent_config` (dict, optional): configuration stored on the agent
+- `shots` (int): measurement shots
+- `**kwargs`: base algorithm options such as `seed`
 
-**Parameters:**
-- `backend` (str|Backend): Quantum backend for circuit execution
-- `agent_config` (dict, optional): Configuration dictionary for the agent
-- `shots` (int): Number of measurement shots (default: 1024)
-- `**kwargs`: Additional parameters
+**Methods:**
 
-#### Methods
+- `_initialize_agent()`: abstract; create the agent's algorithms
+- `solve(problem_instance, **kwargs)`: abstract; returns a `QuantumResult`
+- `get_agent_info()`: agent type, configuration, algorithms and metrics
 
-##### _initialize_agent()
+**Attributes:** `algorithms`, `results_history`, `performance_metrics`, `agent_config`.
 
-Abstract method to initialize agent-specific algorithms and configurations.
+`QuantumResult` has the fields `result` (dict), `metadata` (dict), `execution_time` (seconds), `backend_info`, `error` and `intermediate_results`.
 
-**Must be implemented by subclasses.**
+## QuantumPortfolioAgent
 
-##### solve(problem_instance, **kwargs)
+Selects `n_select` of `n` assets with equal weights. The selection problem is encoded as a diagonal Hamiltonian; a RealAmplitudes circuit is trained to minimise the CVaR of the energy, and the best sampled selection is returned. The brute-force optimum of the same QUBO and a long-only Markowitz portfolio are computed in the same call. Practical up to about 10 assets.
 
-Abstract method to solve a problem using the quantum agent.
+**Constructor:** `QuantumPortfolioAgent(backend, n_select=None, risk_aversion=1.0, reps=2, alpha=0.25, n_restarts=5, maxiter=300, **kwargs)`
 
-**Parameters:**
-- `problem_instance` (Any): Problem data or specification
-- `**kwargs`: Additional solving parameters
+- `n_select`: number of assets to hold (default: half the assets)
+- `risk_aversion`: weight of the variance term
+- `reps`: ansatz repetitions
+- `alpha`: CVaR fraction (1.0 is ordinary VQE)
+- `n_restarts`, `maxiter`: optimizer restarts and iterations per restart
+- `seed` (keyword): makes the run reproducible
 
-**Returns:**
-- `QuantumResult`: Solution result with metadata
+**Methods:**
 
-##### get_agent_info()
-
-Get information about the agent and its algorithms.
-
-**Returns:**
-- `dict`: Agent information including algorithms, config, and performance metrics
-
-#### Attributes
-
-- `algorithms` (dict): Dictionary of initialized quantum algorithms
-- `results_history` (list): History of problem-solving results
-- `performance_metrics` (dict): Performance metrics for different algorithms
-- `agent_config` (dict): Agent configuration parameters
-
-## Specialized Agents
-
-### QuantumTradingAgent
-
-Autonomous quantum trading agent for financial markets.
-
-```python
-from superquantx import QuantumTradingAgent
-
-# Create trading agent
-agent = QuantumTradingAgent(
-    backend='pennylane',
-    strategy='quantum_portfolio',
-    risk_tolerance=0.6,
-    markets=['stocks', 'crypto']
-)
-
-# Deploy agent
-result = agent.deploy(market_data)
-print(f"Performance: {result.result['performance']}")
-print(f"Quantum advantage: {result.result['quantum_advantage']}")
-```
-
-#### Constructor
-
-##### __init__(backend='auto', strategy='quantum_portfolio', risk_tolerance=0.5, quantum_advantage_threshold=0.05, markets=None, **kwargs)
-
-**Parameters:**
-- `backend` (str): Quantum backend ('auto' for automatic selection)
-- `strategy` (str): Trading strategy type
-  - `'quantum_portfolio'`: Quantum portfolio optimization
-  - `'momentum'`: Quantum-enhanced momentum trading
-  - `'mean_reversion'`: Mean reversion with quantum analysis
-- `risk_tolerance` (float): Risk tolerance level (0.0 to 1.0)
-- `quantum_advantage_threshold` (float): Minimum quantum advantage required
-- `markets` (list): Markets to trade in (['stocks', 'crypto', 'forex'])
-- `**kwargs`: Additional parameters
-
-#### Methods
-
-##### deploy(market_data=None, **kwargs)
-
-Deploy the trading agent and return performance metrics.
-
-**Parameters:**
-- `market_data` (Any, optional): Historical market data for analysis
-- `**kwargs`: Deployment parameters
-
-**Returns:**
-- `QuantumResult`: Trading performance and quantum advantage metrics
-
-##### fit(X, y=None, **kwargs)
-
-Fit the trading agent (optional for pre-configured agents).
-
-**Parameters:**
-- `X` (numpy.ndarray): Historical market data
-- `y` (numpy.ndarray, optional): Target returns
-- `**kwargs`: Fitting parameters
-
-**Returns:**
-- `QuantumTradingAgent`: Self
-
-##### predict(X, **kwargs)
-
-Predict trading decisions based on market data.
-
-**Parameters:**
-- `X` (numpy.ndarray): Market data for prediction
-
-**Returns:**
-- `numpy.ndarray`: Trading signals (0=hold, 1=buy, -1=sell)
-
-#### Strategy Types
-
-- **quantum_portfolio**: Uses QAOA for portfolio optimization
-- **momentum**: Quantum-enhanced momentum detection
-- **mean_reversion**: Quantum analysis of market reversals
-
-#### Example
+- `fit(returns)`: estimate mean returns and covariance from a (periods x assets) matrix
+- `solve(returns=None)`: run the selection; refits if returns are given
+- `predict(returns=None)`: equal weights of the selected assets
 
 ```python
 import numpy as np
-from superquantx import QuantumTradingAgent
+from superquantx import QuantumPortfolioAgent
 
-# Create sample market data
-market_data = {
-    'prices': np.random.randn(100, 10),  # 100 days, 10 assets
-    'returns': np.random.randn(100, 10),
-    'volatility': np.random.rand(10)
-}
+rng = np.random.default_rng(42)
+returns = rng.multivariate_normal(
+    mean=[0.08, 0.12, 0.10, 0.15],
+    cov=[[0.16, 0.05, 0.03, 0.02],
+         [0.05, 0.25, 0.04, 0.03],
+         [0.03, 0.04, 0.20, 0.05],
+         [0.02, 0.03, 0.05, 0.30]],
+    size=252,
+) / 100
 
-# Create and deploy trading agent
-agent = QuantumTradingAgent(
-    strategy='quantum_portfolio',
-    risk_tolerance=0.4,
-    markets=['stocks']
-)
+agent = QuantumPortfolioAgent(backend='simulator', n_select=2, risk_aversion=2.0, seed=0)
+result = agent.solve(returns)
+r = result.result
 
-result = agent.deploy(market_data)
-
-print(f"Expected Return: {result.result['performance']['expected_return']:.3f}")
-print(f"Risk: {result.result['performance']['risk']:.3f}")
-print(f"Sharpe Ratio: {result.result['performance']['sharpe_ratio']:.3f}")
-print(f"Quantum Advantage: {result.result['quantum_advantage']:.3f}")
+print("Quantum selection:     ", r['selected_assets'], r['weights'])
+print("Brute-force selection: ", r['classical_selected_assets'])
+print("Matches optimum:       ", r['matches_classical_optimum'])
+print(f"P(optimum) after VQE:   {r['probability_of_optimum']:.3f}")
+print(f"Expected return {r['expected_return']:.4f}, risk {r['risk']:.4f}")
+print("Markowitz weights:     ", np.round(r['markowitz_reference']['weights'], 3))
 ```
 
-### QuantumResearchAgent
+Keys in `result.result`: `selected_assets`, `weights`, `objective`, `feasible`, `classical_selected_assets`, `classical_objective`, `matches_classical_optimum`, `objective_gap`, `probability_of_optimum`, `optimum_sampled`, `markowitz_reference`, `expected_return`, `risk`, `sharpe_ratio`, plus `cvar_rescaled` and `shots`.
 
-Autonomous quantum research agent for scientific discovery.
+!!! note "Not available in 0.3.0"
+    Black-Litterman or factor risk models, Sharpe or risk-parity objectives, per-asset weight limits and sector constraints are not implemented. The agent selects an equal-weight subset; use `markowitz_reference` for continuous weights.
 
-```python
-from superquantx import QuantumResearchAgent
+## QuantumOptimizationAgent
 
-# Create research agent
-agent = QuantumResearchAgent(
-    domain='materials_science',
-    hypothesis_generation=True,
-    experiment_design=True
-)
+**Constructor:** `QuantumOptimizationAgent(backend, problem_type='combinatorial', p=2, algorithms=None, maxiter=200, n_restarts=3, reps=2, **kwargs)`
 
-# Investigate research question
-result = agent.investigate(
-    "How can quantum simulation accelerate discovery of superconducting materials?"
-)
-print(result.result['research_plan'])
-```
+- `problem_type='combinatorial'`: `solve(adjacency)` runs weighted MaxCut with QAOA and compares against brute force
+- `problem_type='continuous'`: `solve(hamiltonian)` runs VQE and compares against exact diagonalisation
+- `p`: QAOA layers; `reps`: VQE ansatz repetitions
 
-#### Constructor
-
-##### __init__(backend='auto', domain='materials_science', hypothesis_generation=True, experiment_design=True, literature_synthesis=False, **kwargs)
-
-**Parameters:**
-- `backend` (str): Quantum backend for simulations
-- `domain` (str): Research domain
-  - `'materials_science'`: Materials and condensed matter research
-  - `'drug_discovery'`: Pharmaceutical and biochemical research
-  - `'physics'`: Fundamental physics research
-- `hypothesis_generation` (bool): Enable automated hypothesis generation
-- `experiment_design` (bool): Enable quantum experiment design
-- `literature_synthesis` (bool): Enable literature review and synthesis
-- `**kwargs`: Additional parameters
-
-#### Methods
-
-##### investigate(research_question, constraints=None, **kwargs)
-
-Investigate a research question and return research plan.
-
-**Parameters:**
-- `research_question` (str): The research question to investigate
-- `constraints` (dict, optional): Research constraints (timeline, budget, etc.)
-- `**kwargs`: Investigation parameters
-
-**Returns:**
-- `QuantumResult`: Research plan, hypotheses, and experiment designs
-
-##### fit(X, y=None, **kwargs)
-
-Fit the research agent to domain-specific data.
-
-##### predict(X, **kwargs)
-
-Predict research outcomes based on data.
-
-#### Research Domains
-
-- **materials_science**: Quantum simulation of materials, electronic structure calculations
-- **drug_discovery**: Molecular simulation, protein folding, drug-target interactions
-- **physics**: Fundamental physics simulations, quantum many-body systems
-
-#### Example
-
-```python
-from superquantx import QuantumResearchAgent
-
-# Create research agent for drug discovery
-agent = QuantumResearchAgent(
-    domain='drug_discovery',
-    hypothesis_generation=True,
-    experiment_design=True
-)
-
-# Investigate research question
-research_question = "Can quantum simulation identify novel COVID-19 drug targets?"
-constraints = {'timeline': '18_months', 'budget': 500000}
-
-result = agent.investigate(research_question, constraints)
-
-# Access results
-research_plan = result.result['research_plan']
-hypothesis = result.result['hypothesis']
-experiments = result.result['experiments']
-
-print("Research Plan Phases:", research_plan['phases'])
-print("Primary Hypothesis:", hypothesis['primary_hypothesis'])
-print("Number of Experiments:", len(experiments))
-
-for exp in experiments:
-    print(f"- {exp['experiment_name']}: {exp['expected_duration']}")
-```
-
-### QuantumOptimizationAgent
-
-General-purpose quantum optimization agent.
-
-```python
-from superquantx import QuantumOptimizationAgent
-
-# Create optimization agent
-agent = QuantumOptimizationAgent(
-    backend='qiskit',
-    problem_type='combinatorial',
-    algorithms=['qaoa', 'vqe']
-)
-
-# Solve optimization problem
-result = agent.solve(problem_instance)
-```
-
-#### Constructor
-
-##### __init__(backend, problem_type='combinatorial', algorithms=None, **kwargs)
-
-**Parameters:**
-- `backend` (str): Quantum backend
-- `problem_type` (str): Type of optimization
-  - `'combinatorial'`: Discrete optimization (TSP, Max-Cut, etc.)
-  - `'continuous'`: Continuous optimization (VQE, portfolio, etc.)
-  - `'mixed'`: Mixed integer optimization
-- `algorithms` (list): Algorithms to use (['qaoa', 'vqe'])
-- `**kwargs`: Additional parameters
-
-#### Methods
-
-##### solve(problem_instance, **kwargs)
-
-Solve optimization problem using appropriate quantum algorithm.
-
-**Parameters:**
-- `problem_instance` (Any): Problem specification or data
-- `**kwargs`: Solving parameters
-
-**Returns:**
-- `QuantumResult`: Optimization result with solution and metadata
-
-##### fit(X, y=None, **kwargs)
-
-Fit optimization algorithms to problem characteristics.
-
-##### predict(X, **kwargs)
-
-Predict optimal solutions for new problem instances.
-
-#### Supported Algorithms
-
-- **QAOA**: Quantum Approximate Optimization Algorithm for combinatorial problems
-- **VQE**: Variational Quantum Eigensolver for continuous optimization
-
-#### Example
+### MaxCut with QAOA
 
 ```python
 import numpy as np
 from superquantx import QuantumOptimizationAgent
 
-# Create Max-Cut problem (combinatorial)
-edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 2)]
-weights = [1, 1, 1, 1, 2]
+# 4-node graph: edges (0,1), (1,2), (2,3), (3,0) with weight 1 and (0,2) with weight 2
+adjacency = np.array([
+    [0, 1, 2, 1],
+    [1, 0, 1, 0],
+    [2, 1, 0, 1],
+    [1, 0, 1, 0],
+], dtype=float)
 
-problem = {
-    'type': 'max_cut',
-    'edges': edges,
-    'weights': weights,
-    'num_nodes': 4
-}
+agent = QuantumOptimizationAgent(backend='simulator', problem_type='combinatorial', p=2, seed=0)
+result = agent.solve(adjacency)
 
-# Create and use optimization agent
-agent = QuantumOptimizationAgent(
-    problem_type='combinatorial',
-    algorithms=['qaoa']
-)
-
-result = agent.solve(problem)
-print(f"Optimal solution: {result.result}")
-print(f"Algorithm used: {result.metadata['algorithm_used']}")
+print("Partition:", result.result['bitstring'])
+print("Cut value:", result.result['cut_value'], "optimum:", result.result['classical_optimum'])
+print("Approximation ratio:", round(result.result['approximation_ratio'], 3))
+print("Algorithm:", result.metadata['algorithm_used'])
 ```
 
-### QuantumClassificationAgent
-
-Ensemble quantum machine learning agent for classification.
+### Ground state with VQE
 
 ```python
-from superquantx import QuantumClassificationAgent
+from superquantx import Hamiltonian, QuantumOptimizationAgent
 
-# Create classification agent
-agent = QuantumClassificationAgent(
-    backend='pennylane',
-    algorithms=['quantum_svm', 'quantum_nn', 'hybrid'],
-    ensemble_method='weighted'
-)
+# Two-qubit transverse-field Ising model
+H = Hamiltonian.ising_model(2, J=1.0, h=0.5)
 
-# Fit and predict
-agent.fit(X_train, y_train)
-predictions = agent.predict(X_test)
+agent = QuantumOptimizationAgent(backend='simulator', problem_type='continuous', seed=0)
+result = agent.solve(H)
+print(f"VQE energy {result.result['ground_energy']:.6f}, exact {result.result['exact_energy']:.6f}")
 ```
 
-#### Constructor
+`predict(problem)` returns the MaxCut partition as an array of 0/1, or the VQE energy.
 
-##### __init__(backend, algorithms=None, ensemble_method='voting', auto_tune=False, **kwargs)
+## QuantumClassificationAgent
 
-**Parameters:**
-- `backend` (str): Quantum backend
-- `algorithms` (list): Algorithms to include
-  - `'quantum_svm'`: Quantum Support Vector Machine
-  - `'quantum_nn'`: Quantum Neural Network
-  - `'hybrid'`: Hybrid quantum-classical classifier
-- `ensemble_method` (str): How to combine predictions
-  - `'voting'`: Majority voting
-  - `'weighted'`: Performance-weighted voting
-  - `'stacking'`: Meta-learning ensemble
-- `auto_tune` (bool): Automatic hyperparameter tuning
-- `**kwargs`: Additional parameters
+**Constructor:** `QuantumClassificationAgent(backend, algorithms=None, ensemble_method='voting', cv=5, **kwargs)`
 
-#### Methods
+- `algorithms`: any of `'quantum_svm'` (default), `'quantum_nn'`, `'hybrid'` (`'hybrid'` uses `HybridClassifier`, which fails in `fit` in 0.3.0; see the [algorithms guide](../user-guide/algorithms.md#hybrid-classifier))
+- `ensemble_method`: `'voting'`, `'weighted'` (weights votes by training accuracy) or `'best'`
+- `cv`: folds used by `solve`
 
-##### fit(X, y, **kwargs)
+**Methods:**
 
-Train all classification algorithms and compute ensemble weights.
+- `fit(X, y)`: train every algorithm and record its training accuracy in `performance_metrics`
+- `predict(X)`: predictions from one algorithm, or the ensemble vote
+- `solve((X, y))`: cross-validated benchmark of the first algorithm against classical baselines with `compare_to_classical`, then fit on all the data
 
-**Parameters:**
-- `X` (numpy.ndarray): Training features
-- `y` (numpy.ndarray): Training labels
-- `**kwargs`: Training parameters
-
-**Returns:**
-- `QuantumClassificationAgent`: Self
-
-##### predict(X, **kwargs)
-
-Make ensemble predictions on new data.
-
-**Parameters:**
-- `X` (numpy.ndarray): Test features
-- `**kwargs`: Prediction parameters
-
-**Returns:**
-- `numpy.ndarray`: Predicted labels
-
-##### solve(problem_instance, **kwargs)
-
-Solve complete classification problem with performance evaluation.
-
-**Parameters:**
-- `problem_instance` (tuple): (X, y) data tuple
-- `**kwargs`: Solving parameters
-
-**Returns:**
-- `QuantumResult`: Classification results with ensemble performance
-
-#### Ensemble Methods
-
-- **voting**: Simple majority voting among algorithms
-- **weighted**: Weight votes by individual algorithm performance
-- **stacking**: Train meta-learner to combine algorithm predictions
-
-#### Example
+### Ensemble
 
 ```python
 from sklearn.datasets import make_classification
 from superquantx import QuantumClassificationAgent
 
-# Generate dataset
-X, y = make_classification(n_samples=200, n_features=8, n_classes=2, random_state=42)
-X_train, X_test = X[:160], X[160:]
-y_train, y_test = y[:160], y[160:]
+X, y = make_classification(n_samples=60, n_features=4, n_informative=3, n_redundant=0, random_state=42)
+X_train, X_test = X[:45], X[45:]
+y_train, y_test = y[:45], y[45:]
 
-# Create ensemble agent
 agent = QuantumClassificationAgent(
+    backend='simulator',
     algorithms=['quantum_svm', 'quantum_nn'],
     ensemble_method='weighted',
-    backend='simulator'
+    seed=0,
 )
+agent.algorithms['quantum_nn'].max_epochs = 20  # keep the example quick
 
-# Train ensemble
 agent.fit(X_train, y_train)
-
-# Make predictions
 predictions = agent.predict(X_test)
-accuracy = agent.score(X_test, y_test)
-
-print(f"Ensemble accuracy: {accuracy:.3f}")
-print("Individual performances:", agent.performance_metrics)
+print(f"Ensemble test accuracy: {(predictions == y_test).mean():.3f}")
+print("Training accuracy per algorithm:", agent.performance_metrics)
 ```
 
-### QuantumPortfolioAgent
-
-Specialized quantum agent for portfolio optimization and risk management.
+### Benchmark against classical models
 
 ```python
-from superquantx import QuantumPortfolioAgent
+from sklearn.datasets import make_classification
+from superquantx import QuantumClassificationAgent
 
-# Create portfolio agent
-agent = QuantumPortfolioAgent(
-    backend='pennylane',
-    risk_model='mean_variance',
-    optimization_objective='sharpe',
-    constraints=[
-        {'type': 'budget'},
-        {'type': 'long_only'},
-        {'type': 'max_weight', 'value': 0.2}
-    ]
-)
+X, y = make_classification(n_samples=60, n_features=4, n_informative=3, n_redundant=0, random_state=0)
 
-# Fit to historical returns
-agent.fit(returns_data)
-optimal_weights = agent.predict(current_data)
+agent = QuantumClassificationAgent(backend='simulator', cv=3, seed=0)
+result = agent.solve((X, y))
+r = result.result
+
+print(f"QuantumSVM CV accuracy: {r['cv_accuracy']:.3f} +/- {r['cv_accuracy_std']:.3f}")
+print(f"Best classical ({r['best_classical']}): {r['best_classical_cv_accuracy']:.3f}")
+print(f"p-value: {r['p_value']:.3f}")
+print("Verdict:", r['verdict'])
 ```
 
-#### Constructor
+!!! note "Not available in 0.3.0"
+    There is no `'stacking'` ensemble and no `auto_tune` option.
 
-##### __init__(backend, risk_model='mean_variance', optimization_objective='sharpe', constraints=None, rebalancing_frequency='monthly', **kwargs)
+## QuantumTradingAgent
 
-**Parameters:**
-- `backend` (str): Quantum backend
-- `risk_model` (str): Risk model type
-  - `'mean_variance'`: Classic mean-variance optimization
-  - `'black_litterman'`: Black-Litterman model
-  - `'factor'`: Factor-based risk model
-- `optimization_objective` (str): Objective function
-  - `'return'`: Maximize expected return
-  - `'sharpe'`: Maximize Sharpe ratio
-  - `'risk_parity'`: Risk parity allocation
-- `constraints` (list): Portfolio constraints (see below)
-- `rebalancing_frequency` (str): Rebalancing frequency
-- `**kwargs`: Additional parameters
+!!! warning "Experimental"
+    Only `strategy='quantum_portfolio'` is implemented. `deploy(returns)` runs the portfolio agent and returns its result. Other strategies (for example momentum or mean reversion) and `predict()` raise `NotImplementedError`. There are no trading signals or backtests.
 
-#### Constraint Types
-
-Portfolio constraints can be specified as dictionaries:
-
-```python
-constraints = [
-    {'type': 'budget'},                                    # Sum of weights = 1
-    {'type': 'long_only'},                                # All weights >= 0
-    {'type': 'max_weight', 'value': 0.3},                 # Max weight per asset
-    {'type': 'sector_limit', 'assets': [0,1,2], 'value': 0.5}  # Sector exposure limit
-]
-```
-
-#### Methods
-
-##### fit(X, y=None, **kwargs)
-
-Fit portfolio optimization to historical returns data.
-
-**Parameters:**
-- `X` (numpy.ndarray): Historical returns (samples × assets)
-- `y` (numpy.ndarray, optional): Not used
-- `**kwargs`: Additional parameters including `risk_aversion`
-
-**Returns:**
-- `QuantumPortfolioAgent`: Self
-
-##### predict(X, **kwargs)
-
-Predict optimal portfolio weights for current market conditions.
-
-**Parameters:**
-- `X` (numpy.ndarray): Current market data
-- `**kwargs`: Prediction parameters
-
-**Returns:**
-- `numpy.ndarray`: Optimal portfolio weights
-
-##### solve(problem_instance, **kwargs)
-
-Solve complete portfolio optimization problem.
-
-**Parameters:**
-- `problem_instance` (numpy.ndarray): Returns data
-- `**kwargs`: Solving parameters including `method` ('vqe' or 'qaoa')
-
-**Returns:**
-- `QuantumResult`: Portfolio optimization results
-
-#### Example
+**Constructor:** `QuantumTradingAgent(backend='simulator', strategy='quantum_portfolio', risk_tolerance=0.5, markets=None, **kwargs)`. Higher `risk_tolerance` puts less weight on variance.
 
 ```python
 import numpy as np
-from superquantx import QuantumPortfolioAgent
+from superquantx import QuantumTradingAgent
 
-# Generate sample returns data
-np.random.seed(42)
-returns = np.random.multivariate_normal(
-    mean=[0.08, 0.12, 0.10, 0.15],  # Expected returns
-    cov=[[0.16, 0.05, 0.03, 0.02],   # Covariance matrix
-         [0.05, 0.25, 0.04, 0.03],
-         [0.03, 0.04, 0.20, 0.05],
-         [0.02, 0.03, 0.05, 0.30]],
-    size=252  # One year of daily returns
-)
+rng = np.random.default_rng(1)
+returns = rng.normal(0.001, 0.02, size=(250, 4))  # 250 periods, 4 assets
 
-# Create portfolio agent with constraints
-agent = QuantumPortfolioAgent(
-    risk_model='mean_variance',
-    optimization_objective='sharpe',
-    constraints=[
-        {'type': 'budget'},
-        {'type': 'long_only'},
-        {'type': 'max_weight', 'value': 0.4}
-    ]
-)
-
-# Optimize portfolio
-agent.fit(returns, risk_aversion=2.0)
-result = agent.solve(returns, method='vqe')
-
-weights = result.result['weights']
-expected_return = result.result['expected_return']
-risk = result.result['risk']
-sharpe = result.result['sharpe_ratio']
-
-print(f"Optimal weights: {weights}")
-print(f"Expected return: {expected_return:.3f}")
-print(f"Risk (volatility): {risk:.3f}")
-print(f"Sharpe ratio: {sharpe:.3f}")
+agent = QuantumTradingAgent(strategy='quantum_portfolio', risk_tolerance=0.4, seed=0)
+result = agent.deploy(returns)
+print("Selected assets:", result.result['selected_assets'])
+print("Matches brute-force optimum:", result.result['matches_classical_optimum'])
+print(f"Sharpe ratio of selection: {result.result['sharpe_ratio']:.3f}")
 ```
 
-## Agent Workflows
+## QuantumResearchAgent
 
-### Multi-Agent Systems
+!!! warning "Experimental"
+    Only ground-state simulation is implemented. `investigate()` (automated research planning, hypothesis generation, experiment design) raises `NotImplementedError`.
 
-Combine multiple agents for complex problems:
+**Constructor:** `QuantumResearchAgent(backend='simulator', domain='materials_science', **kwargs)`
 
-```python
-from superquantx import QuantumTradingAgent, QuantumResearchAgent
-
-# Research agent discovers new strategies
-research_agent = QuantumResearchAgent(domain='finance')
-research_result = research_agent.investigate(
-    "What quantum advantages exist in high-frequency trading?"
-)
-
-# Trading agent implements the strategies
-trading_agent = QuantumTradingAgent(
-    strategy='quantum_momentum',
-    risk_tolerance=0.3
-)
-trading_result = trading_agent.deploy(market_data)
-
-# Compare results
-quantum_advantage = (
-    trading_result.result['quantum_advantage'] + 
-    research_result.result.get('expected_quantum_advantage', 0)
-) / 2
-```
-
-### Agent Orchestration
-
-Coordinate agents for complex workflows:
-
-```python
-class QuantumAgentOrchestrator:
-    def __init__(self):
-        self.agents = {}
-    
-    def add_agent(self, name, agent):
-        self.agents[name] = agent
-    
-    def run_workflow(self, problem_data, workflow_steps):
-        results = {}
-        
-        for step in workflow_steps:
-            agent_name = step['agent']
-            method = step['method']
-            params = step.get('params', {})
-            
-            agent = self.agents[agent_name]
-            result = getattr(agent, method)(problem_data, **params)
-            results[agent_name] = result
-            
-            # Pass results to next step
-            if 'output_to' in step:
-                problem_data = result.result
-        
-        return results
-
-# Use orchestrator
-orchestrator = QuantumAgentOrchestrator()
-orchestrator.add_agent('research', QuantumResearchAgent())
-orchestrator.add_agent('optimization', QuantumOptimizationAgent())
-
-workflow = [
-    {'agent': 'research', 'method': 'investigate', 'params': {'research_question': 'Optimize supply chain'}},
-    {'agent': 'optimization', 'method': 'solve', 'output_to': 'final_result'}
-]
-
-results = orchestrator.run_workflow(supply_chain_data, workflow)
-```
-
-### Performance Monitoring
-
-Monitor agent performance across deployments:
-
-```python
-class AgentPerformanceMonitor:
-    def __init__(self):
-        self.performance_history = {}
-    
-    def track_agent_performance(self, agent_name, result):
-        if agent_name not in self.performance_history:
-            self.performance_history[agent_name] = []
-        
-        performance_data = {
-            'timestamp': time.time(),
-            'execution_time': result.execution_time,
-            'success': result.error is None,
-            'quantum_advantage': result.result.get('quantum_advantage', 0),
-            'metadata': result.metadata
-        }
-        
-        self.performance_history[agent_name].append(performance_data)
-    
-    def get_performance_summary(self, agent_name):
-        history = self.performance_history.get(agent_name, [])
-        if not history:
-            return None
-        
-        success_rate = sum(1 for h in history if h['success']) / len(history)
-        avg_execution_time = np.mean([h['execution_time'] for h in history])
-        avg_quantum_advantage = np.mean([h['quantum_advantage'] for h in history])
-        
-        return {
-            'success_rate': success_rate,
-            'avg_execution_time': avg_execution_time,
-            'avg_quantum_advantage': avg_quantum_advantage,
-            'total_deployments': len(history)
-        }
-
-# Monitor agent performance
-monitor = AgentPerformanceMonitor()
-
-# Deploy agents and track performance
-trading_agent = QuantumTradingAgent()
-result = trading_agent.deploy(market_data)
-monitor.track_agent_performance('trading_agent', result)
-
-# Get performance summary
-summary = monitor.get_performance_summary('trading_agent')
-print(f"Success rate: {summary['success_rate']:.2%}")
-print(f"Avg execution time: {summary['avg_execution_time']:.2f}s")
-```
-
-## Error Handling
-
-All quantum agents implement robust error handling:
-
-```python
-try:
-    agent = QuantumTradingAgent(strategy='invalid_strategy')
-    result = agent.deploy(market_data)
-    
-    if result.error:
-        print(f"Agent error: {result.error}")
-        print(f"Metadata: {result.metadata}")
-    else:
-        print(f"Success: {result.result}")
-        
-except Exception as e:
-    print(f"Unexpected error: {e}")
-```
-
-### Common Error Types
-
-- **AlgorithmError**: Issues with quantum algorithm execution
-- **ConfigurationError**: Invalid agent configuration
-- **ConvergenceError**: Optimization failed to converge
-- **BackendError**: Quantum backend issues
-- **DataError**: Invalid input data format
-
-### Error Recovery
-
-Agents can implement automatic error recovery:
-
-```python
-class ResilientQuantumAgent(QuantumAgent):
-    def solve(self, problem_instance, max_retries=3, **kwargs):
-        for attempt in range(max_retries):
-            try:
-                return super().solve(problem_instance, **kwargs)
-            except Exception as e:
-                if attempt == max_retries - 1:
-                    raise e
-                else:
-                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying...")
-                    # Modify strategy for retry
-                    kwargs['fallback_mode'] = True
-```
-
-## Best Practices
-
-### Agent Selection
-
-Choose agents based on problem characteristics:
-
-```python
-def select_optimal_agent(problem_type, data_size, quantum_resources):
-    if problem_type == 'portfolio_optimization':
-        return QuantumPortfolioAgent(
-            backend='pennylane' if quantum_resources == 'high' else 'simulator'
-        )
-    elif problem_type == 'classification' and data_size > 1000:
-        return QuantumClassificationAgent(
-            algorithms=['quantum_svm', 'hybrid'],
-            ensemble_method='weighted'
-        )
-    elif problem_type == 'research':
-        return QuantumResearchAgent(
-            domain=infer_domain(problem_type),
-            hypothesis_generation=True
-        )
-    else:
-        return QuantumOptimizationAgent(
-            problem_type='combinatorial' if is_discrete(problem_type) else 'continuous'
-        )
-```
-
-### Configuration Management
-
-Use configuration files for agent setup:
-
-```python
-import yaml
-
-# agent_config.yaml
-config = yaml.safe_load("""
-trading_agent:
-  strategy: quantum_portfolio
-  risk_tolerance: 0.4
-  markets: [stocks, crypto]
-  constraints:
-    - type: long_only
-    - type: max_weight
-      value: 0.3
-
-research_agent:
-  domain: materials_science
-  hypothesis_generation: true
-  experiment_design: true
-""")
-
-# Load agents from config
-agents = {}
-for agent_name, agent_config in config.items():
-    if 'trading' in agent_name:
-        agents[agent_name] = QuantumTradingAgent(**agent_config)
-    elif 'research' in agent_name:
-        agents[agent_name] = QuantumResearchAgent(**agent_config)
-```
-
-### Performance Optimization
-
-Optimize agent performance:
-
-```python
-# 1. Use appropriate backends
-agent = QuantumTradingAgent(
-    backend='pennylane' if complex_problem else 'simulator'
-)
-
-# 2. Tune shot counts
-agent.shots = 2048 if high_precision_needed else 1024
-
-# 3. Enable parallel execution
-results = []
-with ThreadPoolExecutor() as executor:
-    futures = [
-        executor.submit(agent.solve, problem_instance) 
-        for problem_instance in problem_batch
-    ]
-    results = [f.result() for f in futures]
-
-# 4. Cache expensive computations
-from functools import lru_cache
-
-@lru_cache(maxsize=128)
-def cached_agent_solve(agent_hash, problem_hash):
-    return agent.solve(problem_instance)
-```
-
-## Examples
-
-### Financial Portfolio Management
-
-Complete portfolio management workflow:
-
-```python
-import pandas as pd
-import numpy as np
-from superquantx import QuantumPortfolioAgent, QuantumTradingAgent
-
-# Load historical data
-returns_data = pd.read_csv('stock_returns.csv').values
-
-# Create portfolio optimization agent
-portfolio_agent = QuantumPortfolioAgent(
-    optimization_objective='sharpe',
-    constraints=[
-        {'type': 'budget'},
-        {'type': 'long_only'},
-        {'type': 'max_weight', 'value': 0.25}
-    ]
-)
-
-# Optimize portfolio
-portfolio_agent.fit(returns_data)
-optimal_weights = portfolio_agent.predict(returns_data[-30:])
-
-# Create trading agent for execution
-trading_agent = QuantumTradingAgent(
-    strategy='quantum_portfolio',
-    risk_tolerance=0.3
-)
-
-# Deploy trading strategy
-trading_result = trading_agent.deploy({
-    'optimal_weights': optimal_weights,
-    'current_prices': current_market_data
-})
-
-print(f"Portfolio Performance:")
-print(f"Expected Return: {trading_result.result['performance']['expected_return']:.2%}")
-print(f"Risk: {trading_result.result['performance']['risk']:.2%}")
-print(f"Quantum Advantage: {trading_result.result['quantum_advantage']:.2%}")
-```
-
-### Scientific Research Acceleration
-
-Accelerate materials science research:
+`simulate_ground_state(hamiltonian=None)` runs VQE and reports the exact energy. With no argument it uses H2 in STO-3G at 0.735 Angstrom.
 
 ```python
 from superquantx import QuantumResearchAgent
 
-# Create research agent for materials science
-research_agent = QuantumResearchAgent(
-    domain='materials_science',
-    hypothesis_generation=True,
-    experiment_design=True
-)
-
-# Investigate superconductor research
-research_question = (
-    "How can quantum simulation discover room-temperature superconductors "
-    "with transition temperatures above 300K?"
-)
-
-constraints = {
-    'timeline': '24_months',
-    'budget': 1000000,
-    'quantum_hardware': 'available'
-}
-
-result = research_agent.investigate(research_question, constraints)
-
-# Access research plan
-plan = result.result['research_plan']
-hypothesis = result.result['hypothesis']
-experiments = result.result['experiments']
-
-print("Research Plan:")
-for i, phase in enumerate(plan['phases'], 1):
-    print(f"{i}. {phase}")
-
-print(f"\nPrimary Hypothesis:")
-print(hypothesis['primary_hypothesis'])
-
-print(f"\nProposed Experiments:")
-for exp in experiments:
-    print(f"- {exp['experiment_name']}")
-    print(f"  Duration: {exp['expected_duration']}")
-    print(f"  Resources: {exp['quantum_resources_needed']}")
+agent = QuantumResearchAgent(seed=0)
+result = agent.simulate_ground_state()
+print(result.result['hamiltonian'])
+print(f"VQE {result.result['ground_energy']:.6f} Ha, exact {result.result['exact_energy']:.6f} Ha")
 ```
 
-### Multi-Modal Classification
+## Combining agents
 
-Complex classification with ensemble methods:
+Agents are ordinary Python objects, so you can chain them yourself:
 
 ```python
-from sklearn.datasets import fetch_openml
-from superquantx import QuantumClassificationAgent
+import numpy as np
+from superquantx import QuantumOptimizationAgent, QuantumPortfolioAgent
 
-# Load complex dataset
-X, y = fetch_openml('wine-quality-red', return_X_y=True, as_frame=False)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+rng = np.random.default_rng(7)
+returns = rng.normal(0.001, 0.02, size=(250, 4))
 
-# Create ensemble classification agent
-classification_agent = QuantumClassificationAgent(
-    algorithms=['quantum_svm', 'quantum_nn', 'hybrid'],
-    ensemble_method='weighted',
-    auto_tune=True
-)
+portfolio = QuantumPortfolioAgent(backend='simulator', n_select=2, seed=0).solve(returns)
+held = portfolio.result['selected_assets']
 
-# Solve classification problem
-result = classification_agent.solve((X_train, y_train))
+# Split the held assets' correlation graph with MaxCut
+corr = np.abs(np.corrcoef(returns[:, held].T))
+np.fill_diagonal(corr, 0)
+split = QuantumOptimizationAgent(backend='simulator', seed=0).solve(corr)
 
-# Evaluate on test set
-test_predictions = classification_agent.predict(X_test)
-test_accuracy = accuracy_score(y_test, test_predictions)
-
-print("Classification Results:")
-print(f"Training Accuracy: {result.result['accuracy']:.3f}")
-print(f"Test Accuracy: {test_accuracy:.3f}")
-
-print("\nIndividual Algorithm Performance:")
-for algo, performance in result.result['individual_performances'].items():
-    print(f"  {algo}: {performance:.3f}")
-
-print(f"\nEnsemble Method: {result.result['ensemble_method']}")
-print(f"Algorithms Used: {result.metadata['algorithms_used']}")
+print("Held:", held, "split:", split.result['bitstring'])
+for name, res in [('portfolio', portfolio), ('maxcut', split)]:
+    print(f"{name}: {res.execution_time:.2f}s, error={res.error}")
 ```
 
----
+## Error handling
 
-*The quantum agent API represents the cutting edge of quantum AI - autonomous systems that leverage quantum advantages for real-world problem solving. These agents combine multiple quantum algorithms with classical AI to create powerful, specialized problem-solving capabilities.*
+```python
+import numpy as np
+from superquantx import QuantumResearchAgent, QuantumTradingAgent
 
-!!! tip "Agent Selection"
-    Choose agents based on your problem domain and quantum resource availability. Start with simulation backends and upgrade to quantum hardware when advantages are demonstrated.
+try:
+    QuantumTradingAgent(strategy='momentum').deploy(np.zeros((10, 3)))
+except NotImplementedError as e:
+    print("Not implemented:", e)
 
-!!! warning "Performance Considerations"
-    Quantum agents may require significant computational resources. Monitor performance and use appropriate backends for your use case.
+try:
+    QuantumResearchAgent().investigate("Find a room-temperature superconductor")
+except NotImplementedError as e:
+    print("Not implemented:", e)
+```
 
-!!! info "Extensibility"
-    The agent framework is designed for extensibility. Create custom agents by inheriting from `QuantumAgent` and implementing domain-specific logic.
+Invalid arguments raise `ValueError`, for example an unknown algorithm name in `QuantumClassificationAgent` or a `problem_type` other than `'combinatorial'` or `'continuous'`.
+
+!!! tip "Choosing an agent"
+    Start on the `'simulator'` backend. Every agent accepts any SuperQuantX gate-model backend name, for example `'qiskit'` or `'pennylane'`, once the matching extra is installed.

@@ -1,9 +1,5 @@
 # Basic Quantum Computing Tutorial
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 2 of 15 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](../user-guide/backends.md).
-
-
 Welcome to the world of quantum computing! This tutorial will teach you the fundamentals of quantum computing using SuperQuantX. No prior quantum knowledge required - we'll build everything from the ground up.
 
 ## 🎯 What You'll Learn

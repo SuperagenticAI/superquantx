@@ -1,9 +1,5 @@
 # What is SuperQuantX?
 
-!!! warning "Unverified examples"
-    This page predates the current release and parts of it describe planned or older API. Only 4 of 14 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](backends.md).
-
-
 SuperQuantX is an **experimental quantum AI research toolkit** that provides a unified API for quantum-agentic systems research. It bridges the gap between multiple quantum computing frameworks and makes quantum machine learning accessible to researchers, developers, and students.
 
 ## 🔬 The Vision
@@ -52,13 +48,15 @@ circuit_cirq.append(cirq.H(qubit))
 # With SuperQuantX: One API for everything
 import superquantx as sqx
 
-# Same code works with any backend!
+# Same code works with any gate-model backend
 for backend_name in ['pennylane', 'qiskit', 'cirq']:
     backend = sqx.get_backend(backend_name)
     circuit = backend.create_circuit(2)
-    circuit.h(0)  # Same interface everywhere
-    result = backend.run(circuit, shots=1000)
-    print(f"{backend_name}: {result.get_counts()}")
+    circuit = backend.add_gate(circuit, 'H', 0)        # same gate names everywhere
+    circuit = backend.add_gate(circuit, 'CNOT', [0, 1])
+    circuit = backend.add_measurement(circuit)
+    result = backend.execute_circuit(circuit, shots=1000)
+    print(f"{backend_name}: {result['counts']}")
 ```
 
 ## 🧠 Core Concepts
@@ -70,20 +68,21 @@ SuperQuantX provides a common interface over different quantum computing framewo
 ```python
 import superquantx as sqx
 
-# All backends follow the same interface
-backend = sqx.get_backend('pennylane')  # or 'qiskit', 'cirq', etc.
+# All gate-model backends follow the same interface
+backend = sqx.get_backend('pennylane')  # or 'qiskit', 'cirq', 'braket', 'tket', 'simulator'
 
 # Create circuit
-circuit = backend.create_circuit(num_qubits=3)
+circuit = backend.create_circuit(3)
 
-# Add gates (same syntax across all backends)
-circuit.h(0)        # Hadamard gate
-circuit.cx(0, 1)    # CNOT gate
-circuit.ry(0.5, 2)  # Y-rotation gate
+# Add gates (same names across all backends)
+circuit = backend.add_gate(circuit, 'H', 0)           # Hadamard
+circuit = backend.add_gate(circuit, 'CNOT', [0, 1])   # CNOT
+circuit = backend.add_gate(circuit, 'RY', 2, [0.5])   # Y rotation
 
 # Execute circuit
-result = backend.run(circuit, shots=1000)
-counts = result.get_counts()
+circuit = backend.add_measurement(circuit)
+result = backend.execute_circuit(circuit, shots=1000)
+counts = result['counts']
 ```
 
 ### 2. Quantum-Agentic Systems
@@ -91,22 +90,28 @@ counts = result.get_counts()
 SuperQuantX is designed for research in **quantum-agentic systems** - AI agents that leverage quantum computation:
 
 ```python
+import numpy as np
 import superquantx as sqx
 
-# Example: Quantum-enhanced reinforcement learning agent
+
+# Example: a quantum neural network as the policy of a simple agent
 class QuantumAgent:
     def __init__(self, backend='pennylane'):
-        self.backend = sqx.get_backend(backend)
-        self.quantum_nn = sqx.QuantumNeuralNetwork(
-            n_qubits=4,
-            n_layers=3,
-            backend=self.backend
-        )
-    
+        self.policy = sqx.QuantumNN(backend=backend, n_layers=2, max_epochs=10, seed=0)
+
+    def learn(self, states, good_actions):
+        self.policy.fit(states, good_actions)
+        return self
+
     def decide_action(self, state):
-        # Process state through quantum neural network
-        q_output = self.quantum_nn.forward(state)
-        return self.classical_decision_layer(q_output)
+        return int(self.policy.predict(np.atleast_2d(state))[0])
+
+
+rng = np.random.default_rng(0)
+states = rng.uniform(-1, 1, size=(30, 2))
+actions = (states[:, 0] > 0).astype(int)        # move right when x > 0
+agent = QuantumAgent().learn(states, actions)
+print(agent.decide_action([0.8, 0.1]))
 ```
 
 ### 3. Research-First Design
@@ -123,15 +128,18 @@ Every feature in SuperQuantX is designed with research needs in mind:
 ### Unified Quantum Framework API
 
 ```python
-# Switch backends without changing your code
-backends = ['simulator', 'pennylane', 'qiskit', 'cirq']
-results = {}
+from sklearn.datasets import make_moons
+from sklearn.model_selection import train_test_split
 
-for backend_name in backends:
-    backend = sqx.get_backend(backend_name)
-    qsvm = sqx.QuantumSVM(backend=backend)
-    accuracy = qsvm.fit_and_score(X_train, y_train, X_test, y_test)
-    results[backend_name] = accuracy
+X, y = make_moons(n_samples=40, noise=0.1, random_state=0)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+
+# Switch backends without changing your code
+results = {}
+for backend_name in ['simulator', 'pennylane', 'qiskit', 'cirq']:
+    qsvm = sqx.QuantumSVM(backend=backend_name, feature_map='ZFeatureMap')
+    qsvm.fit(X_train, y_train)
+    results[backend_name] = float(np.mean(qsvm.predict(X_test) == y_test))
 
 print(f"Backend comparison: {results}")
 ```
@@ -141,19 +149,24 @@ print(f"Backend comparison: {results}")
 Ready-to-use quantum ML algorithms:
 
 ```python
+from superquantx.datasets import load_iris_quantum
+
+X_train, X_test, y_train, y_test, _ = load_iris_quantum(n_features=2, encoding='angle')
+
 # Quantum Support Vector Machine
 qsvm = sqx.QuantumSVM(backend='pennylane', feature_map='ZZFeatureMap')
 qsvm.fit(X_train, y_train)
 predictions = qsvm.predict(X_test)
 
 # Variational Quantum Eigensolver
-vqe = sqx.VQE(hamiltonian=H, backend='qiskit')
+H = sqx.Hamiltonian.from_dict({'ZZ': 1.0, 'XI': 0.5, 'IX': 0.5})
+vqe = sqx.VQE(hamiltonian=H, backend='qiskit', seed=0)
 ground_energy = vqe.find_ground_state()
 
 # Quantum Neural Network
-qnn = sqx.QuantumNeuralNetwork(n_qubits=6, n_layers=4)
-qnn.compile(optimizer='adam', loss='binary_crossentropy')
-qnn.fit(X, y, epochs=100)
+qnn = sqx.QuantumNN(backend='simulator', n_layers=2, learning_rate=0.1, max_epochs=10, seed=0)
+qnn.fit(X_train[y_train < 2], y_train[y_train < 2])
+print(f"VQE energy {ground_energy:.4f} (exact {H.ground_state_energy():.4f})")
 ```
 
 ### Advanced Circuit Building
@@ -161,20 +174,20 @@ qnn.fit(X, y, epochs=100)
 Flexible circuit construction with optimization:
 
 ```python
-# Build complex circuits
+# Build a layered circuit with the shared gate names
+backend = sqx.get_backend('qiskit')
 circuit = backend.create_circuit(4)
 
-# Add parameterized layers
-circuit.add_layer('ry_layer', [0.1, 0.2, 0.3, 0.4])
-circuit.add_entangling_layer('cnot', [(0,1), (2,3), (1,2)])
+for q, angle in enumerate([0.1, 0.2, 0.3, 0.4]):      # RY layer
+    circuit = backend.add_gate(circuit, 'RY', q, [angle])
+for a, b in [(0, 1), (2, 3), (1, 2)]:                  # entangling layer
+    circuit = backend.add_gate(circuit, 'CNOT', [a, b])
 
-# Circuit optimization
-optimized_circuit = circuit.optimize(level=2)
+# Or use a library ansatz
+ansatz = backend.create_ansatz('RealAmplitudes', 4, np.zeros(backend.ansatz_param_count('RealAmplitudes', 4, reps=1)), reps=1)
 
-# Circuit analysis
-depth = circuit.depth()
-gate_count = circuit.gate_count()
-print(f"Depth: {depth}, Gates: {gate_count}")
+# Analysis with the native framework (here a qiskit.QuantumCircuit)
+print(f"Depth: {circuit.depth()}, Gates: {circuit.size()}")
 ```
 
 ### Comprehensive Visualization
@@ -182,16 +195,27 @@ print(f"Depth: {depth}, Gates: {gate_count}")
 Built-in tools for understanding quantum systems:
 
 ```python
-# Circuit visualization
-circuit.draw()                    # ASCII diagram
-circuit.draw('matplotlib')        # Professional plots
-circuit.draw_bloch_sphere()       # Bloch sphere representation
+# Circuit visualization: the backend-independent description draws as text
+circuit = sqx.QuantumCircuit(2)
+circuit.h(0)
+circuit.cx(0, 1)
+circuit.measure_all()
+print(circuit.draw())
 
-# Result visualization
-result.plot_histogram()           # Measurement histograms
-result.plot_state_vector()        # Quantum state visualization
-result.plot_probability_distribution()  # Probability distributions
+# Result visualization: plot counts with matplotlib
+import matplotlib.pyplot as plt
+
+backend = sqx.get_backend('simulator')
+native = backend.create_circuit(2)
+native.h(0)
+native.cx(0, 1)
+native.measure_all()
+counts = backend.run(native, shots=1000).get_counts()
+plt.bar(list(counts), list(counts.values()))
+plt.title("Bell state counts")
 ```
+
+Bloch-sphere plots and `result.plot_*` helpers are not available in 0.3.0.
 
 ## 🔍 Architecture Overview
 
@@ -225,16 +249,13 @@ SuperQuantX follows a layered architecture:
 ### Backend Management
 
 ```python
-# Backend registration and management
-available_backends = sqx.list_available_backends()
-print(f"Available: {available_backends}")
+# Backend discovery and capabilities
+available = sqx.list_available_backends()
+print("Available:", [name for name, info in available.items() if info['available']])
 
-# Backend capabilities
-backend = sqx.get_backend('pennylane')
-capabilities = backend.get_capabilities()
-print(f"Max qubits: {capabilities.max_qubits}")
-print(f"Supported gates: {capabilities.native_gates}")
-print(f"Has noise model: {capabilities.has_noise}")
+backend = sqx.get_backend('qiskit')
+print(backend.capabilities)          # capability flags for this backend
+print(backend.get_version_info())    # installed framework versions
 ```
 
 ## 🎯 Use Cases
@@ -243,34 +264,54 @@ print(f"Has noise model: {capabilities.has_noise}")
 
 ```python
 # Compare ML algorithms across quantum backends
-algorithms = ['QuantumSVM', 'QuantumNeuralNetwork', 'VQC']
-backends = ['pennylane', 'qiskit', 'cirq']
+from sklearn.datasets import make_moons
+
+X, y = make_moons(n_samples=40, noise=0.1, random_state=0)
+models = {
+    'QuantumSVM': lambda b: sqx.QuantumSVM(backend=b, feature_map='ZFeatureMap'),
+    'QuantumNN': lambda b: sqx.QuantumNN(backend=b, n_layers=2, max_epochs=10, seed=0),
+}
 
 results_matrix = {}
-for algo_name in algorithms:
+for algo_name, make in models.items():
     results_matrix[algo_name] = {}
-    for backend_name in backends:
-        algo = getattr(sqx, algo_name)(backend=backend_name)
-        accuracy = algo.fit_and_score(X, y)
-        results_matrix[algo_name][backend_name] = accuracy
+    for backend_name in ['simulator', 'pennylane']:
+        model = make(backend_name).fit(X, y)
+        results_matrix[algo_name][backend_name] = float(np.mean(model.predict(X) == y))
+
+print(results_matrix)
 ```
 
 ### 2. Quantum Algorithm Development
 
 ```python
+import numpy as np
+
+
 # Implement and test new quantum algorithms
 class MyQuantumAlgorithm(sqx.BaseQuantumAlgorithm):
-    def __init__(self, backend='simulator'):
-        super().__init__(backend)
-    
-    def run(self, problem_instance):
-        circuit = self.create_ansatz(problem_instance)
-        result = self.backend.run(circuit)
-        return self.process_result(result)
-    
-    def create_ansatz(self, problem):
-        # Your quantum circuit construction logic
-        pass
+    """Learns a single RY angle so that P(1) matches a target probability."""
+
+    def fit(self, X, y=None, **kwargs):
+        target = float(np.mean(y))
+        angles = np.linspace(0, np.pi, 50)
+        self.theta_ = min(angles, key=lambda t: abs(self._p1(t) - target))
+        self.is_fitted = True
+        return self
+
+    def predict(self, X, **kwargs):
+        return np.full(len(X), self._p1(self.theta_))
+
+    def _p1(self, theta):
+        circuit = self.backend.create_circuit(1)
+        self.backend.add_gate(circuit, 'RY', 0, [theta])
+        self.backend.add_measurement(circuit)
+        counts = self.backend.execute_circuit(circuit, shots=500)['counts']
+        return counts.get('1', 0) / 500
+
+
+algo = MyQuantumAlgorithm(backend='simulator', seed=0).fit(np.zeros((8, 1)), [1, 1, 0, 0, 0, 0, 0, 0])
+print(f"P(1) learned: {algo.predict([[0]])[0]:.2f}  (target 0.25)")
 ```
 
 ### 3. Educational Quantum Computing
@@ -281,35 +322,51 @@ class QuantumLesson:
     def __init__(self, title):
         self.title = title
         self.backend = sqx.get_backend('simulator')
-    
+
     def demonstrate_superposition(self):
         circuit = self.backend.create_circuit(1)
-        circuit.h(0)  # Create superposition
+        circuit.h(0)  # create superposition
         circuit.measure_all()
-        
-        result = self.backend.run(circuit, shots=1000)
-        counts = result.get_counts()
-        
-        self.visualize_results(counts, "Superposition")
+
+        counts = self.backend.run(circuit, shots=1000).get_counts()
+        print(f"{self.title}: {counts}  (about half 0, half 1)")
         return counts
+
+
+QuantumLesson("Superposition").demonstrate_superposition()
 ```
 
 ### 4. Hardware Benchmarking
 
+!!! note "Requires credentials"
+    Hardware backends need provider accounts (IBM Quantum, AWS, Quantinuum). The loop below runs on the local backends; add a hardware backend name once its credentials are set up.
+
 ```python
-# Compare quantum hardware performance
-def benchmark_hardware():
-    hardware_backends = ['ibm_quantum', 'google_quantum', 'aws_braket']
-    benchmark_circuits = create_benchmark_suite()
-    
+import time
+
+
+def ghz_circuit(backend, n):
+    circuit = backend.create_circuit(n)
+    backend.add_gate(circuit, 'H', 0)
+    for q in range(n - 1):
+        backend.add_gate(circuit, 'CNOT', [q, q + 1])
+    backend.add_measurement(circuit)
+    return circuit
+
+
+def benchmark_backends(names=('simulator', 'qiskit', 'cirq', 'pennylane'), n=3, shots=1000):
+    """Run the same GHZ circuit everywhere: time taken and fraction of ideal outcomes."""
     results = {}
-    for hw_backend in hardware_backends:
-        results[hw_backend] = run_benchmark_suite(
-            benchmark_circuits, 
-            backend=hw_backend
-        )
-    
-    return analyze_benchmark_results(results)
+    for name in names:
+        backend = sqx.get_backend(name)
+        start = time.time()
+        counts = backend.execute_circuit(ghz_circuit(backend, n), shots=shots)['counts']
+        ideal = counts.get('0' * n, 0) + counts.get('1' * n, 0)
+        results[name] = {'seconds': round(time.time() - start, 3), 'ideal_fraction': ideal / shots}
+    return results
+
+
+print(benchmark_backends())
 ```
 
 ## 🛠️ Development Philosophy
@@ -324,48 +381,37 @@ def benchmark_hardware():
 ### Code Example: Research Workflow
 
 ```python
+import numpy as np
 import superquantx as sqx
 
-# Set up reproducible experiment
-sqx.set_seed(42)
-experiment = sqx.Experiment("quantum_svm_comparison")
+# Reproducible comparison: fixed dataset splits (random_state) and seeds
+datasets = {
+    'iris': sqx.datasets.load_iris_quantum,
+    'wine': sqx.datasets.load_wine_quantum,
+}
+feature_maps = ['ZFeatureMap', 'ZZFeatureMap']
 
-# Define experiment parameters
-backends = ['simulator', 'pennylane', 'qiskit']
-datasets = ['iris', 'wine', 'breast_cancer']
-feature_maps = ['ZFeatureMap', 'ZZFeatureMap', 'PauliFeatureMap']
+results = []
+for dataset_name, loader in datasets.items():
+    X_train, X_test, y_train, y_test, metadata = loader(
+        n_features=4, encoding='angle', random_state=42
+    )
+    for feature_map in feature_maps:
+        qsvm = sqx.QuantumSVM(backend='simulator', feature_map=feature_map, seed=42)
+        qsvm.fit(X_train, y_train)
+        results.append({
+            'dataset': dataset_name,
+            'feature_map': feature_map,
+            'accuracy': float(np.mean(qsvm.predict(X_test) == y_test)),
+        })
 
-# Run systematic comparison
-with experiment:
-    for backend_name in backends:
-        for dataset_name in datasets:
-            for feature_map in feature_maps:
-                # Load data
-                X, y = sqx.datasets.load(dataset_name)
-                
-                # Create and train model
-                qsvm = sqx.QuantumSVM(
-                    backend=backend_name,
-                    feature_map=feature_map
-                )
-                
-                # Cross-validation
-                scores = sqx.cross_val_score(qsvm, X, y, cv=5)
-                
-                # Log results
-                experiment.log_result({
-                    'backend': backend_name,
-                    'dataset': dataset_name,
-                    'feature_map': feature_map,
-                    'mean_accuracy': scores.mean(),
-                    'std_accuracy': scores.std()
-                })
-
-# Analyze results
-results_df = experiment.get_results_dataframe()
-best_config = experiment.get_best_configuration()
-experiment.plot_comparison()
+for row in results:
+    print(row)
+best = max(results, key=lambda r: r['accuracy'])
+print("Best configuration:", best)
 ```
+
+There is no `Experiment` tracker, `set_seed` or `cross_val_score` in 0.3.0; pass `seed=` to each algorithm and use your own logging (or `sqx.compare_to_classical` for cross-validated comparisons).
 
 ## 🌟 What Makes SuperQuantX Different?
 
