@@ -8,7 +8,9 @@
 
 # SuperQuantX
 
-**One API across quantum SDKs, with a classical baseline for every result.**
+**The agentic layer for Quantum AI**
+
+An open software layer across quantum SDKs, with a classical baseline for every result.
 
 SuperQuantX is an experimental, open-source toolkit for quantum machine
 learning and optimisation research by [Superagentic AI](https://super-agentic.ai).

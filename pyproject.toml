@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "superquantx"
 dynamic = ["version"]
-description = "Quantum AI Research Platform - Unified API for QuantumAgentic AIsystems research"
+description = "The agentic layer for Quantum AI. An open software layer across quantum SDKs, with a classical baseline for every result."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
