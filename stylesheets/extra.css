@@ -1,0 +1,235 @@
+/* Custom styles for SuperQuantX */
+
+/* Header styling for logo visibility */
+.md-header {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98)) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+  box-shadow: 0 2px 12px rgba(124, 58, 237, 0.08);
+}
+
+[data-md-color-scheme="slate"] .md-header {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98)) !important;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+/* Logo styling */
+.md-header__button.md-logo img {
+  width: auto;
+  height: 36px;
+  max-width: 160px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* Header title styling */
+.md-header__title {
+  color: #1e293b !important;
+  font-weight: 700;
+}
+
+[data-md-color-scheme="slate"] .md-header__title {
+  color: #f8fafc !important;
+}
+
+/* Navigation styling */
+.md-header__option {
+  color: #475569 !important;
+}
+
+[data-md-color-scheme="slate"] .md-header__option {
+  color: #cbd5e1 !important;
+}
+
+/* Remove Material branding */
+.md-footer-meta__inner {
+  justify-content: center;
+}
+
+.md-footer-meta__inner > div:last-child {
+  display: none !important;
+}
+
+/* Hide Material for MkDocs branding text */
+.md-footer-meta {
+  display: none !important;
+}
+
+/* Hide generator text */
+.md-footer__link--next,
+.md-footer__link--prev {
+  display: block !important;
+}
+
+/* Alternative approach - hide specific text */
+.md-footer-copyright__highlight {
+  display: none !important;
+}
+
+.md-footer-meta__inner .md-footer-copyright__highlight {
+  display: none !important;
+}
+
+/* Hide any remaining Material branding */
+.md-footer-meta .md-footer-copyright {
+  display: none !important;
+}
+
+/* Show only custom copyright */
+.md-footer-copyright {
+  text-align: center !important;
+}
+
+/* Dark mode body styling */
+[data-md-color-scheme="slate"] .md-main {
+  background: #000000 !important;
+}
+
+[data-md-color-scheme="slate"] .md-content {
+  background: linear-gradient(135deg, #000000, #111111) !important;
+}
+
+[data-md-color-scheme="slate"] .md-content__inner {
+  background: rgba(0, 0, 0, 0.95) !important;
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 1rem 0;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+[data-md-color-scheme="slate"] .md-sidebar {
+  background: rgba(0, 0, 0, 0.9) !important;
+  border-right: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+[data-md-color-scheme="slate"] .md-nav {
+  background: transparent !important;
+}
+
+/* Enhanced code blocks for dark mode */
+[data-md-color-scheme="slate"] .highlight pre {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+/* Better text contrast in dark mode */
+[data-md-color-scheme="slate"] .md-typeset {
+  color: #f1f5f9 !important;
+}
+
+[data-md-color-scheme="slate"] .md-typeset h1,
+[data-md-color-scheme="slate"] .md-typeset h2,
+[data-md-color-scheme="slate"] .md-typeset h3,
+[data-md-color-scheme="slate"] .md-typeset h4 {
+  color: #ffffff !important;
+}
+
+/* Dark mode table styling */
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) {
+  background: rgba(0, 0, 0, 0.8) !important;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background: rgba(124, 58, 237, 0.3) !important;
+  color: #ffffff !important;
+}
+
+/* Dark mode admonitions */
+[data-md-color-scheme="slate"] .md-typeset .admonition {
+  background: rgba(0, 0, 0, 0.8) !important;
+  border-color: rgba(124, 58, 237, 0.4) !important;
+}
+
+/* Custom gradient text for headings */
+.superquant-gradient {
+  background: linear-gradient(135deg, #7c3aed, #ec4899, #f97316);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: bold;
+}
+
+/* Hero section styling */
+.hero-banner {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(236, 72, 153, 0.1), rgba(249, 115, 22, 0.1));
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 2rem 0;
+  text-align: center;
+}
+
+/* Code block enhancements */
+.highlight pre {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Custom admonition styles */
+.md-typeset .admonition.quantum {
+  border-color: #7c3aed;
+}
+
+.md-typeset .admonition.quantum > .admonition-title {
+  background-color: rgba(124, 58, 237, 0.1);
+  border-color: #7c3aed;
+}
+
+.md-typeset .admonition.quantum > .admonition-title::before {
+  background-color: #7c3aed;
+  mask-image: var(--md-admonition-icon--quantum);
+}
+
+/* Button styling */
+.md-button--primary {
+  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  border: none;
+  border-radius: 6px;
+  color: white !important;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.md-button--primary:hover {
+  background: linear-gradient(135deg, #6d28d9, #db2777);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+/* Navigation enhancements */
+.md-tabs__link--active {
+  color: #7c3aed !important;
+  border-bottom-color: #7c3aed !important;
+}
+
+/* Search box styling */
+.md-search__input {
+  border-radius: 8px;
+}
+
+/* Footer customization */
+.md-footer {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(236, 72, 153, 0.05));
+}
+
+/* Table of contents styling */
+.md-nav__link--active {
+  color: #7c3aed !important;
+  font-weight: 600;
+}
+
+/* Homepage logo centering */
+.md-content__inner > h1:first-child {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+/* Badge styling for consistent look */
+.badge-container {
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+.badge-container img {
+  margin: 0 2px;
+}
