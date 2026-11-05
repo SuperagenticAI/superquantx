@@ -20,7 +20,7 @@ The Cirq backend in SuperQuantX offers:
 
 ```bash
 # Install SuperQuantX with Cirq support
-pip install superquantx[cirq]
+uv add "superquantx[cirq]==0.3.0"
 
 # Or install Cirq directly
 pip install cirq cirq-google cirq-web

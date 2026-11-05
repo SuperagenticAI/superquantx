@@ -20,7 +20,7 @@ The Amazon Braket backend in SuperQuantX provides:
 
 ```bash
 # Install SuperQuantX with Braket support
-pip install superquantx[braket]
+uv add "superquantx[braket]==0.3.0"
 
 # Or install Amazon Braket SDK directly
 pip install amazon-braket-sdk boto3

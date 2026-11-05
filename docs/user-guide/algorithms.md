@@ -4,7 +4,7 @@
     This page predates the current release and parts of it describe planned or older API. Only 0 of 22 code snippets on this page run as-is today. For verified, runnable code see the [Quick Start](../getting-started/quickstart.md), the [Showcase](../showcase.md) and the [Backends guide](backends.md).
 
 
-SuperQuantX provides a comprehensive library of quantum algorithms, from fundamental quantum computing primitives to cutting-edge quantum machine learning methods. This guide covers how to use, customize, and combine these algorithms in your research.
+SuperQuantX provides quantum algorithms for machine learning and optimisation, each with a classical check. This guide covers how to use, customize, and combine these algorithms in your research.
 
 ## 🎯 Algorithm Categories
 

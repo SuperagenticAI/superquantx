@@ -20,7 +20,7 @@ PennyLane's strengths make it ideal for:
 
 ```bash
 # Install SuperQuantX with PennyLane support
-pip install superquantx[pennylane]
+uv add "superquantx[pennylane]==0.3.0"
 
 # Or install PennyLane directly
 pip install pennylane pennylane-qiskit pennylane-cirq

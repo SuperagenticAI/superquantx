@@ -125,10 +125,14 @@ markdown_extensions:
 
 extra:
   generator: false
+  homepage: https://superquantx.dev
   analytics:
     provider: google
     property: !ENV GOOGLE_ANALYTICS_KEY
   social:
+    - icon: material/web
+      link: https://superquantx.dev
+      name: superquantx.dev website
     - icon: fontawesome/brands/github
       link: https://github.com/SuperagenticAI/superquantx
     - icon: fontawesome/brands/python
@@ -141,12 +145,12 @@ extra_css:
 
 extra_javascript:
   - javascripts/mathjax.js
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 nav:
   - Home:
     - Overview: index.md
+    - superquantx.dev website: https://superquantx.dev
     - Showcase: showcase.md
   - Getting Started:
     - Installation Guide: getting-started/installation.md
@@ -190,5 +194,6 @@ nav:
     - Code Standards: development/standards.md
 
 copyright: |
-  Copyright &copy; 2025 <a href="https://super-agentic.ai" target="_blank">Superagentic AI</a> - 
-  <a href="https://github.com/SuperagenticAI/superquantx" target="_blank">SuperQuantX</a>
+  Copyright &copy; 2025-2026 <a href="https://super-agentic.ai" target="_blank">Superagentic AI</a> - 
+  <a href="https://superquantx.dev" target="_blank">superquantx.dev</a> -
+  <a href="https://github.com/SuperagenticAI/superquantx" target="_blank">SuperQuantX on GitHub</a>

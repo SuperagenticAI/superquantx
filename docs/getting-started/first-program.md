@@ -21,7 +21,7 @@ By the end of this tutorial, you'll understand:
 Make sure you have SuperQuantX installed:
 
 ```bash
-pip install superquantx[pennylane]
+uv add "superquantx[pennylane]==0.3.0"
 ```
 
 ## 🚀 Hello Quantum World

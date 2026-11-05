@@ -20,7 +20,7 @@ By the end of this tutorial, you'll understand:
 
 - Basic Python knowledge
 - High school mathematics (vectors, complex numbers helpful but not required)
-- SuperQuantX installed (`pip install superquantx`)
+- SuperQuantX installed (`uv add "superquantx==0.3.0"`)
 
 ## 📚 Chapter 1: Classical vs Quantum Bits
 

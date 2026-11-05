@@ -27,7 +27,7 @@ The Simulator backend is included with SuperQuantX and requires no additional de
 
 ```bash
 # Install SuperQuantX (simulator included)
-pip install superquantx
+uv add "superquantx==0.3.0"
 ```
 
 ### Verify Installation

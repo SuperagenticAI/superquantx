@@ -3,11 +3,19 @@
 <div class="hero-banner">
   <h1 class="superquant-gradient">SuperQuantX</h1>
   <h2 class="superquant-gradient">Experimental Quantum ML Toolkit</h2>
-  <p><strong>No hype. Checked results.</strong></p>
   <p>One API across quantum SDKs, with a classical baseline for every result.</p>
 </div>
 
 ## Welcome to SuperQuantX
+
+!!! tip "Website"
+    New here? Start at **[superquantx.dev](https://superquantx.dev)** for an overview, the
+    [supported backends](https://superquantx.dev/backends) and the
+    [MCP server setup](https://superquantx.dev/mcp).
+
+```bash
+uv add "superquantx==0.3.0"
+```
 
 SuperQuantX is an experimental, open-source toolkit for quantum machine
 learning and optimisation research. One API runs the same circuits and
@@ -22,7 +30,7 @@ whether the quantum part earns its keep.
 - **Algorithms with built-in checks**: VQE reports the exact ground energy,
   QAOA reports the brute-force optimum, classifiers can be benchmarked with
   [`compare_to_classical`](user-guide/benchmarking.md).
-- **Research-grade benchmarking**: equal tuning budgets, identical folds and
+- **Benchmarking protocol**: equal tuning budgets, identical folds and
   a corrected t-test, following [arXiv:2610.42029](https://arxiv.org/abs/2610.42029).
 - **Agents that show their work**: portfolio and classification agents
   return the classical optimum or baseline alongside the quantum answer.
@@ -127,7 +135,7 @@ SuperQuantX accelerates research in:
 - **Quantum Machine Learning**: QSVM, QNN, quantum feature maps
 - **Quantum Optimization**: QAOA, VQE (including CVaR-VQE), quantum annealing via D-Wave Ocean
 - **Quantum Agents**: Portfolio and classification agents with classical checks
-- **Honest evaluation**: Tuned classical baselines and significance tests for every quantum model
+- **Classical baselines**: Tuned classical baselines and significance tests for every quantum model
 
 ## Community & Support
 

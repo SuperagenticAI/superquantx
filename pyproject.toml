@@ -142,7 +142,7 @@ full-dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/SuperagenticAI/superquantx"
+Homepage = "https://superquantx.dev"
 Documentation = "https://superagenticai.github.io/superquantx"
 Repository = "https://github.com/SuperagenticAI/superquantx"
 "Bug Tracker" = "https://github.com/SuperagenticAI/superquantx/issues"

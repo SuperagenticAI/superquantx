@@ -10,14 +10,25 @@ The server speaks MCP over **stdio**, uses the official
 
 ## Install
 
+Run the server with no install step (uvx fetches the pinned release into an isolated environment):
+
 ```bash
-pip install "superquantx[mcp,qiskit,pennylane]>=0.3.0"
+uvx --from "superquantx[mcp]==0.3.0" superquantx-mcp
+```
+
+Or add it to a uv project, with optional Qiskit and PennyLane backends:
+
+```bash
+uv add "superquantx[mcp,qiskit,pennylane]==0.3.0"
+uv run superquantx-mcp
 # or, from a checkout
 uv pip install ".[mcp,qiskit,pennylane]"
+# or with pip
+pip install "superquantx[mcp,qiskit,pennylane]==0.3.0"
 ```
 
 The `mcp` extra needs Python 3.10 or newer (SuperQuantX itself requires 3.11+). The built-in
-`simulator` backend works with no extra SDK, so `pip install "superquantx[mcp]"` is enough to try it.
+`simulator` backend works with no extra SDK, so `uv add "superquantx[mcp]==0.3.0"` is enough to try it.
 
 Two equivalent entry points start the server on stdio:
 
@@ -179,7 +190,7 @@ Since 0.3.0, `uvx` can run the server in an isolated environment:
   "mcpServers": {
     "superquantx": {
       "command": "uvx",
-      "args": ["--from", "superquantx[mcp,qiskit,pennylane]", "superquantx-mcp"]
+      "args": ["--from", "superquantx[mcp,qiskit,pennylane]==0.3.0", "superquantx-mcp"]
     }
   }
 }
@@ -253,7 +264,7 @@ tools: ['list_backends', 'backend_versions', 'run_circuit', 'bell_state_demo', '
 ```json
 {
   "ok": true,
-  "superquantx": "0.2.0",
+  "superquantx": "0.3.0",
   "python": "3.11.16",
   "packages": {"qiskit": "2.6.1", "qiskit-aer": "0.18.2", "qiskit-ibm-runtime": "0.51.0",
                "pennylane": "0.45.1", "pennylane-lightning": "0.45.0", "numpy": "2.4.6",
