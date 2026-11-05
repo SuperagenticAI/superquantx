@@ -17,6 +17,15 @@
 uv add "superquantx==0.3.0"
 ```
 
+### Watch the demo
+
+<div class="video-embed" markdown="0" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin:1.5rem 0;border-radius:12px;">
+  <iframe style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" src="https://www.youtube.com/embed/QwPBKtpNSKU?rel=0" title="SuperQuantX 0.3.0 demo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+</div>
+
+*SuperQuantX 0.3.0 · Local simulation · No quantum hardware used* ·
+[Watch on YouTube](https://www.youtube.com/watch?v=QwPBKtpNSKU)
+
 SuperQuantX is an experimental, open-source toolkit for quantum machine
 learning and optimisation research. One API runs the same circuits and
 algorithms on PennyLane, Qiskit, Cirq, Amazon Braket, pytket and a built-in
