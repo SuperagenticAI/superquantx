@@ -1,0 +1,169 @@
+{
+  "provenance": {
+    "historical": true,
+    "platform": "Linux",
+    "description": "Example output from a local Linux/Python 3.12.14 run of published SuperQuantX 0.3.0 on 5 November 2026. Counts and timings vary between runs and environments."
+  },
+  "sdk": "0.3.0",
+  "python": "3.12.14",
+  "run_at": "2026-11-05T14:53:25.732543+00:00",
+  "scope": "local simulators only",
+  "algorithm_seed": 7,
+  "packages": {
+    "superquantx": "0.3.0",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "scikit-learn": "1.9.1",
+    "pennylane": "0.45.1",
+    "qiskit": "2.6.2",
+    "qiskit-aer": "0.18.2",
+    "cirq": "1.7.0",
+    "amazon-braket-sdk": "1.127.7",
+    "pytket": "2.18.5",
+    "pytket-qiskit": "0.79.0",
+    "dwave-ocean-sdk": "9.5.0"
+  },
+  "stages": {
+    "simulator": {
+      "status": "PASS",
+      "result": {
+        "counts": {
+          "00": 520,
+          "11": 504
+        },
+        "shots": 1024,
+        "correlated_shots": 1024,
+        "raw_qubit_order_counts": {
+          "01": 32
+        },
+        "qubit_order_counts": {
+          "10": 32
+        }
+      },
+      "seconds": 14.179
+    },
+    "pennylane": {
+      "status": "PASS",
+      "result": {
+        "counts": {
+          "00": 497,
+          "11": 527
+        },
+        "shots": 1024,
+        "correlated_shots": 1024,
+        "raw_qubit_order_counts": {
+          "10": 32
+        },
+        "qubit_order_counts": {
+          "10": 32
+        }
+      },
+      "seconds": 0.014
+    },
+    "qiskit": {
+      "status": "PASS",
+      "result": {
+        "counts": {
+          "11": 530,
+          "00": 494
+        },
+        "shots": 1024,
+        "correlated_shots": 1024,
+        "raw_qubit_order_counts": {
+          "01": 32
+        },
+        "qubit_order_counts": {
+          "10": 32
+        }
+      },
+      "seconds": 0.342
+    },
+    "cirq": {
+      "status": "PASS",
+      "result": {
+        "counts": {
+          "00": 483,
+          "11": 541
+        },
+        "shots": 1024,
+        "correlated_shots": 1024,
+        "raw_qubit_order_counts": {
+          "10": 32
+        },
+        "qubit_order_counts": {
+          "10": 32
+        }
+      },
+      "seconds": 0.01
+    },
+    "braket": {
+      "status": "PASS",
+      "result": {
+        "counts": {
+          "00": 539,
+          "11": 485
+        },
+        "shots": 1024,
+        "correlated_shots": 1024,
+        "raw_qubit_order_counts": {
+          "10": 32
+        },
+        "qubit_order_counts": {
+          "10": 32
+        }
+      },
+      "seconds": 0.043
+    },
+    "tket": {
+      "status": "PASS",
+      "result": {
+        "counts": {
+          "00": 485,
+          "11": 539
+        },
+        "shots": 1024,
+        "correlated_shots": 1024,
+        "raw_qubit_order_counts": {
+          "10": 32
+        },
+        "qubit_order_counts": {
+          "10": 32
+        }
+      },
+      "seconds": 0.059
+    },
+    "ocean": {
+      "status": "PASS",
+      "result": {
+        "best_sample": {
+          "0": 0,
+          "1": 1
+        },
+        "energy": -2.0,
+        "exact_minimum": -2,
+        "matches_optimum": true
+      },
+      "seconds": 0.059
+    },
+    "vqe": {
+      "status": "PASS",
+      "result": {
+        "estimated_energy": -1.857275028995664,
+        "exact_energy": -1.8572750302023795,
+        "absolute_error": 1.206715394275193e-09
+      },
+      "seconds": 0.077
+    },
+    "qaoa": {
+      "status": "PASS",
+      "result": {
+        "bitstring": "01101",
+        "cut_value": 6.0,
+        "classical_optimum": 6.0,
+        "expected_cut": 5.066310717494404,
+        "approximation_ratio": 0.8443851195824007
+      },
+      "seconds": 2.033
+    }
+  }
+}

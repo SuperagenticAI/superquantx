@@ -1,0 +1,2 @@
+# Preserve the historical sample; generated JSON remains ignored by the root rules.
+!sample-results.json

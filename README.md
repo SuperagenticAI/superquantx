@@ -154,6 +154,9 @@ print(res.result["selected_assets"], res.result["classical_selected_assets"],
 `examples/quantum_agents_demo.py` runs the portfolio and classification
 agents end to end.
 
+The [local SDK and MCP examples](examples/full-demo/README.md) check six
+gate-model simulators, Ocean annealing, H2 VQE, MaxCut QAOA and a local MCP call.
+
 ## Command line
 
 ```bash
