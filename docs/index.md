@@ -2,8 +2,8 @@
 
 <div class="hero-banner">
   <h1 class="superquant-gradient">SuperQuantX</h1>
-  <h2 class="superquant-gradient">Experimental Quantum ML Toolkit</h2>
-  <p>One API across quantum SDKs, with a classical baseline for every result.</p>
+  <h2 class="superquant-gradient">The agentic layer for Quantum AI</h2>
+  <p>An open software layer across quantum SDKs, with a classical baseline for every result.</p>
 </div>
 
 ## Welcome to SuperQuantX

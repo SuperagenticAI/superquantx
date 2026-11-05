@@ -182,7 +182,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 # Package metadata
 __title__ = "SuperQuantX"
-__description__ = "Experimental Quantum AI Research Platform - NOT for production use"
+__description__ = "The agentic layer for Quantum AI. Experimental research software, not for production use."
 __author__ = "SuperXLab - Superagentic AI Research Division"
 __author_email__ = "research@superagentic.ai"
 __license__ = "Apache-2.0"

@@ -1,5 +1,5 @@
 site_name: SuperQuantX Documentation
-site_description: Quantum AI research platform that provides a unified API for future quantum agentic AI systems research
+site_description: The agentic layer for Quantum AI. An open software layer across quantum SDKs, with a classical baseline for every result.
 site_author: Superagentic AI
 site_url: https://superagenticai.github.io/superquantx/
 
